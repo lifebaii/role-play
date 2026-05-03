@@ -117,8 +117,8 @@ jobs:
           }
           EOF
 
-          # Generate update script
-          cat > update-config.js << 'EOF'
+          # Generate update script as CommonJS
+          cat > update-config.cjs << 'EOF'
           const fs = require("fs");
           const appName = process.env.APP_NAME;
           const appUrl = process.env.APP_URL;
@@ -145,7 +145,7 @@ jobs:
           EOF
 
           # Run update script
-          node update-config.js
+          node update-config.cjs
 
       - name: Upload Tauri config artifacts
         uses: actions/upload-artifact@v4
