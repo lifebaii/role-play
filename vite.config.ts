@@ -14,6 +14,7 @@ export default defineConfig(({ command, mode }) => {
   const isDev = mode === 'development'
 
   return {
+    base: './',
     plugins: [
       vue(),
       ...(isDev ? [removeManifestPlugin()] : []),
@@ -27,7 +28,7 @@ export default defineConfig(({ command, mode }) => {
           theme_color: '#1f2937',
           background_color: '#f3f4f6',
           display: 'standalone',
-          start_url: '/',
+          start_url: './',
           icons: [
             {
               src: 'pwa-192x192.png',
