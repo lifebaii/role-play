@@ -196,7 +196,7 @@ const localFriendIds = ref<Set<string>>(new Set())
 
 const updateLocalFriendIds = async () => {
   const localFriends = await getLocalFriends()
-  localFriendIds.value = new Set(localFriends.map(f => f.data?.id || f.role_play?.id))
+  localFriendIds.value = new Set(localFriends.map(f => f.role_play?.id).filter(Boolean))
 }
 
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -227,6 +227,7 @@ const toggleFriend = async (character: Character) => {
   try {
     await userStore.addOnlineFriendCharacter(characterId)
     character.isFriend = true
+    await userStore.loadLocalFriends()
     showToast('添加成功', 'success')
   } catch (error: any) {
     showToast(error.message || '操作失败', 'error')
@@ -282,22 +283,22 @@ const fetchCharacters = async () => {
       params.userId = userStore.user.id
     }
     
-    const response = await charactersApi.getOfficialCharacters(params)
+    if (localFriendIds.value.size > 0) {
+      params.friendIds = JSON.stringify(Array.from(localFriendIds.value))
+    }
     
-    const localIds = localFriendIds.value
-    characters.value = response.characters.map((c: Character) => {
-      const id = c.role_play?.id || c.id || ''
-      const data = c.data || {}
+    const response = await charactersApi.getSharedCharacters(params)
+    
+    characters.value = response.characters.map((item: any) => {
+      const char = item.character || {}
+      const metaData = item.data || {}
       return {
-        ...c,
-        id,
-        name: data.name || c.name || '',
-        description: data.description || c.description || '',
-        avatar: data.avatar || c.avatar || '',
-        creator: data.creator || c.creator || '',
-        creator_notes: data.creator_notes || c.creator_notes || '',
-        tags: data.tags || c.tags || [],
-        isFriend: localIds.has(id)
+        ...char,
+        likeCount: metaData.likeCount || 0,
+        liked: metaData.liked || false,
+        isOfficial: metaData.isOfficial || false,
+        isFriend: metaData.isFriend || false,
+        shared: metaData.shared || false
       }
     })
     total.value = response.total

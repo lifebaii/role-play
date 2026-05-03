@@ -355,9 +355,8 @@ export const charactersApi = {
   deleteUserCharacter: (userId: string, charId: string) => api.delete(`/characters/user/${userId}/${charId}`),
   importUserCharacters: (userId: string, characters: any[]) => 
     api.post(`/characters/user/import`, { userId, characters }),
-  getSharedCharacters: (params?: { userId?: string }) => api.get<{ characters: Character[] }>('/characters/shared', params),
-  getOfficialCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
-    api.get<CharactersResponse>('/characters/official', params),
+  getSharedCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
+    api.get<CharactersResponse>('/characters/shared', params),
   
   toggleLike: (characterId: string) => api.post<{ liked: boolean; likeCount: number }>(`/characters/${characterId}/like`, {}),
   

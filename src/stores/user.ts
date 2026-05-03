@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, onMounted } from 'vue';
 import { isAnonymousUser, setLocalUserName, hasLocalUserName, getLocalUserName } from '@/utils/anonymousUser';
-import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, type LocalFriend } from '@/utils/localFriendStorage';
+import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, clearFriendsCache, type LocalFriend } from '@/utils/localFriendStorage';
 import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
 
@@ -59,8 +59,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const loadLocalFriends = async () => {
+    clearFriendsCache();
     const localFriends = await getLocalFriends();
-    friendCharacters.value = localFriends;
+    friendCharacters.value = [...localFriends];
   };
 
   if (typeof localStorage !== 'undefined') {

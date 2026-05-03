@@ -6,6 +6,10 @@ const FRIEND_IMG_PREFIX = 'character_img_'
 
 let friendsCache: LocalFriend[] | null = null
 
+export function clearFriendsCache(): void {
+  friendsCache = null
+}
+
 function generateUUID(): string {
   try {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
