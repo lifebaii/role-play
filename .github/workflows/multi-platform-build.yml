@@ -345,7 +345,7 @@ jobs:
           EOF
 
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init --web-dir=www
+          npx cap init "TempApp" "com.tempapp.app" --web-dir=www
 
           cat > update-pkg.cjs << 'EOF'
           const fs = require("fs");
@@ -453,7 +453,7 @@ jobs:
           EOF
 
           npm install @capacitor/core @capacitor/cli @capacitor/ios
-          npx cap init --web-dir=www
+          npx cap init "TempApp" "com.tempapp.app" --web-dir=www
 
           cat > update-pkg.cjs << 'EOF'
           const fs = require("fs");
