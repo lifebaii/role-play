@@ -1,0 +1,172 @@
+name: Tauri Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 应用名称
+        required: true
+        default: Role-Play
+        type: string
+      app_url:
+        description: 应用网址
+        required: true
+        default: https://github.com
+        type: string
+      version:
+        description: 版本号
+        required: true
+        default: 1.0.0
+        type: string
+
+jobs:
+  create-tauri-project:
+    runs-on: ubuntu-latest
+    outputs:
+      tauri-config: ${{ steps.generate-config.outputs.tauri-config }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Tauri configuration
+        id: generate-config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const appName = '${{ inputs.app_name }}';
+            const appUrl = '${{ inputs.app_url }}';
+            const version = '${{ inputs.version }}';
+            
+            const tauriConf = {
+              $schema: "https://schema.tauri.app/config/2.0.0",
+              productName: appName,
+              version: version,
+              identifier: `com.${appName.toLowerCase().replace(/\s/g, '')}.app`,
+              build: {
+                beforeDevCommand: "",
+                beforeBuildCommand: "",
+                devUrl: appUrl,
+                frontendDist: ""
+              },
+              app: {
+                windows: [
+                  {
+                    title: appName,
+                    width: 1280,
+                    height: 720,
+                    resizable: true,
+                    fullscreen: false
+                  }
+                ],
+                security: {
+                  csp: null
+                },
+                withGlobalTauri: false
+              },
+              bundle: {
+                active: true,
+                targets: "all",
+                identifier: `com.${appName.toLowerCase().replace(/\s/g, '')}.app`,
+                icon: []
+              }
+            };
+
+            const cargoToml = `[package]
+name = "${appName.toLowerCase().replace(/\s/g, '-')}"
+version = "${version}"
+description = "${appName} Desktop App"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+`;
+
+            const mainRs = `// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+fn main() {
+    tauri_build::build()
+}
+`;
+
+            const buildRs = `fn main() {
+    tauri_build::build()
+}
+`;
+
+            core.setOutput('tauri-config', JSON.stringify(tauriConf));
+            core.setOutput('cargo-toml', cargoToml);
+            core.setOutput('main-rs', mainRs);
+            core.setOutput('build-rs', buildRs);
+
+      - name: Create Tauri project structure
+        run: |
+          mkdir -p src-tauri/src
+          echo '${{ steps.generate-config.outputs.tauri-config }}' > src-tauri/tauri.conf.json
+          echo '${{ steps.generate-config.outputs.cargo-toml }}' > src-tauri/Cargo.toml
+          echo '${{ steps.generate-config.outputs.main-rs }}' > src-tauri/src/main.rs
+          echo '${{ steps.generate-config.outputs.build-rs }}' > src-tauri/build.rs
+
+      - name: Upload Tauri config artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+  build-tauri:
+    needs: create-tauri-project
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/

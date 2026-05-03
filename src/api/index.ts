@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+import { eventBus } from '@/utils/eventBus'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -66,10 +67,13 @@ function createRequest(tokenSource: 'user-first' | 'admin-only') {
         console.log('[API] 401 Unauthorized, logging out')
         if (tokenSource === 'admin-only') {
           localStorage.removeItem('admin_token')
+          eventBus.emit('admin-logout')
         } else {
           localStorage.removeItem('user_token')
           localStorage.removeItem('user_data')
+          eventBus.emit('user-logout')
         }
+        eventBus.emit('auth-error', { type: tokenSource, message: '登录已过期，请重新登录' })
       }
       
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))

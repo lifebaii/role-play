@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Model, Character, CharactersResponse, AdminSettings } from '@/types'
 import { adminApi, charactersApi, modelsApi, presetsApi, regexApi, worldInfoApi } from '@/api'
+import { eventBus } from '@/utils/eventBus'
 
 // 辅助函数
 function getCharacterId(character: any): string {
@@ -9,11 +10,26 @@ function getCharacterId(character: any): string {
 }
 
 export const useAdminStore = defineStore('admin', () => {
-  // 初始化时检查本地token，直接设置状态，避免等待
+  // 初始化时检查本地 token，直接设置状态，避免等待
   const tokenExists = !!localStorage.getItem('admin_token')
   const isLoggedIn = ref(tokenExists)
   const isLoading = ref(false)
-  const hasVerified = ref(tokenExists)  // 添加标志，避免重复验证，有token就先认为已验证
+  const hasVerified = ref(tokenExists)  // 添加标志，避免重复验证，有 token 就先认为已验证
+
+  // 监听管理员登录过期事件
+  const handleAdminLogout = () => {
+    logout()
+  };
+
+  // 添加事件监听器
+  const initEventListeners = () => {
+    eventBus.on('admin-logout', handleAdminLogout);
+  };
+
+  // 初始化时添加监听
+  if (typeof window !== 'undefined') {
+    initEventListeners();
+  }
   const models = ref<Model[]>([])
   const characters = ref<Character[]>([])
   const settings = ref<AdminSettings>({
