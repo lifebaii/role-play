@@ -593,7 +593,7 @@ watch(() => props.modelValue, (newValue) => {
       ...newValue,
       temperature: newValue.temperature ?? 1,
       character_book: { entries: newValue.character_book?.entries || [] },
-      regex_scripts: newValue.regex_scripts || [],
+      regex_scripts: newValue.extensions?.regex_scripts || [],
       tags: newValue.tags || []
     }
     nextTick(() => resizeAllTextareas())
@@ -709,18 +709,35 @@ function saveRegexEditing(data: any) {
   } else {
     form.value.regex_scripts.push({ ...data, enabled: true })
   }
+  // 同时也更新 extensions.regex_scripts，保持一致性
+  form.value.extensions = {
+    ...form.value.extensions,
+    regex_scripts: form.value.regex_scripts
+  }
   editingRegexIndex.value = undefined
 }
 
 function removeRegex(index: number) {
   if (confirm('确定要删除这个正则脚本吗？')) {
     form.value.regex_scripts.splice(index, 1)
+    // 同时也更新 extensions.regex_scripts，保持一致性
+    form.value.extensions = {
+      ...form.value.extensions,
+      regex_scripts: form.value.regex_scripts
+    }
   }
 }
 
 async function handleSubmit() {
-  emit('update:modelValue', { ...form.value })
-  emit('submit', { ...form.value })
+  const submitData = {
+    ...form.value,
+    extensions: {
+      ...form.value.extensions,
+      regex_scripts: form.value.regex_scripts
+    }
+  }
+  emit('update:modelValue', submitData)
+  emit('submit', submitData)
 }
 
 function handleDelete() {

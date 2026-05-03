@@ -299,6 +299,10 @@ function normalizeSingleCharacter(charData: any): NormalizedCharacter {
     res.data.character_book = { entries: res.data.world_info }
   }
 
+  if (res.data && res.data.extensions?.regex_scripts) {
+    res.data.regex_scripts = res.data.extensions.regex_scripts
+  }
+
   return res as NormalizedCharacter
 }
 

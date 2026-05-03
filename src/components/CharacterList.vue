@@ -316,7 +316,7 @@ function getCharacterBook(character: Character): any {
 }
 
 function getCharacterRegexScripts(character: Character): any[] {
-  return character.data?.regex_scripts || character.regex_scripts || []
+  return character.data?.extensions?.regex_scripts || character.extensions?.regex_scripts || []
 }
 
 const props = defineProps<{

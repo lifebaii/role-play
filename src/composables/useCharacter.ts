@@ -149,7 +149,10 @@ export function useCharacter() {
       first_mes: data.first_mes,
       temperature: data.temperature || 1,
       character_book: { entries: data.character_book?.entries || [] },
-      regex_scripts: data.regex_scripts || [],
+      extensions: {
+        ...data.extensions,
+        regex_scripts: data.regex_scripts || []
+      },
       creator_notes: data.creator_notes || '',
       system_prompt: data.system_prompt || '',
       tags: data.tags || []
@@ -226,7 +229,8 @@ export function useCharacter() {
           creator_notes: charData.creator_notes || '',
           temperature: charData.temperature || 1,
           character_book: { entries: charData.character_book?.entries || [] },
-          regex_scripts: charData.regex_scripts || [],
+          extensions: charData.extensions || {},
+          regex_scripts: charData.extensions?.regex_scripts || [],
           tags: charData.tags || []
         }
         if (fullCharacter.role_play?.shared !== undefined) {
@@ -286,7 +290,8 @@ export function useCharacter() {
           creator_notes: charData.creator_notes || '',
           temperature: charData.temperature || 1,
           character_book: { entries: charData.character_book?.entries || [] },
-          regex_scripts: charData.regex_scripts || [],
+          extensions: charData.extensions || {},
+          regex_scripts: charData.extensions?.regex_scripts || [],
           tags: charData.tags || []
         }
         if (fullCharacter.role_play?.shared !== undefined) {
@@ -465,7 +470,8 @@ export function useCharacter() {
         creator_notes: originalCharacter.creator_notes || '',
         temperature: originalCharacter.temperature ?? 1,
         character_book: { entries: originalCharacter.character_book?.entries || [] },
-        regex_scripts: originalCharacter.regex_scripts || [],
+        extensions: originalCharacter.extensions || {},
+        regex_scripts: originalCharacter.extensions?.regex_scripts || [],
         tags: originalCharacter.tags || []
       }
       }

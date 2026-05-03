@@ -58,7 +58,7 @@ function getCharacterId(character: any): string {
   }
 
   function getCharacterRegexScripts(character: any): any[] {
-    return character.data?.regex_scripts || character.regex_scripts || []
+    return character.data?.extensions?.regex_scripts || character.extensions?.regex_scripts || []
   }
 
   async function handleDelete(character: any) {

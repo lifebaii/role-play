@@ -95,7 +95,8 @@ onMounted(async () => {
         creator_notes: data.creator_notes || '',
         temperature: data.temperature ?? 1,
         character_book: data.character_book || { entries: data.world_info || [] },
-        regex_scripts: data.regex_scripts || [],
+        extensions: data.extensions || {},
+        regex_scripts: data.extensions?.regex_scripts || [],
         shared: meta.shared || false,
         tags: data.tags || []
       }
@@ -131,7 +132,10 @@ async function handleSubmit(data: any) {
         creator_notes: data.creator_notes,
         temperature: data.temperature ?? 1,
         character_book: data.character_book || { entries: data.world_info || [] },
-        regex_scripts: data.regex_scripts || [],
+        extensions: {
+          ...data.extensions,
+          regex_scripts: data.regex_scripts || []
+        },
         tags: data.tags || []
       }
     }
