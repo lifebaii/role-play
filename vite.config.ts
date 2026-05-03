@@ -99,7 +99,7 @@ export default defineConfig(({ command, mode }) => {
       }
     },
     build: {
-      outDir: resolve(__dirname, '../dist'),
+      outDir: resolve(__dirname, './dist'),
       emptyOutDir: true
     }
   }
