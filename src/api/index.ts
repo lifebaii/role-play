@@ -263,11 +263,20 @@ export const charactersApi = {
     const response = await api.get<CharactersResponse>('/characters')
     return response.characters
   },
+  listAdmin: async () => {
+    const response = await adminApiClient.get<CharactersResponse>('/characters')
+    return response.characters
+  },
   search: (params?: { search?: string; page?: number; pageSize?: number }) => 
     api.get<CharactersResponse>('/characters', params),
+  searchAdmin: (params?: { search?: string; page?: number; pageSize?: number }) => 
+    adminApiClient.get<CharactersResponse>('/characters', params),
   getAll: (params?: { search?: string; page?: number; pageSize?: number; userId?: string }) => 
     api.get<CharactersResponse>('/characters/all', params),
+  getAllAdmin: (params?: { search?: string; page?: number; pageSize?: number; userId?: string }) => 
+    adminApiClient.get<CharactersResponse>('/characters/all', params),
   get: (id: string) => api.get<Character>(`/characters/${id}`),
+  getAdmin: (id: string) => adminApiClient.get<Character>(`/characters/${id}`),
   create: (data: Partial<Character>) => adminApiClient.post<Character>('/characters', data),
   update: (id: string, data: Partial<Character>) => adminApiClient.put<Character>(`/characters/${id}`, data),
   updateShared: (id: string, shared: boolean) => 

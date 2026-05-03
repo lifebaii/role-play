@@ -109,7 +109,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function loadCharacters(): Promise<void> {
     try {
-      const result = await charactersApi.list()
+      const result = await charactersApi.listAdmin()
       characters.value = result
     } catch (error) {
       console.error('Failed to load characters:', error)
@@ -119,7 +119,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function loadCharacterDetail(id: string): Promise<Character | null> {
     try {
-      return await charactersApi.get(id)
+      return await charactersApi.getAdmin(id)
     } catch (error) {
       console.error('Failed to load character detail:', error)
       return null
