@@ -22,102 +22,130 @@ on:
 jobs:
   create-tauri-project:
     runs-on: ubuntu-latest
-    outputs:
-      tauri-config: ${{ steps.generate-config.outputs.tauri-config }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate Tauri configuration
-        id: generate-config
-        uses: actions/github-script@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          script: |
-            const appName = '${{ inputs.app_name }}';
-            const appUrl = '${{ inputs.app_url }}';
-            const version = '${{ inputs.version }}';
-            
-            const tauriConf = {
-              $schema: "https://schema.tauri.app/config/2.0.0",
-              productName: appName,
-              version: version,
-              identifier: `com.${appName.toLowerCase().replace(/\s/g, '')}.app`,
-              build: {
-                beforeDevCommand: "",
-                beforeBuildCommand: "",
-                devUrl: appUrl,
-                frontendDist: ""
-              },
-              app: {
-                windows: [
-                  {
-                    title: appName,
-                    width: 1280,
-                    height: 720,
-                    resizable: true,
-                    fullscreen: false
-                  }
-                ],
-                security: {
-                  csp: null
-                },
-                withGlobalTauri: false
-              },
-              bundle: {
-                active: true,
-                targets: "all",
-                identifier: `com.${appName.toLowerCase().replace(/\s/g, '')}.app`,
-                icon: []
-              }
-            };
+          node-version: "20"
 
-            const cargoToml = `[package]
-name = "${appName.toLowerCase().replace(/\s/g, '-')}"
-version = "${version}"
-description = "${appName} Desktop App"
-authors = ["you"]
-license = ""
-repository = ""
-edition = "2021"
-
-[build-dependencies]
-tauri-build = { version = "2.0", features = [] }
-
-[dependencies]
-tauri = { version = "2.0", features = ["shell-open"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-[features]
-default = ["custom-protocol"]
-custom-protocol = ["tauri/custom-protocol"]
-`;
-
-            const mainRs = `// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-fn main() {
-    tauri_build::build()
-}
-`;
-
-            const buildRs = `fn main() {
-    tauri_build::build()
-}
-`;
-
-            core.setOutput('tauri-config', JSON.stringify(tauriConf));
-            core.setOutput('cargo-toml', cargoToml);
-            core.setOutput('main-rs', mainRs);
-            core.setOutput('build-rs', buildRs);
-
-      - name: Create Tauri project structure
+      - name: Generate Tauri config files
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          APP_URL: ${{ inputs.app_url }}
+          VERSION: ${{ inputs.version }}
         run: |
           mkdir -p src-tauri/src
-          echo '${{ steps.generate-config.outputs.tauri-config }}' > src-tauri/tauri.conf.json
-          echo '${{ steps.generate-config.outputs.cargo-toml }}' > src-tauri/Cargo.toml
-          echo '${{ steps.generate-config.outputs.main-rs }}' > src-tauri/src/main.rs
-          echo '${{ steps.generate-config.outputs.build-rs }}' > src-tauri/build.rs
+          
+          # Generate tauri.conf.json
+          cat > src-tauri/tauri.conf.json << 'EOF'
+          {
+            "$schema": "https://schema.tauri.app/config/2.0.0",
+            "productName": "",
+            "version": "",
+            "identifier": "",
+            "build": {
+              "beforeDevCommand": "",
+              "beforeBuildCommand": "",
+              "devUrl": "",
+              "frontendDist": ""
+            },
+            "app": {
+              "windows": [
+                {
+                  "title": "",
+                  "width": 1280,
+                  "height": 720,
+                  "resizable": true,
+                  "fullscreen": false
+                }
+              ],
+              "security": {
+                "csp": null
+              },
+              "withGlobalTauri": false
+            },
+            "bundle": {
+              "active": true,
+              "targets": "all",
+              "identifier": "",
+              "icon": []
+            }
+          }
+          EOF
+
+          # Generate Cargo.toml
+          cat > src-tauri/Cargo.toml << 'EOF'
+          [package]
+          name = ""
+          version = ""
+          description = ""
+          authors = ["you"]
+          license = ""
+          repository = ""
+          edition = "2021"
+
+          [build-dependencies]
+          tauri-build = { version = "2.0", features = [] }
+
+          [dependencies]
+          tauri = { version = "2.0", features = ["shell-open"] }
+          serde = { version = "1.0", features = ["derive"] }
+          serde_json = "1.0"
+
+          [features]
+          default = ["custom-protocol"]
+          custom-protocol = ["tauri/custom-protocol"]
+          EOF
+
+          # Generate main.rs
+          cat > src-tauri/src/main.rs << 'EOF'
+          // Prevents additional console window on Windows in release, DO NOT REMOVE!!
+          #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+          fn main() {
+              tauri_build::build()
+          }
+          EOF
+
+          # Generate build.rs
+          cat > src-tauri/build.rs << 'EOF'
+          fn main() {
+              tauri_build::build()
+          }
+          EOF
+
+          # Generate update script
+          cat > update-config.js << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const appUrl = process.env.APP_URL;
+          const version = process.env.VERSION;
+          const safeName = appName.toLowerCase().replace(/\s/g, "-");
+          const identifier = `com.${safeName}.app`;
+
+          // Update tauri.conf.json
+          const tauriConf = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+          tauriConf.productName = appName;
+          tauriConf.version = version;
+          tauriConf.identifier = identifier;
+          tauriConf.build.devUrl = appUrl;
+          tauriConf.app.windows[0].title = appName;
+          tauriConf.bundle.identifier = identifier;
+          fs.writeFileSync("src-tauri/tauri.conf.json", JSON.stringify(tauriConf, null, 2));
+
+          // Update Cargo.toml
+          let cargoToml = fs.readFileSync("src-tauri/Cargo.toml", "utf8");
+          cargoToml = cargoToml.replace('name = ""', `name = "${safeName}"`);
+          cargoToml = cargoToml.replace('version = ""', `version = "${version}"`);
+          cargoToml = cargoToml.replace('description = ""', `description = "${appName} Desktop App"`);
+          fs.writeFileSync("src-tauri/Cargo.toml", cargoToml);
+          EOF
+
+          # Run update script
+          node update-config.js
 
       - name: Upload Tauri config artifacts
         uses: actions/upload-artifact@v4
