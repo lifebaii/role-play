@@ -60,7 +60,7 @@ const isDev = import.meta.env.DEV
 if (!isDev) {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+      navigator.serviceWorker.register('./sw.js').catch(() => {})
     })
   }
 }
