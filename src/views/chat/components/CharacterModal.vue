@@ -51,7 +51,7 @@
                 <span class="hidden sm:inline">更新</span>
               </button>
             </template>
-            <template v-if="editingCharacterMeta.originalId || editingCharacterMeta.shared">
+            <template v-if="isOnlineFriend">
               <button
                 @click="$emit('toggleLike')"
                 :disabled="isLikingInEdit"
@@ -109,7 +109,7 @@
           />
           
           <CommentSection
-            v-if="editingCharacterMeta.originalId || editingCharacterMeta.shared"
+            v-if="isOnlineFriend"
             :character-id="editingCharacterMeta.originalId || editingCharacter?.id"
             :show-original-hint="!!editingCharacterMeta.originalId"
           />
@@ -220,6 +220,7 @@ const props = defineProps<{
     isLiked: boolean
   }
   isViewOnlyMode: boolean
+  isOnlineFriend: boolean
   isLoadingCharacterDetail: boolean
   isLoadingMeta: boolean
   isSavingCharacter: boolean

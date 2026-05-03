@@ -94,7 +94,33 @@ export const api = {
   get: <T>(path: string, params?: Record<string, string>) => request<T>(path, { params }),
   post: <T>(path: string, body: any) => request<T>(path, { method: 'POST', body }),
   put: <T>(path: string, body: any) => request<T>(path, { method: 'PUT', body }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' })
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  getRaw: async (path: string, params?: Record<string, string>): Promise<{ blob: Blob; contentType: string }> => {
+    let token = localStorage.getItem('user_token')
+    if (!token) {
+      token = localStorage.getItem('admin_token')
+    }
+    
+    let url = `${API_BASE}${path}`
+    if (params) {
+      const searchParams = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => searchParams.append(key, value))
+      url += `?${searchParams.toString()}`
+    }
+    
+    const response = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(error.error || `HTTP ${response.status}`)
+    }
+    
+    const contentType = response.headers.get('Content-Type') || 'application/octet-stream'
+    const blob = await response.blob()
+    return { blob, contentType }
+  }
 }
 
 export const adminApiClient = {
@@ -289,11 +315,12 @@ export const charactersApi = {
     api.get<CharactersResponse>('/characters', params),
   searchAdmin: (params?: { search?: string; page?: number; pageSize?: number }) => 
     adminApiClient.get<CharactersResponse>('/characters', params),
-  getAll: (params?: { search?: string; page?: number; pageSize?: number; userId?: string }) => 
+  getAll: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
     api.get<CharactersResponse>('/characters/all', params),
-  getAllAdmin: (params?: { search?: string; page?: number; pageSize?: number; userId?: string }) => 
+  getAllAdmin: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
     adminApiClient.get<CharactersResponse>('/characters/all', params),
   get: (id: string) => api.get<Character>(`/characters/${id}`),
+  getRaw: (id: string) => api.getRaw(`/characters/${id}/raw`),
   getAdmin: (id: string) => adminApiClient.get<Character>(`/characters/${id}`),
   create: (data: Partial<Character>) => adminApiClient.post<Character>('/characters', data),
   update: (id: string, data: Partial<Character>) => adminApiClient.put<Character>(`/characters/${id}`, data),
@@ -329,7 +356,7 @@ export const charactersApi = {
   importUserCharacters: (userId: string, characters: any[]) => 
     api.post(`/characters/user/import`, { userId, characters }),
   getSharedCharacters: (params?: { userId?: string }) => api.get<{ characters: Character[] }>('/characters/shared', params),
-  getOfficialCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string }) => 
+  getOfficialCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
     api.get<CharactersResponse>('/characters/official', params),
   
   toggleLike: (characterId: string) => api.post<{ liked: boolean; likeCount: number }>(`/characters/${characterId}/like`, {}),

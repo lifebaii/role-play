@@ -3,6 +3,7 @@ import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
 import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend } from '@/utils/localFriendStorage'
+import { charactersApi } from '@/api'
 
 export function useCharacter() {
   const chatStore = useChatStore()
@@ -49,6 +50,7 @@ export function useCharacter() {
   
   const isViewOnlyMode = ref(false)
   const likedCharacterIds = ref<string[]>([])
+  const isOnlineFriend = ref(false)
   
   const newCharacterData = ref({
     name: '',
@@ -202,6 +204,7 @@ export function useCharacter() {
     isViewOnlyMode.value = false
     isLoadingCharacterDetail.value = true
     isLoadingMeta.value = true
+    isOnlineFriend.value = false
     showCreateCharacterModal.value = true
     
     try {
@@ -211,6 +214,25 @@ export function useCharacter() {
       
       if (await isLocalFriend(charId)) {
         fullCharacter = await getLocalFriend(charId)
+        
+        if (fullCharacter?.role_play?.originalId) {
+          try {
+            const meta = await charactersApi.getMeta(charId)
+            if (meta) {
+              isOnlineFriend.value = true
+              editingCharacterMeta.value.originalId = fullCharacter.role_play.originalId
+              editingCharacterMeta.value.shared = meta.shared || false
+              editingCharacterMeta.value.likeCount = meta.likeCount || 0
+              editingCharacterMeta.value.commentCount = meta.commentCount || 0
+              editingCharacterMeta.value.isLiked = meta.isLiked || false
+              if (meta.originalMeta) {
+                editingCharacterMeta.value.originalMeta = meta.originalMeta
+              }
+            }
+          } catch (e) {
+            console.log('[Character] Failed to get meta, character may not exist on server')
+          }
+        }
       }
       
       isLoadingMeta.value = false
@@ -261,6 +283,7 @@ export function useCharacter() {
     isViewOnlyMode.value = true
     isLoadingCharacterDetail.value = true
     isLoadingMeta.value = true
+    isOnlineFriend.value = false
     showCreateCharacterModal.value = true
     
     try {
@@ -270,6 +293,26 @@ export function useCharacter() {
       
       if (await isLocalFriend(charId)) {
         fullCharacter = await getLocalFriend(charId)
+        
+        if (fullCharacter?.role_play?.originalId) {
+          try {
+            const meta = await charactersApi.getMeta(charId)
+            if (meta) {
+              isOnlineFriend.value = true
+              editingCharacterMeta.value.originalId = fullCharacter.role_play.originalId
+              editingCharacterMeta.value.shared = meta.shared || false
+              editingCharacterMeta.value.likeCount = meta.likeCount || 0
+              editingCharacterMeta.value.commentCount = meta.commentCount || 0
+              editingCharacterMeta.value.isLiked = meta.isLiked || false
+              if (meta.originalMeta) {
+                editingCharacterMeta.value.originalMeta = meta.originalMeta
+              }
+            }
+          } catch (e) {
+            console.log('[Character] Failed to get meta, character may not exist on server')
+          }
+        }
+        
         isLoadingMeta.value = false
       } else {
         fullCharacter = character
@@ -571,6 +614,7 @@ export function useCharacter() {
     displayMeta,
     isLoadingMeta,
     isViewOnlyMode,
+    isOnlineFriend,
     newCharacterData,
     likedCharacterIds,
     isLiking,

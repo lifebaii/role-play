@@ -267,6 +267,174 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
   return newFriend
 }
 
+export async function addOnlineFriend(character: any, originalId: string): Promise<LocalFriend> {
+  const friends = await getLocalFriends()
+
+  const serverId = character.role_play?.id || character.id
+  const existingIndex = friends.findIndex(f => f.role_play.id === serverId)
+
+  if (existingIndex !== -1) {
+    return friends[existingIndex]
+  }
+
+  const hasDataField = character.data !== undefined
+  const characterData = hasDataField ? character.data : character
+
+  const characterName = characterData.name || 'character'
+  const jsonFile = new File([JSON.stringify(characterData)], `${characterName}.json`, { type: 'application/json' })
+  await characterSet(serverId, jsonFile)
+
+  const newFriend: LocalFriend = {
+    ...character,
+    data: characterData,
+    role_play: {
+      id: serverId,
+      originalId: originalId,
+      shared: character.role_play?.shared || false
+    }
+  }
+
+  friends.unshift(newFriend)
+  friendsCache = friends
+
+  console.log(`[LocalFriend] Added online friend: ${serverId}, originalId: ${originalId}`)
+
+  return newFriend
+}
+
+export async function addOnlineFriendFromBlob(
+  blob: Blob, 
+  contentType: string, 
+  characterId: string,
+  originalId: string
+): Promise<LocalFriend> {
+  const friends = await getLocalFriends()
+
+  const existingIndex = friends.findIndex(f => f.role_play.id === characterId)
+
+  if (existingIndex !== -1) {
+    return friends[existingIndex]
+  }
+
+  let characterData: any = null
+  let fileToSave: File
+
+  if (contentType.includes('application/json') || contentType.includes('text/')) {
+    const text = await blob.text()
+    characterData = JSON.parse(text)
+    const characterName = characterData.data?.name || characterData.name || 'character'
+    fileToSave = new File([blob], `${characterName}.json`, { type: 'application/json' })
+  } else {
+    const arrayBuffer = await blob.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+    
+    characterData = await extractCharacterFromPng(uint8Array)
+    
+    if (!characterData) {
+      characterData = {
+        name: characterId,
+        avatar: await blobToDataUrl(blob),
+        description: '',
+        first_mes: '',
+        personality: '',
+        scenario: '',
+        system_prompt: '',
+        creator_notes: '',
+        temperature: 1,
+        character_book: { entries: [] },
+        regex_scripts: []
+      }
+    }
+    
+    const ext = contentType.includes('png') ? 'png' : 
+                contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg' : 'png'
+    const characterName = characterData.data?.name || characterData.name || 'character'
+    fileToSave = new File([blob], `${characterName}.${ext}`, { type: contentType })
+  }
+
+  await characterSet(characterId, fileToSave)
+
+  const newFriend: LocalFriend = {
+    ...characterData,
+    data: characterData.data || characterData,
+    role_play: {
+      id: characterId,
+      originalId: originalId,
+      shared: true
+    }
+  }
+
+  friends.unshift(newFriend)
+  friendsCache = friends
+
+  console.log(`[LocalFriend] Added online friend from blob: ${characterId}, originalId: ${originalId}`)
+
+  return newFriend
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function extractCharacterFromPng(uint8Array: Uint8Array): Promise<any | null> {
+  try {
+    const textDecoder = new TextDecoder('utf-8')
+    
+    const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    for (let i = 0; i < 8; i++) {
+      if (uint8Array[i] !== pngSignature[i]) {
+        return null
+      }
+    }
+    
+    let offset = 8
+    
+    while (offset + 8 <= uint8Array.length) {
+      const length = (uint8Array[offset] << 24) | 
+                     (uint8Array[offset + 1] << 16) | 
+                     (uint8Array[offset + 2] << 8) | 
+                     uint8Array[offset + 3]
+      const type = textDecoder.decode(uint8Array.slice(offset + 4, offset + 8))
+      
+      if (type === 'IEND') break
+      
+      if (type === 'tEXt' || type === 'iTXt') {
+        const chunkData = uint8Array.slice(offset + 8, offset + 8 + length)
+        
+        let nullIndex = -1
+        for (let i = 0; i < chunkData.length; i++) {
+          if (chunkData[i] === 0) {
+            nullIndex = i
+            break
+          }
+        }
+        
+        if (nullIndex !== -1) {
+          const keyword = textDecoder.decode(chunkData.slice(0, nullIndex))
+          
+          if (keyword === 'chara' || keyword === 'character') {
+            const base64Data = textDecoder.decode(chunkData.slice(nullIndex + 1))
+            const jsonString = atob(base64Data)
+            return JSON.parse(jsonString)
+          }
+        }
+      }
+      
+      offset += 12 + length
+    }
+    
+    return null
+  } catch (e) {
+    console.error('[LocalFriend] Failed to extract character from PNG:', e)
+    return null
+  }
+}
+
 export async function createLocalFriend(characterData: any, _shared: boolean = false): Promise<LocalFriend> {
   const newId = generateUUID()
 

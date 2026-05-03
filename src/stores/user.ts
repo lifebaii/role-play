@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed, onMounted } from 'vue';
 import { isAnonymousUser, setLocalUserName, hasLocalUserName, getLocalUserName } from '@/utils/anonymousUser';
-import { getLocalFriends, addLocalFriend, removeLocalFriend, type LocalFriend } from '@/utils/localFriendStorage';
-import { userApi } from '@/api';
+import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, type LocalFriend } from '@/utils/localFriendStorage';
+import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
 
 export interface User {
@@ -217,6 +217,27 @@ export const useUserStore = defineStore('user', () => {
     return newFriend;
   };
 
+  const addOnlineFriendCharacter = async (characterId: string) => {
+    try {
+      const { blob, contentType } = await charactersApi.getRaw(characterId);
+      
+      const newFriend = await addOnlineFriendFromBlob(blob, contentType, characterId, characterId);
+      
+      const exists = friendCharacters.value.some(f => 
+        f.role_play?.id === newFriend.role_play?.id
+      );
+      if (!exists) {
+        friendCharacters.value.unshift(newFriend);
+      }
+      
+      console.log(`[UserStore] Added online friend: ${characterId}`);
+      return newFriend;
+    } catch (error) {
+      console.error('[UserStore] Failed to add online friend:', error);
+      throw error;
+    }
+  };
+
   const addLocalFriendCharacter = async (character: any) => {
     const newFriend = await addLocalFriend(character);
     const exists = friendCharacters.value.some(f => 
@@ -283,6 +304,7 @@ export const useUserStore = defineStore('user', () => {
     signin,
     canSigninToday,
     addFriend,
+    addOnlineFriendCharacter,
     addLocalFriendCharacter,
     removeFriend,
     updateUserName,
