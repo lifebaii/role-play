@@ -1,0 +1,502 @@
+name: Multi-Platform Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 应用名称
+        required: true
+        default: Role-Play
+        type: string
+      app_url:
+        description: 应用网址
+        required: true
+        default: https://role-play-web.netlify.app
+        type: string
+      version:
+        description: 版本号
+        required: true
+        default: 1.0.0
+        type: string
+      desktop:
+        description: 打包桌面端
+        required: true
+        default: true
+        type: boolean
+      mobile:
+        description: 打包手机端
+        required: true
+        default: true
+        type: boolean
+      mobile_platform:
+        description: 手机端平台
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - android
+          - ios
+
+jobs:
+  # ==================== Tauri 桌面端构建 ====================
+  create-tauri-config:
+    if: ${{ inputs.desktop }}
+    runs-on: ubuntu-latest
+    outputs:
+      config-ready: ${{ steps.create-config.outputs.config-ready }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Create Tauri config
+        id: create-config
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          APP_URL: ${{ inputs.app_url }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p src-tauri/src
+          
+          # Generate tauri.conf.json
+          cat > src-tauri/tauri.conf.json << 'EOF'
+          {
+            "$schema": "https://schema.tauri.app/config/2.0.0",
+            "productName": "",
+            "version": "",
+            "identifier": "",
+            "build": {
+              "beforeDevCommand": "",
+              "beforeBuildCommand": "",
+              "devUrl": "",
+              "frontendDist": ""
+            },
+            "app": {
+              "windows": [
+                {
+                  "title": "",
+                  "width": 1280,
+                  "height": 720,
+                  "resizable": true,
+                  "fullscreen": false
+                }
+              ],
+              "security": {
+                "csp": null
+              },
+              "withGlobalTauri": false
+            },
+            "bundle": {
+              "active": true,
+              "targets": "all",
+              "identifier": "",
+              "icon": []
+            }
+          }
+          EOF
+
+          # Generate Cargo.toml
+          cat > src-tauri/Cargo.toml << 'EOF'
+          [package]
+          name = ""
+          version = ""
+          description = ""
+          authors = ["you"]
+          license = ""
+          repository = ""
+          edition = "2021"
+
+          [build-dependencies]
+          tauri-build = { version = "2.0", features = [] }
+
+          [dependencies]
+          tauri = { version = "2.0", features = ["shell-open"] }
+          serde = { version = "1.0", features = ["derive"] }
+          serde_json = "1.0"
+
+          [features]
+          default = ["custom-protocol"]
+          custom-protocol = ["tauri/custom-protocol"]
+          EOF
+
+          # Generate main.rs
+          cat > src-tauri/src/main.rs << 'EOF'
+          // Prevents additional console window on Windows in release, DO NOT REMOVE!!
+          #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+          fn main() {
+              tauri_build::build()
+          }
+          EOF
+
+          # Generate build.rs
+          cat > src-tauri/build.rs << 'EOF'
+          fn main() {
+              tauri_build::build()
+          }
+          EOF
+
+          # Create update script
+          cat > update-tauri.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const appUrl = process.env.APP_URL;
+          const version = process.env.VERSION;
+          const safeName = appName.toLowerCase().replace(/\s/g, "-");
+          const identifier = "com." + safeName + ".app";
+          const tauriConf = JSON.parse(fs.readFileSync("src-tauri/tauri.conf.json", "utf8"));
+          tauriConf.productName = appName;
+          tauriConf.version = version;
+          tauriConf.identifier = identifier;
+          tauriConf.build.devUrl = appUrl;
+          tauriConf.app.windows[0].title = appName;
+          tauriConf.bundle.identifier = identifier;
+          fs.writeFileSync("src-tauri/tauri.conf.json", JSON.stringify(tauriConf, null, 2));
+          let cargoToml = fs.readFileSync("src-tauri/Cargo.toml", "utf8");
+          cargoToml = cargoToml.replace('name = ""', "name = \"" + safeName + "\"");
+          cargoToml = cargoToml.replace('version = ""', "version = \"" + version + "\"");
+          cargoToml = cargoToml.replace('description = ""', "description = \"" + appName + " Desktop App\"");
+          fs.writeFileSync("src-tauri/Cargo.toml", cargoToml);
+          EOF
+
+          # Run update script
+          node update-tauri.cjs
+          echo "config-ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Tauri config
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+  build-tauri-macos:
+    if: ${{ inputs.desktop }}
+    needs: create-tauri-config
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-macos
+          path: src-tauri/target/release/bundle/
+
+  build-tauri-linux:
+    if: ${{ inputs.desktop }}
+    needs: create-tauri-config
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-linux
+          path: src-tauri/target/release/bundle/
+
+  build-tauri-windows:
+    if: ${{ inputs.desktop }}
+    needs: create-tauri-config
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: ./
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-windows
+          path: src-tauri/target/release/bundle/
+
+  # ==================== Capacitor 手机端构建 ====================
+  build-android:
+    if: ${{ inputs.mobile && (inputs.mobile_platform == 'both' || inputs.mobile_platform == 'android') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Create Capacitor project
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          APP_URL: ${{ inputs.app_url }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p capacitor-project/www
+          cd capacitor-project
+
+          cat > package.json << 'EOF'
+          {
+            "name": "",
+            "version": "",
+            "description": "",
+            "main": "index.js"
+          }
+          EOF
+
+          cat > www/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data:; style-src * 'unsafe-inline'; frame-src *;">
+            <title></title>
+            <style>
+              * { margin: 0; padding: 0; }
+              html, body, iframe { width: 100%; height: 100%; border: 0; }
+            </style>
+          </head>
+          <body>
+            <iframe id="app-frame"></iframe>
+            <script>
+              const url = "";
+              document.title = "";
+              document.getElementById('app-frame').src = url;
+            </script>
+          </body>
+          </html>
+          EOF
+
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init --web-dir=www
+
+          cat > update-pkg.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const version = process.env.VERSION;
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          pkg.name = appName.toLowerCase().replace(/\s/g, "-");
+          pkg.version = version;
+          pkg.description = appName + " Mobile App";
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          EOF
+
+          cat > update-html.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const appUrl = process.env.APP_URL;
+          let html = fs.readFileSync("www/index.html", "utf8");
+          html = html.replace("<title></title>", `<title>${appName}</title>`);
+          html = html.replace('const url = "";', `const url = "${appUrl}";`);
+          html = html.replace('document.title = "";', `document.title = "${appName}";`);
+          fs.writeFileSync("www/index.html", html);
+          EOF
+
+          cat > update-cap.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const safeName = appName.toLowerCase().replace(/\s/g, "-");
+          const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+          config.appId = "com." + safeName + ".app";
+          config.appName = appName;
+          config.webDir = "www";
+          config.server = {
+            androidScheme: "https",
+            cleartext: true
+          };
+          fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
+          EOF
+
+          node update-pkg.cjs
+          node update-html.cjs
+          node update-cap.cjs
+
+          npx cap add android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-app
+          path: capacitor-project/android/app/build/outputs/apk/debug/
+
+  build-ios:
+    if: ${{ inputs.mobile && (inputs.mobile_platform == 'both' || inputs.mobile_platform == 'ios') }}
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Create Capacitor project
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          APP_URL: ${{ inputs.app_url }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p capacitor-project/www
+          cd capacitor-project
+
+          cat > package.json << 'EOF'
+          {
+            "name": "",
+            "version": "",
+            "description": "",
+            "main": "index.js"
+          }
+          EOF
+
+          cat > www/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data:; style-src * 'unsafe-inline'; frame-src *;">
+            <title></title>
+            <style>
+              * { margin: 0; padding: 0; }
+              html, body, iframe { width: 100%; height: 100%; border: 0; }
+            </style>
+          </head>
+          <body>
+            <iframe id="app-frame"></iframe>
+            <script>
+              const url = "";
+              document.title = "";
+              document.getElementById('app-frame').src = url;
+            </script>
+          </body>
+          </html>
+          EOF
+
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npx cap init --web-dir=www
+
+          cat > update-pkg.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const version = process.env.VERSION;
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          pkg.name = appName.toLowerCase().replace(/\s/g, "-");
+          pkg.version = version;
+          pkg.description = appName + " Mobile App";
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          EOF
+
+          cat > update-html.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const appUrl = process.env.APP_URL;
+          let html = fs.readFileSync("www/index.html", "utf8");
+          html = html.replace("<title></title>", `<title>${appName}</title>`);
+          html = html.replace('const url = "";', `const url = "${appUrl}";`);
+          html = html.replace('document.title = "";', `document.title = "${appName}";`);
+          fs.writeFileSync("www/index.html", html);
+          EOF
+
+          cat > update-cap.cjs << 'EOF'
+          const fs = require("fs");
+          const appName = process.env.APP_NAME;
+          const safeName = appName.toLowerCase().replace(/\s/g, "-");
+          const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+          config.appId = "com." + safeName + ".app";
+          config.appName = appName;
+          config.webDir = "www";
+          fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
+          EOF
+
+          node update-pkg.cjs
+          node update-html.cjs
+          node update-cap.cjs
+
+          npx cap add ios
+          echo "iOS build requires Apple Developer account and certificates"
+
+      - name: Upload iOS project
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-project
+          path: capacitor-project/ios/
