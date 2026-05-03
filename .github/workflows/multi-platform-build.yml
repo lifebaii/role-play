@@ -300,7 +300,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
+          java-version: "21"
           distribution: "temurin"
 
       - name: Create Capacitor project
@@ -485,6 +485,9 @@ jobs:
           config.appId = "com." + safeName + ".app";
           config.appName = appName;
           config.webDir = "www";
+          config.ios = {
+            minimumDeploymentTarget: "13.0"
+          };
           fs.writeFileSync("capacitor.config.json", JSON.stringify(config, null, 2));
           EOF
 
@@ -493,6 +496,11 @@ jobs:
           node update-cap.cjs
 
           npx cap add ios
+
+          cd ios/App
+          sed -i '' 's/platform :ios.*/platform :ios, '\''13.0'\''/' Podfile
+          pod install --repo-update
+
           echo "iOS build requires Apple Developer account and certificates"
 
       - name: Upload iOS project

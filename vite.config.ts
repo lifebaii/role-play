@@ -20,7 +20,7 @@ export default defineConfig(({ command, mode }) => {
       ...(isDev ? [removeManifestPlugin()] : []),
       ...(!isDev ? [VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['favicon.png'],
         manifest: {
           name: 'Role-Play',
           short_name: 'RolePlay',
