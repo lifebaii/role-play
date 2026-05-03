@@ -18,6 +18,11 @@ on:
         required: true
         default: 1.0.0
         type: string
+      platforms:
+        description: 平台选择 (macos, ubuntu, windows, ios, android, all)
+        required: true
+        default: all
+        type: string
 
 jobs:
   create-tauri-project:
@@ -153,7 +158,7 @@ jobs:
           name: tauri-config
           path: src-tauri/
 
-  build-tauri:
+  build-desktop:
     needs: create-tauri-project
     strategy:
       fail-fast: false
@@ -198,3 +203,106 @@ jobs:
           name: tauri-app-${{ matrix.platform }}
           path: |
             src-tauri/target/release/bundle/
+
+  build-android:
+    needs: create-tauri-project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.2.9519653"
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Android targets
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Initialize Android project
+        run: |
+          cargo tauri android init
+        working-directory: ./
+        continue-on-error: true
+
+      - name: Build Android APK
+        run: |
+          cargo tauri android build --apk
+        working-directory: ./
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-android
+          path: |
+            src-tauri/gen/android/app/build/outputs/
+
+  build-ios:
+    needs: create-tauri-project
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Tauri config
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-config
+          path: src-tauri/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install iOS targets
+        run: |
+          rustup target add aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0"
+
+      - name: Initialize iOS project
+        run: |
+          cargo tauri ios init
+        working-directory: ./
+        continue-on-error: true
+
+      - name: Build iOS app
+        run: |
+          cargo tauri ios build --no-code-sign
+        working-directory: ./
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-app-ios
+          path: |
+            src-tauri/gen/apple/build/

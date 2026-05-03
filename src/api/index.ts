@@ -8,13 +8,16 @@ interface RequestOptions {
   params?: Record<string, string>
 }
 
-function createRequest(tokenSource: 'user-first' | 'admin-only') {
+function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
   return async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const { method = 'GET', body, headers = {}, params } = options
 
     let token
     if (tokenSource === 'admin-only') {
       token = localStorage.getItem('admin_token')
+    } else if (tokenSource === 'user-only') {
+      // user-only：只使用 user_token
+      token = localStorage.getItem('user_token')
     } else {
       // user-first：优先使用 user_token
       token = localStorage.getItem('user_token')
@@ -84,7 +87,7 @@ function createRequest(tokenSource: 'user-first' | 'admin-only') {
   }
 }
 
-const request = createRequest('user-first')
+const request = createRequest('user-only')
 const adminOnlyRequest = createRequest('admin-only')
 
 export const api = {
@@ -483,9 +486,6 @@ export const v1Api = {
     signal?: AbortSignal
   ): AsyncGenerator<string> {
     let token = localStorage.getItem('user_token')
-    if (!token) {
-      token = localStorage.getItem('admin_token')
-    }
     
     const response = await fetch(`${API_BASE}/v1/chat/completions`, {
       method: 'POST',
@@ -552,9 +552,6 @@ export const v1Api = {
 
   chatCompletion: async (options: V1ChatCompletionOptions): Promise<string> => {
     let token = localStorage.getItem('user_token')
-    if (!token) {
-      token = localStorage.getItem('admin_token')
-    }
     
     const response = await fetch(`${API_BASE}/v1/chat/completions`, {
       method: 'POST',
