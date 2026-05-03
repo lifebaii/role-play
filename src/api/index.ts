@@ -61,6 +61,17 @@ function createRequest(tokenSource: 'user-first' | 'admin-only') {
     const response = await fetch(url, config)
 
     if (!response.ok) {
+      // 401 错误处理：自动退出登录
+      if (response.status === 401) {
+        console.log('[API] 401 Unauthorized, logging out')
+        if (tokenSource === 'admin-only') {
+          localStorage.removeItem('admin_token')
+        } else {
+          localStorage.removeItem('user_token')
+          localStorage.removeItem('user_data')
+        }
+      }
+      
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
       throw new Error(error.error || `HTTP ${response.status}`)
     }

@@ -56,6 +56,18 @@ app.use(createPinia())
 app.use(router)
 app.mount('#app')
 
+function removeLoading() {
+  const loading = document.getElementById('app-loading')
+  if (loading) {
+    loading.classList.add('hidden')
+    setTimeout(() => {
+      loading.remove()
+    }, 300)
+  }
+}
+
+removeLoading()
+
 const isDev = import.meta.env.DEV
 if (!isDev) {
   if ('serviceWorker' in navigator) {

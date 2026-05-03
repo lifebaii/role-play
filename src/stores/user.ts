@@ -123,6 +123,8 @@ export const useUserStore = defineStore('user', () => {
           setUser(result.user);
         })
         .catch(() => {
+          setToken(null);
+          setUser(null);
         });
       return { user: user.value };
     }
