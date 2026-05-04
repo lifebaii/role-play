@@ -80,16 +80,7 @@
         </div>
         
         <div class="p-3 sm:p-6">
-          <div v-if="isLoadingCharacterDetail" class="flex flex-col items-center justify-center py-12">
-            <svg class="w-10 h-10 animate-spin text-theme-primary mb-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="text-theme-text-secondary">加载角色详情中...</p>
-          </div>
-          
           <CharacterForm
-            v-else
             ref="characterFormRef"
             :model-value="characterData"
             :character-id="editingCharacter?.role_play?.id || editingCharacter?.id"
@@ -99,12 +90,9 @@
             :show-admin-fields="false"
             :view-only="isViewOnlyMode"
             :saving="isSavingCharacter"
-            :shared="editingCharacterMeta.shared"
-            :updating-shared="isUpdatingShared"
             @submit="$emit('save', $event)"
             @cancel="$emit('update:visible', false)"
             @delete="$emit('delete')"
-            @update:shared="$emit('update:shared', $event)"
             @image-saved="handleImageSaved"
           />
           
@@ -158,6 +146,40 @@
               </svg>
               <span class="hidden sm:inline">删除</span>
             </button>
+            
+            <div 
+              v-if="!editingCharacterMeta.originalId"
+              class="flex items-center gap-2 px-2 py-1.5 sm:px-3 rounded-lg bg-[var(--theme-card-hover)] border border-theme-border"
+              :class="{ 'opacity-50': !canToggleShared || isUpdatingShared }"
+              @click="handleSharedClick"
+            >
+              <span class="text-xs sm:text-sm text-theme-text-secondary">
+                <template v-if="isLoadingMeta">
+                  <svg class="w-3 h-3 animate-spin inline-block mr-1" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  加载中...
+                </template>
+                <template v-else>分享</template>
+              </span>
+              <label v-if="!isLoadingMeta" class="relative inline-flex items-center" :class="canToggleShared && !isUpdatingShared ? 'cursor-pointer' : 'cursor-not-allowed'">
+                <input
+                  :checked="editingCharacterMeta.shared"
+                  @change="handleToggleShared"
+                  type="checkbox"
+                  :disabled="!canToggleShared || isUpdatingShared"
+                  class="sr-only peer"
+                />
+                <div v-if="isUpdatingShared" class="w-9 h-5 flex items-center justify-center">
+                  <svg class="w-3 h-3 animate-spin text-theme-primary" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+                <div v-else class="w-9 h-5 bg-[var(--theme-card-hover)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--theme-primary)]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-theme-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+              </label>
+            </div>
           </div>
           <div class="flex gap-1.5 sm:gap-4 sm:ml-auto">
             <button
@@ -195,7 +217,11 @@ import { computed, ref, watch } from 'vue'
 import CharacterForm from '@/components/CharacterForm.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import type { Character } from '@/types'
-import { getFriendAvatar, clearCharacterAvatarCache } from '@/utils/localFriendStorage'
+import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob } from '@/utils/localFriendStorage'
+import { useUserStore } from '@/stores/user'
+import { charactersApi } from '@/api'
+
+const userStore = useUserStore()
 
 interface MetaData {
   originalId: string | null
@@ -207,6 +233,9 @@ interface MetaData {
 }
 
 const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
+const localIsUpdatingShared = ref(false)
+
+const isLoggedIn = computed(() => userStore.isLoggedIn())
 
 const props = defineProps<{
   visible: boolean
@@ -226,9 +255,12 @@ const props = defineProps<{
   isSavingCharacter: boolean
   isLoadingOriginal: boolean
   isLikingInEdit: boolean
-  isUpdatingShared: boolean
+  existsOnServer: boolean
+  isOwnerOfCharacter: boolean
   characterData: any
 }>()
+
+const isUpdatingShared = computed(() => localIsUpdatingShared.value)
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
@@ -282,6 +314,7 @@ function handleImageSaved(characterId: string) {
 
 const characterTypeLabel = computed(() => {
   if (!props.editingCharacter) return ''
+  if (props.existsOnServer && !props.isOwnerOfCharacter) return '来自分享'
   if (props.editingCharacterMeta.originalId) return '来自分享'
   if (props.editingCharacterMeta.shared) return '已分享'
   return '私密'
@@ -289,6 +322,9 @@ const characterTypeLabel = computed(() => {
 
 const characterTypeClass = computed(() => {
   if (!props.editingCharacter) return ''
+  if (props.existsOnServer && !props.isOwnerOfCharacter) {
+    return 'bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] border border-[var(--theme-accent)]/20'
+  }
   if (props.editingCharacterMeta.originalId) {
     return 'bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] border border-[var(--theme-accent)]/20'
   }
@@ -297,4 +333,78 @@ const characterTypeClass = computed(() => {
   }
   return 'bg-[var(--theme-primary)]/10 text-theme-text-accent border border-[var(--theme-primary)]/20'
 })
+
+const canToggleShared = computed(() => {
+  if (props.isLoadingMeta) return false
+  if (!isLoggedIn.value) return false
+  if (props.existsOnServer && !props.isOwnerOfCharacter) {
+    return false
+  }
+  return true
+})
+
+const sharedDisabledReason = computed(() => {
+  if (props.isLoadingMeta) return '正在加载角色信息...'
+  if (!isLoggedIn.value) return '请先登录'
+  if (props.existsOnServer && !props.isOwnerOfCharacter) {
+    return '此角色不属于您'
+  }
+  return ''
+})
+
+function handleSharedClick(event: MouseEvent) {
+  if (!canToggleShared.value) {
+    alert(sharedDisabledReason.value)
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}
+
+async function handleToggleShared() {
+  if (!isLoggedIn.value) {
+    userStore.requireLogin()
+    return
+  }
+  
+  const characterId = props.editingCharacter?.role_play?.id
+  const userId = userStore.user?.id
+  
+  if (!characterId || !userId) return
+  
+  const newSharedState = !props.editingCharacterMeta.shared
+  
+  if (newSharedState) {
+    const confirmed = confirm('分享后其他用户可以添加此角色，确定要分享吗？')
+    if (!confirmed) {
+      return
+    }
+  }
+  
+  localIsUpdatingShared.value = true
+  
+  try {
+    if (newSharedState) {
+      const blob = await getCharacterBlob(characterId)
+      if (!blob) {
+        alert('无法获取角色数据')
+        return
+      }
+      
+      const characterName = props.editingCharacter?.data?.name || props.editingCharacter?.name || 'character'
+      const isImage = blob.type.startsWith('image/')
+      const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
+      
+      await charactersApi.uploadUserCharacter(userId, characterId, blob, fileName)
+    } else {
+      await charactersApi.updateUserCharacterShared(userId, characterId, false)
+    }
+    
+    emit('update:shared', newSharedState)
+  } catch (error: any) {
+    console.error('更新分享状态失败:', error)
+    alert('更新分享状态失败: ' + error.message)
+  } finally {
+    localIsUpdatingShared.value = false
+  }
+}
 </script>

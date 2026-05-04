@@ -204,12 +204,13 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref } from 'vue'
+import { watch, ref, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
 import { getAvatarUrl, preloadAvatars, getCharacterDisplayName, getCharacterDisplayDescription, useAvatar } from '@/composables/useAvatar'
 import { clearCharacterAvatarCache, getFriendAvatar } from '@/utils/localFriendStorage'
+import { eventBus } from '@/utils/eventBus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -299,6 +300,18 @@ function handleLogout() {
     userStore.logout()
   }
 }
+
+function handleUserLogout() {
+  // store 已经处理了状态清除，这里确保 UI 同步
+}
+
+onMounted(() => {
+  eventBus.on('user-logout', handleUserLogout)
+})
+
+onUnmounted(() => {
+  eventBus.off('user-logout', handleUserLogout)
+})
 
 function handleImportUserCharacter(event: Event) {
   emit('importCharacter', event)

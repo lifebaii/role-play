@@ -26,6 +26,7 @@ export function useCharacter() {
     likeCount: 0,
     commentCount: 0,
     isLiked: false,
+    originalUserId: null as string | null,
     originalMeta: null as {
       originalId: string | null
       shared: boolean
@@ -51,6 +52,8 @@ export function useCharacter() {
   const isViewOnlyMode = ref(false)
   const likedCharacterIds = ref<string[]>([])
   const isOnlineFriend = ref(false)
+  const existsOnServer = ref(false)
+  const isOwnerOfCharacter = ref(false)
   
   const newCharacterData = ref({
     name: '',
@@ -199,12 +202,15 @@ export function useCharacter() {
       likeCount: 0,
       commentCount: 0,
       isLiked: false,
+      originalUserId: null,
       originalMeta: null
     }
     isViewOnlyMode.value = false
     isLoadingCharacterDetail.value = true
     isLoadingMeta.value = true
     isOnlineFriend.value = false
+    existsOnServer.value = false
+    isOwnerOfCharacter.value = false
     showCreateCharacterModal.value = true
     
     try {
@@ -215,22 +221,31 @@ export function useCharacter() {
       if (await isLocalFriend(charId)) {
         fullCharacter = await getLocalFriend(charId)
         
-        if (fullCharacter?.role_play?.originalId) {
+        if (userStore.isLoggedIn()) {
           try {
-            const meta = await charactersApi.getMeta(charId)
-            if (meta) {
-              isOnlineFriend.value = true
-              editingCharacterMeta.value.originalId = fullCharacter.role_play.originalId
-              editingCharacterMeta.value.shared = meta.shared || false
-              editingCharacterMeta.value.likeCount = meta.likeCount || 0
-              editingCharacterMeta.value.commentCount = meta.commentCount || 0
-              editingCharacterMeta.value.isLiked = meta.isLiked || false
-              if (meta.originalMeta) {
-                editingCharacterMeta.value.originalMeta = meta.originalMeta
+            const detail = await charactersApi.getCharacterDetail(charId)
+            if (detail) {
+              editingCharacterMeta.value.shared = detail.characterMeta.shared || false
+              editingCharacterMeta.value.likeCount = detail.characterMeta.likeCount || 0
+              editingCharacterMeta.value.commentCount = detail.characterMeta.commentCount || 0
+              editingCharacterMeta.value.isLiked = detail.characterMeta.isLiked || false
+              editingCharacterMeta.value.originalUserId = detail.characterMeta.originalUserId || null
+              
+              existsOnServer.value = detail.exists
+              isOwnerOfCharacter.value = detail.isOwner
+              
+              if (fullCharacter?.role_play?.originalId || detail.characterMeta.originalId) {
+                isOnlineFriend.value = true
+                editingCharacterMeta.value.originalId = fullCharacter?.role_play?.originalId || detail.characterMeta.originalId
+                if (detail.characterMeta.originalMeta) {
+                  editingCharacterMeta.value.originalMeta = detail.characterMeta.originalMeta
+                }
               }
             }
           } catch (e) {
-            console.log('[Character] Failed to get meta, character may not exist on server')
+            console.log('[Character] Failed to get detail, character may not exist on server')
+            existsOnServer.value = false
+            isOwnerOfCharacter.value = false
           }
         }
       }
@@ -566,43 +581,6 @@ export function useCharacter() {
     }
   }
   
-  const isUpdatingShared = ref(false)
-  
-  async function handleUpdateShared(value: boolean) {
-    if (!editingCharacter.value) return
-    
-    const editId = editingCharacter.value.role_play?.id || editingCharacter.value.id
-    
-    if (await isLocalFriend(editId)) {
-      isUpdatingShared.value = true
-      try {
-        await updateLocalFriendShared(editId, value)
-        editingCharacterMeta.value.shared = value
-        await userStore.loadLocalFriends()
-      } catch (e: any) {
-        console.error('Failed to update shared:', e)
-        throw new Error(e.message || '更新分享状态失败')
-      } finally {
-        isUpdatingShared.value = false
-      }
-      return
-    }
-    
-    if (!userStore.user?.id) return
-    
-    isUpdatingShared.value = true
-    try {
-      await updateLocalFriendShared(editingCharacter.value.id, value)
-      editingCharacterMeta.value.shared = value
-      await userStore.loadLocalFriends()
-    } catch (e: any) {
-      console.error('Failed to update shared:', e)
-      throw new Error(e.message || '更新分享状态失败')
-    } finally {
-      isUpdatingShared.value = false
-    }
-  }
-  
   return {
     showCreateCharacterModal,
     showDeleteCharacterConfirm,
@@ -615,12 +593,13 @@ export function useCharacter() {
     isLoadingMeta,
     isViewOnlyMode,
     isOnlineFriend,
+    existsOnServer,
+    isOwnerOfCharacter,
     newCharacterData,
     likedCharacterIds,
     isLiking,
     isLikingInEdit,
     isLoadingOriginal,
-    isUpdatingShared,
     friendCharacters,
     isCurrentCharacterFriend,
     isCurrentCharacterUserOwned,
@@ -637,7 +616,6 @@ export function useCharacter() {
     handleDeleteCharacter,
     handleToggleLike,
     handleToggleLikeInEdit,
-    handleUpdateShared,
     loadOriginalCharacterData,
     loadLikedCharacters,
     handleImportUserCharacter

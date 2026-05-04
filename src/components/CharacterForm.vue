@@ -110,29 +110,6 @@
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
           </div>
-          
-          <div v-if="!viewOnly" class="flex items-center justify-between p-4 bg-[var(--theme-card-hover)] rounded-xl border border-theme-border" :class="{ 'opacity-50': (isEdit && !isUserCreated) || updatingShared }">
-            <div>
-              <div class="text-sm font-medium text-theme-text-primary">分享角色</div>
-              <div class="text-xs text-theme-text-secondary">{{ isEdit && !isUserCreated ? '角色不支持分享' : '开启后其他用户可添加' }}</div>
-            </div>
-            <label class="relative inline-flex items-center" :class="(isEdit && !isUserCreated) || updatingShared ? 'cursor-not-allowed' : 'cursor-pointer'">
-              <input
-                :checked="shared"
-                @change="$emit('update:shared', !shared)"
-                type="checkbox"
-                :disabled="(isEdit && !isUserCreated) || updatingShared"
-                class="sr-only peer"
-              />
-              <div v-if="updatingShared" class="w-11 h-6 flex items-center justify-center">
-                <svg class="w-4 h-4 animate-spin text-theme-primary" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              </div>
-              <div v-else class="w-11 h-6 bg-[var(--theme-card-hover)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--theme-primary)]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-theme-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]" :class="{ 'peer-disabled:opacity-50 peer-disabled:cursor-not-allowed': isEdit && !isUserCreated }"></div>
-            </label>
-          </div>
         </div>
       </div>
     </div>
@@ -529,8 +506,6 @@ const props = defineProps<{
   showAdminFields?: boolean
   viewOnly?: boolean
   saving?: boolean
-  shared?: boolean
-  updatingShared?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -539,7 +514,6 @@ const emit = defineEmits<{
   (e: 'cancel'): void
   (e: 'delete'): void
   (e: 'export'): void
-  (e: 'update:shared', value: boolean): void
   (e: 'imageSaved', characterId: string): void
 }>()
 

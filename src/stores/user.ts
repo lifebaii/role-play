@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { ref, computed, onMounted } from 'vue';
-import { isAnonymousUser, setLocalUserName, hasLocalUserName, getLocalUserName } from '@/utils/anonymousUser';
+import { ref, computed } from 'vue';
+import { setLocalUserName, getLocalUserName } from '@/utils/anonymousUser';
 import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, clearFriendsCache, type LocalFriend } from '@/utils/localFriendStorage';
 import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
@@ -38,25 +38,21 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 监听用户登录过期事件
+  let isLogoutListenerInitialized = false;
+  
   const handleUserLogout = () => {
     setToken(null);
     setUser(null);
   };
 
-  // 在组件挂载时添加监听器
   const initEventListeners = () => {
+    if (isLogoutListenerInitialized) return;
+    isLogoutListenerInitialized = true;
     eventBus.on('user-logout', handleUserLogout);
   };
 
-  // 清理事件监听器
-  const cleanupEventListeners = () => {
-    eventBus.off('user-logout', handleUserLogout);
-  };
-
-  // 初始化时添加监听
-  if (typeof window !== 'undefined') {
-    initEventListeners();
-  }
+  // 确保 store 初始化时注册监听器
+  initEventListeners();
 
   const loadLocalFriends = async () => {
     clearFriendsCache();

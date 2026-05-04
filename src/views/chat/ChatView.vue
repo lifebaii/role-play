@@ -440,13 +440,14 @@
       :is-saving-character="isSavingCharacter"
       :is-loading-original="isLoadingOriginal"
       :is-liking-in-edit="isLikingInEdit"
-      :is-updating-shared="isUpdatingShared"
+      :exists-on-server="existsOnServer"
+      :is-owner-of-character="isOwnerOfCharacter"
       :character-data="newCharacterData"
       @save="saveCharacter"
       @delete="handleDeleteFromEdit"
       @load-original="handleLoadOriginalCharacterData"
       @toggle-like="handleToggleLikeInEdit"
-      @update:shared="handleUpdateShared"
+      @update:shared="handleUpdateSharedFromModal"
       @avatar-updated="handleAvatarUpdated"
     />
 
@@ -721,7 +722,8 @@ const {
   likedCharacterIds,
   isLikingInEdit,
   isLoadingOriginal,
-  isUpdatingShared,
+  existsOnServer,
+  isOwnerOfCharacter,
   friendCharacters,
   isCurrentCharacterFriend,
   isCurrentCharacterUserOwned,
@@ -1114,6 +1116,11 @@ function handleAvatarUpdated(characterId: string) {
     avatarError.value = false
     loadCurrentCharacterAvatar()
   }
+}
+
+function handleUpdateSharedFromModal(value: boolean) {
+  editingCharacterMeta.value.shared = value
+  userStore.loadLocalFriends()
 }
 
 function openCharacterInfoFromCurrent() {

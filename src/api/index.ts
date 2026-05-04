@@ -113,6 +113,12 @@ export const api = {
     })
     
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_data')
+        eventBus.emit('user-logout')
+        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      }
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
       throw new Error(error.error || `HTTP ${response.status}`)
     }
@@ -352,6 +358,14 @@ export const charactersApi = {
     api.put<Character>(`/characters/user/${userId}/${charId}`, data),
   updateUserCharacterShared: (userId: string, charId: string, shared: boolean) => 
     api.put<{ success: boolean; shared: boolean }>(`/characters/user/${userId}/${charId}/shared`, { shared }),
+  uploadUserCharacter: (userId: string, charId: string, file: Blob, fileName: string) => {
+    const formData = new FormData();
+    formData.append('file', file, fileName);
+    return api.post<{ success: boolean; characterId: string }>(
+      `/characters/user/${userId}/${charId}/upload`,
+      formData
+    );
+  },
   deleteUserCharacter: (userId: string, charId: string) => api.delete(`/characters/user/${userId}/${charId}`),
   importUserCharacters: (userId: string, characters: any[]) => 
     api.post(`/characters/user/import`, { userId, characters }),
@@ -360,20 +374,26 @@ export const charactersApi = {
   
   toggleLike: (characterId: string) => api.post<{ liked: boolean; likeCount: number }>(`/characters/${characterId}/like`, {}),
   
-  getMeta: (characterId: string) => api.get<{
-    originalId: string | null
-    shared: boolean
-    likeCount: number
-    commentCount: number
-    isLiked: boolean
-    originalMeta: {
+  getCharacterDetail: (characterId: string) => api.get<{
+    characterMeta: {
       originalId: string | null
       shared: boolean
+      originalUserId: string | null
       likeCount: number
       commentCount: number
       isLiked: boolean
-    } | null
-  }>(`/characters/${characterId}/meta`),
+      originalMeta: {
+        originalId: string | null
+        shared: boolean
+        likeCount: number
+        commentCount: number
+        isLiked: boolean
+      } | null
+    }
+    character: any | null
+    exists: boolean
+    isOwner: boolean
+  }>(`/characters/${characterId}/detail`),
   
   getLikedCharacters: () => api.get<{ likedCharacterIds: string[] }>('/characters/likes/list'),
   
@@ -530,6 +550,12 @@ export const v1Api = {
     })
     
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_data')
+        eventBus.emit('user-logout')
+        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      }
       let errorMessage = `HTTP ${response.status}`
       try {
         const errorData = await response.json()
@@ -595,6 +621,12 @@ export const v1Api = {
     })
     
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_data')
+        eventBus.emit('user-logout')
+        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      }
       let errorMessage = `HTTP ${response.status}`
       try {
         const errorData = await response.json()
