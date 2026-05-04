@@ -139,6 +139,7 @@
 import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { Preset } from '@/types'
+import { presetsApi } from '@/api'
 
 const presets = ref<Preset[]>([])
 const isSaving = ref(false)

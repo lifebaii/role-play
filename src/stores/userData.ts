@@ -35,6 +35,7 @@ export interface UserPreset {
   id: string
   name: string
   content: string
+  prompt: string
   enabled: boolean
   order: number
 }

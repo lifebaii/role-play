@@ -5,56 +5,33 @@
         <h2 class="text-base sm:text-xl font-bold gradient-text flex items-center gap-2">
           <span class="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] rounded-md sm:rounded-lg flex items-center justify-center text-white text-xs sm:text-sm shadow-lg">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-          </span>
-          添加好友
-        </h2>
-        <div class="flex items-center gap-2">
-          <button
-            @click="showUserCharactersModal = true"
-            class="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm bg-gradient-to-r from-[var(--theme-secondary)] to-[var(--theme-accent)] hover:from-[var(--theme-secondary-dark)] hover:to-[var(--theme-accent-dark)] text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-1"
-          >
-            <svg class="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            <span class="hidden sm:inline">好友召回</span>
-          </button>
-          <button @click="close" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg sm:rounded-xl hover:bg-[var(--theme-card-hover)] text-theme-text-secondary hover:text-theme-text-primary transition-colors duration-200">
-            <span class="text-base sm:text-lg">×</span>
-          </button>
-        </div>
+          </span>
+          我创建的角色
+          <span v-if="total > 0" class="text-xs sm:text-sm font-normal text-theme-text-secondary">({{ total }})</span>
+        </h2>
+        <button @click="close" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg sm:rounded-xl hover:bg-[var(--theme-card-hover)] text-theme-text-secondary hover:text-theme-text-primary transition-colors duration-200">
+          <span class="text-base sm:text-lg">×</span>
+        </button>
       </div>
       
       <div class="p-3 sm:p-4 border-b border-theme-border">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <div class="relative flex-1">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索角色名称..."
+            class="w-full pl-10 pr-4 py-2.5 chat-input-field border border-theme-border rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+          />
+          <div v-if="isSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
+            <svg class="w-5 h-5 text-[var(--theme-primary)] animate-spin" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
             </svg>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="搜索角色名称..."
-              class="w-full pl-10 pr-4 py-2.5 chat-input-field border border-theme-border rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
-            />
-            <div v-if="isSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
-              <svg class="w-5 h-5 text-[var(--theme-primary)] animate-spin" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c00 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-              </svg>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <select
-              v-model="sortBy"
-              class="px-3 py-2 chat-input-field border border-theme-border rounded-xl text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
-            >
-              <option value="updatedAt">最新更新</option>
-              <option value="likeCount">点赞数</option>
-              <option value="commentCount">评论数</option>
-              <option value="createdAt">创建日期</option>
-            </select>
           </div>
         </div>
       </div>
@@ -69,8 +46,8 @@
         :show-add-button="true"
         :show-friend-status="true"
         empty-text="暂无角色"
-        empty-subtext="请先在管理员页面添加角色"
-        friend-status-title="已添加"
+        empty-subtext="创建你的第一个角色吧"
+        friend-status-title="已召回"
         @page-change="loadPage"
         @select="viewCharacterDetail"
         @action="toggleFriend"
@@ -84,11 +61,6 @@
     >
       {{ toastMessage }}
     </div>
-    
-    <UserCharactersModal
-      v-model:visible="showUserCharactersModal"
-      @view-character="handleViewUserCharacter"
-    />
   </div>
 </template>
 
@@ -99,7 +71,6 @@ import { charactersApi } from '@/api'
 import type { Character } from '@/types'
 import { getLocalFriends } from '@/utils/localFriendStorage'
 import CharacterSelectorList from './CharacterSelectorList.vue'
-import UserCharactersModal from './UserCharactersModal.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -114,7 +85,6 @@ const userStore = useUserStore()
 
 const characters = ref<Character[]>([])
 const searchQuery = ref('')
-const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'>('updatedAt')
 const currentPage = ref(1)
 const pageSize = 10
 const total = ref(0)
@@ -125,7 +95,6 @@ const isSearching = ref(false)
 const actionCharacterId = ref<string | null>(null)
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
-const showUserCharactersModal = ref(false)
 
 const localFriendIds = ref<Set<string>>(new Set())
 
@@ -158,7 +127,7 @@ const toggleFriend = async (character: Character) => {
     await userStore.addOnlineFriendCharacter(characterId)
     character.isFriend = true
     await userStore.loadLocalFriends()
-    showToast('添加成功', 'success')
+    showToast('召回成功', 'success')
   } catch (error: any) {
     showToast(error.message || '操作失败', 'error')
   } finally {
@@ -167,10 +136,6 @@ const toggleFriend = async (character: Character) => {
 }
 
 const viewCharacterDetail = (character: Character) => {
-  emit('view-character', character)
-}
-
-const handleViewUserCharacter = async (character: Character) => {
   emit('view-character', character)
 }
 
@@ -201,53 +166,38 @@ const debounceSearch = (() => {
 })()
 
 const fetchCharacters = async () => {
+  const userId = userStore.user?.id
+  if (!userId) {
+    characters.value = []
+    return
+  }
+  
   isLoading.value = true
   try {
     await updateLocalFriendIds()
     
     const params: Record<string, string> = {
       page: currentPage.value.toString(),
-      pageSize: pageSize.toString(),
-      sortBy: sortBy.value
+      pageSize: pageSize.toString()
     }
     if (searchQuery.value.trim()) {
       params.search = searchQuery.value.trim()
     }
     
-    if (userStore.user) {
-      params.userId = userStore.user.id
-    }
+    const response = await charactersApi.getUserCharacters(userId, params)
     
-    if (localFriendIds.value.size > 0) {
-      params.friendIds = JSON.stringify(Array.from(localFriendIds.value))
-    }
-    
-    const response = await charactersApi.getSharedCharacters(params)
-    
-    characters.value = response.characters.map((item: any) => {
-      const char = item.character || {}
-      const metaData = item.data || {}
+    characters.value = (response.characters || []).map((char: any) => {
+      const characterId = char.role_play?.id || char.id
       return {
         ...char,
-        likeCount: metaData.likeCount || 0,
-        liked: metaData.liked || false,
-        isOfficial: metaData.isOfficial || false,
-        isFriend: metaData.isFriend || false,
-        shared: metaData.shared || false
+        isFriend: localFriendIds.value.has(characterId)
       }
     })
-    total.value = response.total
-    currentPage.value = response.page
-    totalPages.value = response.totalPages
-    
-    localStorage.setItem('friend_selector_all', JSON.stringify({
-      characters: characters.value,
-      total: total.value,
-      page: currentPage.value,
-      totalPages: totalPages.value
-    }))
+    total.value = response.total || 0
+    currentPage.value = response.page || 1
+    totalPages.value = response.totalPages || 1
   } catch (error) {
-    console.error('Failed to fetch characters:', error)
+    console.error('Failed to fetch user characters:', error)
     characters.value = []
     total.value = 0
     totalPages.value = 1
@@ -260,16 +210,11 @@ watch(searchQuery, (query) => {
   debounceSearch(query)
 })
 
-watch(sortBy, () => {
-  currentPage.value = 1
-  fetchCharacters()
-})
-
 watch(() => props.visible, async (visible) => {
   if (visible) {
     searchQuery.value = ''
     currentPage.value = 1
-    
+    total.value = 0
     await fetchCharacters()
   }
 })

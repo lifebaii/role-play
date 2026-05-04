@@ -47,28 +47,15 @@
               共 <span class="font-bold gradient-text">{{ filteredCharacters.length }}</span> 个角色
             </span>
             <div class="flex items-center gap-2">
-              <button
-                @click="sortBy = 'name'"
-                :class="[
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                  sortBy === 'name'
-                    ? 'bg-[var(--theme-primary)]/10 text-theme-text-accent border border-[var(--theme-primary)]/20'
-                    : 'text-theme-text-secondary hover:bg-[var(--theme-card-hover)]'
-                ]"
+              <select
+                v-model="sortBy"
+                class="px-3 py-1.5 chat-input-field border border-theme-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
               >
-                按名称排序
-              </button>
-              <button
-                @click="sortBy = 'created'"
-                :class="[
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                  sortBy === 'created'
-                    ? 'bg-[var(--theme-primary)]/10 text-theme-text-accent border border-[var(--theme-primary)]/20'
-                    : 'text-theme-text-secondary hover:bg-[var(--theme-card-hover)]'
-                ]"
-              >
-                按创建时间排序
-              </button>
+                <option value="updatedAt">最新更新</option>
+                <option value="likeCount">点赞数</option>
+                <option value="commentCount">评论数</option>
+                <option value="createdAt">创建日期</option>
+              </select>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -269,6 +256,9 @@ interface Character {
   }
   regex_scripts?: any[]
   createdAt?: number
+  updatedAt?: number
+  likeCount?: number
+  commentCount?: number
   spec?: string
   spec_version?: string
   data?: {
@@ -283,6 +273,7 @@ interface Character {
   role_play?: {
     id?: string
     createdAt?: number
+    updatedAt?: number
     shared?: boolean
   }
 }
@@ -338,8 +329,20 @@ const emit = defineEmits<{
 
 const dragIndex = ref<number | null>(null)
 const searchQuery = ref('')
-const sortBy = ref<'name' | 'created'>('name')
+const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'>('updatedAt')
 const viewMode = ref<'grid' | 'list'>('grid')
+
+function getCharacterUpdatedAt(character: Character): number | undefined {
+  return character.role_play?.updatedAt || character.updatedAt
+}
+
+function getCharacterLikeCount(character: Character): number {
+  return character.likeCount || 0
+}
+
+function getCharacterCommentCount(character: Character): number {
+  return character.commentCount || 0
+}
 
 const filteredCharacters = computed(() => {
   let result = [...props.characters]
@@ -353,11 +356,20 @@ const filteredCharacters = computed(() => {
     })
   }
 
-  if (sortBy.value === 'name') {
-    result.sort((a, b) => getCharacterName(a).localeCompare(getCharacterName(b)))
-  } else {
-    result.sort((a, b) => (getCharacterCreatedAt(b) || 0) - (getCharacterCreatedAt(a) || 0))
-  }
+  result.sort((a, b) => {
+    switch (sortBy.value) {
+      case 'updatedAt':
+        return (getCharacterUpdatedAt(b) || 0) - (getCharacterUpdatedAt(a) || 0)
+      case 'likeCount':
+        return getCharacterLikeCount(b) - getCharacterLikeCount(a)
+      case 'commentCount':
+        return getCharacterCommentCount(b) - getCharacterCommentCount(a)
+      case 'createdAt':
+        return (getCharacterCreatedAt(b) || 0) - (getCharacterCreatedAt(a) || 0)
+      default:
+        return 0
+    }
+  })
 
   return result
 })

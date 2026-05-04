@@ -444,12 +444,18 @@
       :is-owner-of-character="isOwnerOfCharacter"
       :show-comment-section="showCommentSection"
       :character-data="newCharacterData"
+      :is-uploading-to-server="isUploadingToServer"
+      :is-updating-to-server="isUpdatingToServer"
+      :is-updating-from-server="isUpdatingFromServer"
       @save="saveCharacter"
       @delete="handleDeleteFromEdit"
       @load-original="handleLoadOriginalCharacterData"
       @toggle-like="handleToggleLikeInEdit"
       @update:shared="handleUpdateSharedFromModal"
       @avatar-updated="handleAvatarUpdated"
+      @upload-to-server="handleUploadToServer"
+      @update-to-server="handleUpdateToServer"
+      @update-from-server="handleUpdateFromServer"
     />
 
     <div v-if="isImportingCharacter" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4">
@@ -638,7 +644,8 @@ const globalRegex = ref<any[]>([])
 const compiledRegexScripts = computed<CompiledRegexScript[]>(() => {
   const globalRegexList = globalRegex.value || []
   const charRegexList = chatStore.currentCharacter?.regex_scripts || []
-  const allRegex = [...globalRegexList, ...charRegexList]
+  const userRegexList = userDataStore.enabledRegexScripts || []
+  const allRegex = [...globalRegexList, ...charRegexList, ...userRegexList]
 
   const result: CompiledRegexScript[] = []
 
@@ -729,6 +736,9 @@ const {
   friendCharacters,
   isCurrentCharacterFriend,
   isCurrentCharacterUserOwned,
+  isUploadingToServer,
+  isUpdatingToServer,
+  isUpdatingFromServer,
   selectCharacter,
   openCreateCharacterModal,
   closeCreateCharacterModal,
@@ -741,7 +751,10 @@ const {
   handleUpdateShared,
   loadOriginalCharacterData: originalLoadOriginalCharacterData,
   loadLikedCharacters,
-  handleImportUserCharacter
+  handleImportUserCharacter,
+  uploadToServer,
+  updateToServer,
+  updateFromServer
 } = useCharacter()
 
 async function handleLoadOriginalCharacterData() {
@@ -752,6 +765,33 @@ async function handleLoadOriginalCharacterData() {
     }
   } catch (e: any) {
     showToast(e.message || '加载原角色数据失败', 'error')
+  }
+}
+
+async function handleUploadToServer(data: any) {
+  try {
+    await uploadToServer(data)
+    showToast('上传到服务器成功', 'success')
+  } catch (e: any) {
+    showToast(e.message || '上传到服务器失败', 'error')
+  }
+}
+
+async function handleUpdateToServer(data: any) {
+  try {
+    await updateToServer(data)
+    showToast('更新到服务器成功', 'success')
+  } catch (e: any) {
+    showToast(e.message || '更新到服务器失败', 'error')
+  }
+}
+
+async function handleUpdateFromServer() {
+  try {
+    await updateFromServer()
+    showToast('从服务器更新成功', 'success')
+  } catch (e: any) {
+    showToast(e.message || '从服务器更新失败', 'error')
   }
 }
 

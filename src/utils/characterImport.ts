@@ -293,14 +293,22 @@ function normalizeSingleCharacter(charData: any): NormalizedCharacter {
 
   if (res.data && res.data.greeting && !res.data.first_mes) {
     res.data.first_mes = res.data.greeting
+    delete res.data.greeting
   }
 
   if (res.data && res.data.world_info && !res.data.character_book) {
     res.data.character_book = { entries: res.data.world_info }
+    delete res.data.world_info
   }
 
-  if (res.data && res.data.extensions?.regex_scripts) {
-    res.data.regex_scripts = res.data.extensions.regex_scripts
+  if (Array.isArray(res.data.regex_scripts)) {
+    if (!res.data.extensions) {
+      res.data.extensions = {};
+    }
+    if (!Array.isArray(res.data.extensions.regex_scripts)) {
+      res.data.extensions.regex_scripts = res.data.regex_scripts;
+      delete res.data.regex_scripts;
+    }
   }
 
   return res as NormalizedCharacter

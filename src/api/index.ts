@@ -350,12 +350,15 @@ export const charactersApi = {
     formData.append('image', file);
     return adminApiClient.putForm<Character>(`/characters/${id}/image`, formData);
   },
-  getUserCharacters: (userId: string) => api.get<{ characters: Character[] }>(`/characters/user`, { userId }),
+  getUserCharacters: (userId: string, params?: Record<string, string>) => 
+    api.get<{ characters: Character[]; total: number; page: number; totalPages: number; pageSize: number }>(`/characters/user`, { userId, ...params }),
   getUserCharacter: (userId: string, charId: string) => api.get<Character>(`/characters/user/${userId}/${charId}`),
   createUserCharacter: (userId: string, character: Partial<Character>) => 
     api.post<Character>('/characters/user', { userId, character }),
   updateUserCharacter: (userId: string, charId: string, data: Partial<Character>) => 
     api.put<Character>(`/characters/user/${userId}/${charId}`, data),
+  updateUserCharacterData: (userId: string, charId: string, data: Partial<Character>) => 
+    api.put<Character>(`/characters/user/${userId}/${charId}/data`, data),
   updateUserCharacterShared: (userId: string, charId: string, shared: boolean) => 
     api.put<{ success: boolean; shared: boolean }>(`/characters/user/${userId}/${charId}/shared`, { shared }),
   uploadUserCharacter: (userId: string, charId: string, file: Blob, fileName: string) => {
@@ -461,9 +464,20 @@ export const modelsApi = {
   list: () => adminApiClient.get<{ models: Model[], global_default_model: string }>('/models'),
   update: (models: Model[], globalDefaultModel?: string) => 
     adminApiClient.put<{ models: Model[], global_default_model: string }>('/models', { models, global_default_model: globalDefaultModel }),
-  test: (modelId: string) => adminApiClient.post('/models/test', { model_id: modelId }),
-  listModels: (modelId: string) => 
-    adminApiClient.post<{ models: { id: string; name: string }[] }>('/models/list', { model_id: modelId }),
+  test: (params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }) => 
+    adminApiClient.post('/models/test', { 
+      model_id: params.modelId, 
+      api_key: params.apiKey, 
+      api_url: params.apiUrl, 
+      provider: params.provider 
+    }),
+  listModels: (params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }) => 
+    adminApiClient.post<{ models: { id: string; name: string }[] }>('/models/list', { 
+      model_id: params.modelId, 
+      api_key: params.apiKey, 
+      api_url: params.apiUrl, 
+      provider: params.provider 
+    }),
   delete: (modelId: string) => adminApiClient.delete<any>(`/models/${modelId}`),
   listUnique: () => adminApiClient.get<{ models: { id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[] }>('/models/list-unique')
 }
@@ -481,16 +495,20 @@ export const worldInfoApi = {
 }
 
 export interface RegexScript {
-  name: string
-  regex: string
-  replacement: string
+  name?: string
+  regex?: string
+  replacement?: string
   enabled: boolean
   flags?: string
   promptOnly?: boolean
   markdownOnly?: boolean
-  placement?: number[]
+  placement?: number[] | boolean
   minDepth?: number
   maxDepth?: number
+  scriptName?: string
+  findRegex?: string
+  replaceString?: string
+  trimStrings?: boolean
 }
 
 export const regexApi = {

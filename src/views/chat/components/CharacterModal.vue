@@ -1,6 +1,6 @@
 <template>
-  <div v-if="visible" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click.self="$emit('update:visible', false)">
-    <div class="chat-card rounded-2xl max-w-2xl w-full overflow-hidden flex flex-col shadow-2xl border border-theme-border" style="max-height: min(90vh, calc(var(--vh, 1vh) * 90));">
+  <div v-if="visible" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click.self="$emit('update:visible', false)" @click="showMoreActions = false">
+    <div class="chat-card rounded-2xl max-w-2xl w-full overflow-hidden flex flex-col shadow-2xl border border-theme-border" style="max-height: min(90vh, calc(var(--vh, 1vh) * 90));" @click.stop>
       <div class="flex-1 overflow-y-auto overscroll-contain" data-scrollable="true" style="-webkit-overflow-scrolling: touch;">
         <div class="sticky top-0 z-10 p-3 sm:p-6 border-b border-theme-border/50 flex items-center justify-between bg-[var(--theme-card)]/80 backdrop-blur-xl">
           <div class="flex items-center gap-2 sm:gap-3">
@@ -98,27 +98,13 @@
           
           <CommentSection
             v-if="showCommentSection"
-            :character-id="editingCharacterMeta.originalId || editingCharacter?.id"
+            :character-id="editingCharacterMeta.originalId || editingCharacter?.role_play?.id"
             :show-original-hint="!!editingCharacterMeta.originalId"
           />
         </div>
         
         <div v-if="!isViewOnlyMode" class="sticky bottom-0 flex flex-row justify-between items-center gap-1.5 sm:gap-0 bg-[var(--theme-card)]/80 backdrop-blur-xl border-t border-theme-border/50 px-3 sm:px-6 py-2.5 sm:py-4 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
           <div v-if="editingCharacter" class="flex gap-1.5 sm:gap-3">
-            <button
-              type="button"
-              @click="characterFormRef?.handleExport()"
-              :disabled="!!editingCharacterMeta.originalId"
-              :title="editingCharacterMeta.originalId ? '在线添加的角色无法导出' : '导出'"
-              :class="editingCharacterMeta.originalId 
-                ? 'px-2 py-1.5 sm:px-4 sm:py-2.5 text-theme-text-secondary bg-[var(--theme-card-hover)] rounded-lg sm:rounded-xl transition-all duration-200 font-medium border border-theme-border flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm cursor-not-allowed opacity-50'
-                : 'px-2 py-1.5 sm:px-4 sm:py-2.5 text-theme-text-accent hover:bg-[var(--theme-primary)]/10 rounded-lg sm:rounded-xl transition-all duration-200 font-medium border border-[var(--theme-primary)]/20 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm'"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span class="hidden sm:inline">导出</span>
-            </button>
             <button
               type="button"
               @click="characterFormRef && (characterFormRef.showImageEditor = true)"
@@ -134,17 +120,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span class="hidden sm:inline">{{ characterFormRef?.isSavingImage ? '保存中...' : '编辑图片' }}</span>
-            </button>
-            <button
-              type="button"
-              @click="characterFormRef?.handleDelete()"
-              title="删除"
-              class="px-2 py-1.5 sm:px-4 sm:py-2.5 text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] rounded-lg sm:rounded-xl transition-all duration-200 font-medium border border-[var(--theme-danger)]/30 text-xs sm:text-sm"
-            >
-              <svg class="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span class="hidden sm:inline">删除</span>
             </button>
             
             <div 
@@ -179,6 +154,119 @@
                 </div>
                 <div v-else class="w-9 h-5 bg-[var(--theme-card-hover)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--theme-primary)]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-theme-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
               </label>
+            </div>
+            
+            <div class="relative">
+              <button
+                type="button"
+                @click="showMoreActions = !showMoreActions"
+                class="px-2 py-1.5 sm:px-4 sm:py-2.5 text-theme-text-accent hover:bg-[var(--theme-primary)]/10 rounded-lg sm:rounded-xl transition-all duration-200 font-medium border border-[var(--theme-primary)]/20 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+                <span class="hidden sm:inline">更多</span>
+              </button>
+              
+              <div
+                v-if="showMoreActions"
+                class="absolute bottom-full left-0 mb-2 min-w-[200px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-2xl border border-theme-border/30 overflow-hidden z-50"
+                @click.stop
+              >
+                <button
+                  type="button"
+                  @click="characterFormRef?.handleExport(); showMoreActions = false"
+                  :disabled="!!editingCharacterMeta.originalId"
+                  class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>{{ editingCharacterMeta.originalId ? '在线添加的角色无法导出' : '导出角色' }}</span>
+                </button>
+                
+                <div class="border-t border-gray-300 dark:border-gray-600"></div>
+                
+                <button
+                  type="button"
+                  @click="characterFormRef?.handleDelete(); showMoreActions = false"
+                  class="w-full px-4 py-3 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)]/50 transition-colors flex items-center gap-3"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>删除角色</span>
+                </button>
+                
+                <template v-if="isLoggedIn">
+                  <div class="border-t border-gray-300 dark:border-gray-600"></div>
+                  
+                  <template v-if="!editingCharacterMeta.originalId">
+                    <button
+                      v-if="!existsOnServer"
+                      type="button"
+                      :disabled="isUploadingToServer"
+                      @click="handleUploadToServer(); showMoreActions = false"
+                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg v-if="isUploadingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span>{{ isUploadingToServer ? '上传中...' : '上传到服务器' }}</span>
+                    </button>
+                    
+                    <button
+                      v-else-if="existsOnServer && isOwnerOfCharacter"
+                      type="button"
+                      :disabled="isUpdatingToServer"
+                      @click="handleUpdateToServer(); showMoreActions = false"
+                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg v-if="isUpdatingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{{ isUpdatingToServer ? '更新中...' : '更新到服务器' }}</span>
+                    </button>
+                  </template>
+                  
+                  <template v-if="editingCharacterMeta.originalId">
+                    <button
+                      v-if="existsOnServer && editingCharacterMeta.shared"
+                      type="button"
+                      :disabled="isUpdatingFromServer"
+                      @click="handleUpdateFromServer(); showMoreActions = false"
+                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg v-if="isUpdatingFromServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{{ isUpdatingFromServer ? '更新中...' : '更新本地数据' }}</span>
+                    </button>
+                    
+                    <div
+                      v-else-if="existsOnServer && !editingCharacterMeta.shared"
+                      class="w-full px-4 py-3 text-sm text-theme-text-secondary flex items-center gap-3"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      <span>作者已取消分享</span>
+                    </div>
+                  </template>
+                </template>
+              </div>
             </div>
           </div>
           <div class="flex gap-1.5 sm:gap-4 sm:ml-auto">
@@ -234,6 +322,7 @@ interface MetaData {
 
 const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
 const localIsUpdatingShared = ref(false)
+const showMoreActions = ref(false)
 
 const isLoggedIn = computed(() => userStore.isLoggedIn())
 
@@ -258,6 +347,9 @@ const props = defineProps<{
   isOwnerOfCharacter: boolean
   showCommentSection: boolean
   characterData: any
+  isUploadingToServer: boolean
+  isUpdatingToServer: boolean
+  isUpdatingFromServer: boolean
 }>()
 
 const isUpdatingShared = computed(() => localIsUpdatingShared.value)
@@ -270,6 +362,9 @@ const emit = defineEmits<{
   (e: 'toggleLike'): void
   (e: 'update:shared', value: boolean): void
   (e: 'avatarUpdated', characterId: string): void
+  (e: 'uploadToServer', data: any): void
+  (e: 'updateToServer', data: any): void
+  (e: 'updateFromServer'): void
 }>()
 
 const avatarUrl = ref<string | undefined>(undefined)
@@ -299,6 +394,7 @@ watch(() => props.visible, (visible) => {
     avatarError.value = false
     loadAvatar()
   }
+  showMoreActions.value = false
 })
 
 function handleAvatarError() {
@@ -310,6 +406,20 @@ function handleImageSaved(characterId: string) {
   avatarError.value = false
   loadAvatar()
   emit('avatarUpdated', characterId)
+}
+
+function handleUploadToServer() {
+  if (!props.characterData) return
+  emit('uploadToServer', props.characterData)
+}
+
+function handleUpdateToServer() {
+  if (!props.characterData) return
+  emit('updateToServer', props.characterData)
+}
+
+function handleUpdateFromServer() {
+  emit('updateFromServer')
 }
 
 const characterTypeLabel = computed(() => {

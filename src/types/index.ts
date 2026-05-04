@@ -47,11 +47,10 @@ export interface RolePlayMeta {
 
 export interface Character {
   spec?: string
-  spec_version?: string
+  spec_version?: string | number
   data?: CharacterData
   role_play?: RolePlayMeta
   
-  // 兼容旧格式的字段
   id?: string
   name?: string
   description?: string
@@ -77,8 +76,6 @@ export interface Character {
   creator?: string
   creator_notes?: string
   character_version?: string
-  spec?: string
-  spec_version?: number
   createdAt?: number
   userId?: string
   shared?: boolean
@@ -183,27 +180,69 @@ export interface FriendCharacter {
 }
 
 export interface RegexScript {
-  id: string
-  name: string
-  regex: string
-  replacement: string
+  id?: string
+  name?: string
+  regex?: string
+  replacement?: string
   enabled: boolean
-  flags: string
-  promptOnly: boolean
-  markdownOnly: boolean
-  placement: number[]
+  flags?: string
+  promptOnly?: boolean
+  markdownOnly?: boolean
+  placement?: number[] | boolean
   minDepth?: number
   maxDepth?: number
+  scriptName?: string
+  findRegex?: string
+  replaceString?: string
+  trimStrings?: boolean
 }
 
 export interface AdminSettings {
-  registrationEnabled: boolean
-  defaultQuota: number
-  githubAuthEnabled: boolean
-  gitSyncEnabled: boolean
+  registrationEnabled?: boolean
+  defaultQuota?: number
+  githubAuthEnabled?: boolean
+  gitSyncEnabled?: boolean
   gitSyncRepo?: string
   gitSyncBranch?: string
   gitSyncPath?: string
+  newUserQuota?: number
+  signinMinQuota?: number
+  signinMaxQuota?: number
+  chatQuotaCost?: number
+  suggestionQuotaCost?: number
+  maxUserCharacters?: number
+  maxCharacterSize?: number
+}
+
+export interface WorldInfoEntry {
+  uid: string
+  key: string
+  keysecondary?: string
+  keylogic?: string
+  comment?: string
+  content: string
+  enabled: boolean
+  position?: string
+  insertion_order?: number
+  selective?: boolean
+  keys?: string[]
+  depth?: number
+  order?: number
+  useRegex?: boolean
+  matchWholeWords?: boolean
+  caseSensitive?: boolean
+  scanDepth?: number
+  probability?: number
+  useProbability?: boolean
+  selectiveLogic?: number
+  secondary_keys?: string[]
+  group?: string
+  groupWeight?: number
+  constant?: boolean
+  preferential?: boolean
+  sticky?: number
+  cooldown?: number
+  delay?: number
 }
 
 export interface UploadResult {

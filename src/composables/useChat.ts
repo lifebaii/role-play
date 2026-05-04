@@ -1,6 +1,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
+import { useUserDataStore } from '@/stores/userData'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -16,6 +17,7 @@ export interface CompiledRegexScript {
 export function useChat(globalRegex: any[] = []) {
   const chatStore = useChatStore()
   const userStore = useUserStore()
+  const userDataStore = useUserDataStore()
   
   const messagesContainer = ref<HTMLElement | null>(null)
   const editingIndex = ref(-1)
@@ -33,7 +35,8 @@ export function useChat(globalRegex: any[] = []) {
   const compiledRegexScripts = computed<CompiledRegexScript[]>(() => {
     const globalRegexList = globalRegex || []
     const charRegexList = chatStore.currentCharacter?.regex_scripts || []
-    const allRegex = [...globalRegexList, ...charRegexList]
+    const userRegexList = userDataStore.enabledRegexScripts || []
+    const allRegex = [...globalRegexList, ...charRegexList, ...userRegexList]
 
     const result: CompiledRegexScript[] = []
 

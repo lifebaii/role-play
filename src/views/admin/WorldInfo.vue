@@ -188,6 +188,7 @@
 import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { WorldInfoEntry } from '@/types'
+import { worldInfoApi } from '@/api'
 
 const entries = ref<WorldInfoEntry[]>([])
 const isSaving = ref(false)

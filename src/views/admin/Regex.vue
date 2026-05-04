@@ -141,6 +141,7 @@
 import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { RegexScript } from '@/types'
+import { regexApi } from '@/api'
 
 const scripts = ref<RegexScript[]>([])
 const isSaving = ref(false)

@@ -454,26 +454,23 @@ export function useCharacter() {
     if (!character || !character.id) return
 
     const charId = character.role_play?.id || character.id
-    if (await isLocalFriend(charId)) return
 
     isLiking.value = true
     try {
-      const isLiked = !likedCharacterIds.value.includes(character.id)
+      const result = await charactersApi.toggleLike(charId)
       
-      if (isLiked) {
-        if (!likedCharacterIds.value.includes(character.id)) {
-          likedCharacterIds.value.push(character.id)
+      if (result.liked) {
+        if (!likedCharacterIds.value.includes(charId)) {
+          likedCharacterIds.value.push(charId)
         }
       } else {
-        likedCharacterIds.value = likedCharacterIds.value.filter(id => id !== character.id)
+        likedCharacterIds.value = likedCharacterIds.value.filter(id => id !== charId)
       }
       
       if (chatStore.currentCharacter) {
-        chatStore.currentCharacter.likeCount = isLiked 
-          ? (chatStore.currentCharacter.likeCount || 0) + 1 
-          : Math.max(0, (chatStore.currentCharacter.likeCount || 0) - 1)
+        chatStore.currentCharacter.likeCount = result.likeCount
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to toggle like:', e)
     } finally {
       isLiking.value = false
@@ -481,28 +478,28 @@ export function useCharacter() {
   }
   
   async function handleToggleLikeInEdit() {
-    const likeCharId = editingCharacterMeta.value.originalId || (editingCharacterMeta.value.shared ? editingCharacter.value?.id : null)
-    if (!likeCharId) return
+    const likeCharId = editingCharacterMeta.value.originalId || (editingCharacterMeta.value.shared ? (editingCharacter.value?.role_play?.id || editingCharacter.value?.id) : null)
+    console.log('[handleToggleLikeInEdit] likeCharId:', likeCharId, 'originalId:', editingCharacterMeta.value.originalId, 'shared:', editingCharacterMeta.value.shared, 'editingCharacter.id:', editingCharacter.value?.id, 'editingCharacter.role_play?.id:', editingCharacter.value?.role_play?.id)
+    if (!likeCharId) {
+      console.log('[handleToggleLikeInEdit] No likeCharId, returning early')
+      return
+    }
 
-    if (await isLocalFriend(likeCharId)) return
-
+    console.log('[handleToggleLikeInEdit] Calling API with likeCharId:', likeCharId)
     isLikingInEdit.value = true
     try {
-      const isLiked = !likedCharacterIds.value.includes(likeCharId)
+      const result = await charactersApi.toggleLike(likeCharId)
+      console.log('[handleToggleLikeInEdit] API result:', result)
       
       if (editingCharacterMeta.value.originalMeta) {
-        editingCharacterMeta.value.originalMeta.likeCount = isLiked 
-          ? (editingCharacterMeta.value.originalMeta.likeCount || 0) + 1 
-          : Math.max(0, (editingCharacterMeta.value.originalMeta.likeCount || 0) - 1)
-        editingCharacterMeta.value.originalMeta.isLiked = isLiked
+        editingCharacterMeta.value.originalMeta.likeCount = result.likeCount
+        editingCharacterMeta.value.originalMeta.isLiked = result.liked
       } else {
-        editingCharacterMeta.value.likeCount = isLiked 
-          ? (editingCharacterMeta.value.likeCount || 0) + 1 
-          : Math.max(0, (editingCharacterMeta.value.likeCount || 0) - 1)
-        editingCharacterMeta.value.isLiked = isLiked
+        editingCharacterMeta.value.likeCount = result.likeCount
+        editingCharacterMeta.value.isLiked = result.liked
       }
       
-      if (isLiked) {
+      if (result.liked) {
         if (!likedCharacterIds.value.includes(likeCharId)) {
           likedCharacterIds.value.push(likeCharId)
         }
@@ -588,6 +585,129 @@ export function useCharacter() {
     }
   }
   
+  const isUploadingToServer = ref(false)
+  const isUpdatingToServer = ref(false)
+  const isUpdatingFromServer = ref(false)
+  
+  async function uploadToServer(data: any): Promise<boolean> {
+    const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
+    const userId = userStore.user?.id
+    
+    if (!charId || !userId) {
+      throw new Error('无法获取角色或用户信息')
+    }
+    
+    isUploadingToServer.value = true
+    try {
+      const blob = await getCharacterBlob(charId)
+      if (!blob) {
+        throw new Error('无法获取角色数据')
+      }
+      
+      const characterName = data.name || editingCharacter.value?.data?.name || editingCharacter.value?.name || 'character'
+      const isImage = blob.type.startsWith('image/')
+      const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
+      
+      await charactersApi.uploadUserCharacter(userId, charId, blob, fileName)
+      
+      existsOnServer.value = true
+      isOwnerOfCharacter.value = true
+      editingCharacterMeta.value.shared = true
+      
+      return true
+    } catch (error: any) {
+      console.error('[UploadToServer] Failed:', error)
+      throw new Error('上传到服务器失败: ' + error.message)
+    } finally {
+      isUploadingToServer.value = false
+    }
+  }
+  
+  async function updateToServer(data: any): Promise<boolean> {
+    const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
+    const userId = userStore.user?.id
+    
+    if (!charId || !userId) {
+      throw new Error('无法获取角色或用户信息')
+    }
+    
+    isUpdatingToServer.value = true
+    try {
+      const characterData = {
+        name: data.name,
+        description: data.description,
+        avatar: data.avatar,
+        first_mes: data.first_mes,
+        personality: data.personality,
+        scenario: data.scenario,
+        system_prompt: data.system_prompt,
+        creator_notes: data.creator_notes,
+        temperature: data.temperature,
+        character_book: data.character_book,
+        extensions: {
+          ...data.extensions,
+          regex_scripts: data.regex_scripts
+        },
+        tags: data.tags
+      }
+      
+      await charactersApi.updateUserCharacterData(userId, charId, characterData)
+      
+      return true
+    } catch (error: any) {
+      console.error('[UpdateToServer] Failed:', error)
+      throw new Error('更新到服务器失败: ' + error.message)
+    } finally {
+      isUpdatingToServer.value = false
+    }
+  }
+  
+  async function updateFromServer(): Promise<boolean> {
+    const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
+    const originalId = editingCharacterMeta.value.originalId
+    
+    if (!charId) {
+      throw new Error('无法获取角色信息')
+    }
+    
+    isUpdatingFromServer.value = true
+    try {
+      const targetId = originalId || charId
+      const result = await charactersApi.getCharacterDetail(targetId)
+      
+      if (!result.character) {
+        throw new Error('服务器上未找到角色数据')
+      }
+      
+      const serverData = result.character.data || result.character
+      
+      newCharacterData.value = {
+        name: serverData.name || '',
+        description: serverData.description || '',
+        avatar: serverData.avatar || '',
+        first_mes: serverData.first_mes || '',
+        personality: serverData.personality || '',
+        scenario: serverData.scenario || '',
+        system_prompt: serverData.system_prompt || '',
+        creator_notes: serverData.creator_notes || '',
+        temperature: serverData.temperature ?? 1,
+        character_book: { entries: serverData.character_book?.entries || [] },
+        extensions: serverData.extensions || {},
+        regex_scripts: serverData.extensions?.regex_scripts || [],
+        tags: serverData.tags || []
+      }
+      
+      editingCharacterMeta.value.shared = result.characterMeta.shared
+      
+      return true
+    } catch (error: any) {
+      console.error('[UpdateFromServer] Failed:', error)
+      throw new Error('从服务器更新失败: ' + error.message)
+    } finally {
+      isUpdatingFromServer.value = false
+    }
+  }
+  
   return {
     showCreateCharacterModal,
     showDeleteCharacterConfirm,
@@ -612,6 +732,9 @@ export function useCharacter() {
     isCurrentCharacterFriend,
     isCurrentCharacterUserOwned,
     isCurrentCharacterLocal,
+    isUploadingToServer,
+    isUpdatingToServer,
+    isUpdatingFromServer,
     selectCharacter,
     openCreateCharacterModal,
     closeCreateCharacterModal,
@@ -626,6 +749,9 @@ export function useCharacter() {
     handleToggleLikeInEdit,
     loadOriginalCharacterData,
     loadLikedCharacters,
-    handleImportUserCharacter
+    handleImportUserCharacter,
+    uploadToServer,
+    updateToServer,
+    updateFromServer
   }
 }

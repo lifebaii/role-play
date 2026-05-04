@@ -698,15 +698,8 @@ export async function compressImageToBlob(imageUrl: string, maxWidth: number = 2
       ctx.drawImage(img, 0, 0, width, height)
 
       try {
-        const originalSize = dataUrl.startsWith('data:') ? Math.round(dataUrl.length * 0.75) : 0
-
         canvas.toBlob((blob) => {
           if (blob) {
-            if (originalSize > 0) {
-              const compressedSize = blob.size
-              const compressionRatio = ((1 - compressedSize / originalSize) * 100).toFixed(1)
-              console.log(`[Image Compression] ${originalWidth}x${originalHeight} -> ${Math.round(width)}x${Math.round(height)}, ${(originalSize / 1024).toFixed(1)}KB -> ${(compressedSize / 1024).toFixed(1)}KB, compressed ${compressionRatio}%`)
-            }
             resolve(blob)
           } else if (dataUrl.startsWith('data:')) {
             resolve(dataUrlToBlob(dataUrl))
@@ -811,13 +804,8 @@ export async function compressImageFile(file: File | Blob, maxWidth: number = 20
         ctx.drawImage(img, 0, 0, width, height)
 
         try {
-          const originalSize = file.size
-
           canvas.toBlob((blob) => {
             if (blob) {
-              const compressedSize = blob.size
-              const compressionRatio = ((1 - compressedSize / originalSize) * 100).toFixed(1)
-              console.log(`[Image Compression] ${originalWidth}x${originalHeight} -> ${Math.round(width)}x${Math.round(height)}, ${(originalSize / 1024).toFixed(1)}KB -> ${(compressedSize / 1024).toFixed(1)}KB, compressed ${compressionRatio}%`)
               resolve(blob)
             } else {
               resolve(file)

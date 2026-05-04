@@ -318,7 +318,11 @@ async function fetchModels(index: number) {
 
   fetchingIndex.value = index
   try {
-    const modelList = await adminStore.fetchModelList(model.id)
+    const modelList = await adminStore.fetchModelList({
+      apiKey: model.api_key,
+      apiUrl: model.api_url,
+      provider: model.provider
+    })
     models.value[index].available_models = modelList
     if (!models.value[index].selected_models) {
       models.value[index].selected_models = []
@@ -401,9 +405,16 @@ async function saveModels() {
 }
 
 async function testModel(id: string) {
+  const model = models.value.find(m => m.id === id)
+  if (!model) return
+  
   testingId.value = id
   try {
-    const success = await adminStore.testModel(id)
+    const success = await adminStore.testModel({
+      apiKey: model.api_key,
+      apiUrl: model.api_url,
+      provider: model.provider
+    })
     alert(success ? '连接成功' : '连接失败')
   } finally {
     testingId.value = null

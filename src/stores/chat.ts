@@ -43,13 +43,15 @@ function flattenCharacter(character: any): Character {
       ...data,
       id: character.role_play?.id || character.id,
       role_play: character.role_play,
-      data: character.data, // 保留原始 data
-      character_book: { entries: data.character_book?.entries || [] }
+      data: character.data,
+      character_book: { entries: data.character_book?.entries || [] },
+      regex_scripts: data.extensions?.regex_scripts || data.regex_scripts || []
     }
   }
   return {
     ...character,
-    character_book: { entries: character.character_book?.entries || [] }
+    character_book: { entries: character.character_book?.entries || [] },
+    regex_scripts: character.extensions?.regex_scripts || character.regex_scripts || []
   }
 }
 

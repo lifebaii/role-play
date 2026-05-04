@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Model, Character, CharactersResponse, AdminSettings } from '@/types'
-import { adminApi, charactersApi, modelsApi, presetsApi, regexApi, worldInfoApi } from '@/api'
+import type { Model, Character, AdminSettings } from '@/types'
+import { adminApi, charactersApi, modelsApi } from '@/api'
 import { eventBus } from '@/utils/eventBus'
 
 // 辅助函数
@@ -31,6 +31,7 @@ export const useAdminStore = defineStore('admin', () => {
     initEventListeners();
   }
   const models = ref<Model[]>([])
+  const globalDefaultModel = ref<string>('')
   const characters = ref<Character[]>([])
   const settings = ref<AdminSettings>({
     registrationEnabled: true,
@@ -102,25 +103,65 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function loadModels(): Promise<void> {
-    models.value = []
+    try {
+      const result = await modelsApi.list()
+      models.value = result.models || []
+      globalDefaultModel.value = result.global_default_model || ''
+    } catch (error) {
+      console.error('Failed to load models:', error)
+      models.value = []
+    }
   }
 
-  async function saveModel(): Promise<void> {
+  async function saveModels(modelList: Model[], globalDefault?: string): Promise<void> {
+    try {
+      const result = await modelsApi.update(modelList, globalDefault)
+      models.value = result.models || []
+      globalDefaultModel.value = result.global_default_model || ''
+    } catch (error) {
+      console.error('Failed to save models:', error)
+      throw error
+    }
   }
 
-  async function loadUniqueModels(): Promise<void> {
-    models.value = []
+  async function loadUniqueModels(): Promise<{ id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[]> {
+    try {
+      const result = await modelsApi.listUnique()
+      return result.models || []
+    } catch (error) {
+      console.error('Failed to load unique models:', error)
+      return []
+    }
   }
 
-  async function testModel(): Promise<{ success: boolean; message: string }> {
-    return { success: false, message: 'Not available in pure web mode' }
+  async function testModel(params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }): Promise<boolean> {
+    try {
+      await modelsApi.test(params)
+      return true
+    } catch (error) {
+      console.error('Failed to test model:', error)
+      return false
+    }
   }
 
-  async function loadModelList(): Promise<{ id: string; name: string }[]> {
-    return []
+  async function fetchModelList(params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }): Promise<{ id: string; name: string }[]> {
+    try {
+      const result = await modelsApi.listModels(params)
+      return result.models || []
+    } catch (error) {
+      console.error('Failed to fetch model list:', error)
+      throw error
+    }
   }
 
-  async function deleteModel(): Promise<void> {
+  async function deleteModel(modelId: string): Promise<void> {
+    try {
+      await modelsApi.delete(modelId)
+      models.value = models.value.filter(m => m.id !== modelId)
+    } catch (error) {
+      console.error('Failed to delete model:', error)
+      throw error
+    }
   }
 
   async function loadCharacters(): Promise<void> {
@@ -197,10 +238,33 @@ export const useAdminStore = defineStore('admin', () => {
     await loadCharacters()
   }
 
-  async function getSettings(): Promise<void> {
+  async function getSettings(): Promise<AdminSettings> {
+    try {
+      const result = await adminApi.getSettings()
+      settings.value = { ...settings.value, ...result }
+      return result
+    } catch (error) {
+      console.error('Failed to get settings:', error)
+      throw error
+    }
   }
 
-  async function updateSettings(): Promise<void> {
+  async function updateSettings(newSettings: Partial<AdminSettings>): Promise<void> {
+    try {
+      const result = await adminApi.updateSettings(newSettings)
+      settings.value = { ...settings.value, ...result }
+    } catch (error) {
+      console.error('Failed to update settings:', error)
+      throw error
+    }
+  }
+
+  async function loadSettings(): Promise<AdminSettings> {
+    return getSettings()
+  }
+
+  async function saveSettings(newSettings: Partial<AdminSettings>): Promise<void> {
+    return updateSettings(newSettings)
   }
 
   function logout(): void {
@@ -236,6 +300,7 @@ export const useAdminStore = defineStore('admin', () => {
     isLoggedIn,
     isLoading,
     models,
+    globalDefaultModel,
     characters,
     settings,
     saveButtonVisible,
@@ -244,10 +309,10 @@ export const useAdminStore = defineStore('admin', () => {
     verify,
     checkAuth,
     loadModels,
-    saveModel,
+    saveModels,
     loadUniqueModels,
     testModel,
-    loadModelList,
+    fetchModelList,
     deleteModel,
     loadCharacters,
     loadCharacterDetail,
@@ -258,6 +323,8 @@ export const useAdminStore = defineStore('admin', () => {
     importCharacters,
     getSettings,
     updateSettings,
+    loadSettings,
+    saveSettings,
     logout,
     showSaveButton,
     hideSaveButton,

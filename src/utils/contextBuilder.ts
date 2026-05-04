@@ -214,7 +214,7 @@ export function buildContext(options: ContextOptions): BuildContextResult {
 
   const otherPresets = allPresets.filter(p => p.name !== '破限')
   if (otherPresets.length > 0) {
-    systemPromptParts.push(`[System Presets]\n${otherPresets.map(p => p.content).join('\n\n---\n\n')}`)
+    systemPromptParts.push(`[System Presets]\n${otherPresets.map(p => p.prompt).join('\n\n---\n\n')}`)
   }
 
   if (wiGroups.before_char.length > 0) {
