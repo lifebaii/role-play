@@ -442,6 +442,7 @@
       :is-liking-in-edit="isLikingInEdit"
       :exists-on-server="existsOnServer"
       :is-owner-of-character="isOwnerOfCharacter"
+      :show-comment-section="showCommentSection"
       :character-data="newCharacterData"
       @save="saveCharacter"
       @delete="handleDeleteFromEdit"
@@ -724,6 +725,7 @@ const {
   isLoadingOriginal,
   existsOnServer,
   isOwnerOfCharacter,
+  showCommentSection,
   friendCharacters,
   isCurrentCharacterFriend,
   isCurrentCharacterUserOwned,

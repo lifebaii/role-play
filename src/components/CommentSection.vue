@@ -123,6 +123,7 @@
 import { ref, computed, watch } from 'vue'
 import type { Comment } from '@/types'
 import { generateAnonymousName } from '@/utils/anonymousName'
+import { charactersApi } from '@/api'
 
 const props = defineProps<{
   characterId: string
@@ -156,8 +157,9 @@ const toggleExpand = () => {
 const loadComments = async () => {
   isLoading.value = true
   try {
-    comments.value = []
-    totalComments.value = 0
+    const result = await charactersApi.getComments(props.characterId, 1)
+    comments.value = result.comments
+    total.value = result.total
     currentPage.value = result.page
     totalPages.value = result.totalPages
   } catch (error) {
@@ -172,8 +174,9 @@ const loadMore = async () => {
   
   isLoadingMore.value = true
   try {
-    comments.value = []
-    currentPage.value = page
+    const result = await charactersApi.getComments(props.characterId, currentPage.value + 1)
+    comments.value = [...comments.value, ...result.comments]
+    currentPage.value = result.page
     totalPages.value = result.totalPages
   } catch (error) {
     console.error('Failed to load more comments:', error)
@@ -187,7 +190,7 @@ const submitComment = async () => {
   
   isSubmitting.value = true
   try {
-    return
+    const comment = await charactersApi.addComment(props.characterId, newComment.value.trim())
     comments.value = [comment, ...comments.value]
     total.value++
     newComment.value = ''
@@ -202,7 +205,7 @@ const handleDelete = async (commentId: string) => {
   if (!confirm('确定要删除这条评论吗？')) return
   
   try {
-    return
+    await charactersApi.deleteComment(props.characterId, commentId)
     comments.value = comments.value.filter(c => c.id !== commentId)
     total.value--
   } catch (error) {

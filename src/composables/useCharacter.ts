@@ -55,6 +55,13 @@ export function useCharacter() {
   const existsOnServer = ref(false)
   const isOwnerOfCharacter = ref(false)
   
+  const showCommentSection = computed(() => {
+    if (!userStore.isLoggedIn()) return false
+    if (editingCharacterMeta.value.originalId) return true
+    if (editingCharacterMeta.value.shared) return true
+    return false
+  })
+  
   const newCharacterData = ref({
     name: '',
     description: '',
@@ -595,6 +602,7 @@ export function useCharacter() {
     isOnlineFriend,
     existsOnServer,
     isOwnerOfCharacter,
+    showCommentSection,
     newCharacterData,
     likedCharacterIds,
     isLiking,
