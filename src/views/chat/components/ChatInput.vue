@@ -92,7 +92,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit', text: string): void
+  (e: 'submit', text: string, clearInput: () => void): void
   (e: 'stop'): void
   (e: 'fetchSuggestions'): void
   (e: 'refreshSuggestions'): void
@@ -103,8 +103,9 @@ const inputText = ref('')
 
 function handleSubmit() {
   if (!inputText.value.trim()) return
-  emit('submit', inputText.value)
-  inputText.value = ''
+  emit('submit', inputText.value, () => {
+    inputText.value = ''
+  })
 }
 </script>
 

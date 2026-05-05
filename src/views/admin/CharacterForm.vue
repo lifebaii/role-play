@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-[var(--theme-bg-start)] py-6 sm:py-8 px-4">
     <div class="max-w-4xl mx-auto">
-      <div v-if="isEdit" class="mb-4 flex flex-wrap gap-2">
+      <div v-if="isEdit" class="mb-4 flex flex-wrap gap-2 items-center">
         <button
           @click="loadFromSource"
           :disabled="isLoadingSource || !sourceUrl"
@@ -26,6 +26,33 @@
           </svg>
           查看源文件
         </button>
+        
+        <div class="flex items-center gap-2 ml-auto">
+          <select
+            v-model="selectedModelId"
+            class="px-3 py-2 bg-[var(--theme-card-hover)] border border-theme-border rounded-xl text-theme-text-primary text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+          >
+            <option value="">选择模型</option>
+            <option v-for="model in availableModels" :key="model.id" :value="model.id">
+              {{ model.name }}
+            </option>
+          </select>
+          
+          <button
+            @click="showOptimizeModal = true"
+            :disabled="!selectedModelId || isOptimizing"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-xl hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg v-if="isOptimizing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {{ isOptimizing ? '优化中...' : '优化角色数据' }}
+          </button>
+        </div>
       </div>
       
       <CharacterForm
@@ -39,20 +66,48 @@
         @cancel="handleCancel"
       />
     </div>
+    
+    <div
+      v-if="showOptimizeModal"
+      class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      @click.self="showOptimizeModal = false"
+    >
+      <div class="chat-card rounded-2xl shadow-2xl max-w-md w-full p-6 border border-theme-border">
+        <h3 class="text-lg font-semibold text-theme-text-primary mb-4">选择优化方案</h3>
+        <div class="space-y-2">
+          <button
+            v-for="preset in optimizationPresets"
+            :key="preset.name"
+            @click="handleOptimize(preset)"
+            class="w-full px-4 py-3 text-left bg-[var(--theme-card-hover)] border border-theme-border rounded-xl hover:border-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 transition-all duration-200"
+          >
+            <span class="font-medium text-theme-text-primary">{{ preset.name }}</span>
+          </button>
+        </div>
+        <button
+          @click="showOptimizeModal = false"
+          class="mt-4 w-full px-4 py-2 text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+        >
+          取消
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
-import { readPngChunks, decodeBase64Utf8, normalizeCharacterData, writePngChunks } from '@/utils/characterImport'
-import { charactersApi } from '@/api'
+import { extractCharacterFromPng, normalizeCharacterData, writePngChunks } from '@/utils/characterImport'
+import { charactersApi, modelsApi, adminApi } from '@/api'
 import CharacterForm from '@/components/CharacterForm.vue'
+import { useDialog } from '@/composables/useDialog'
 
 const route = useRoute()
 const router = useRouter()
 const adminStore = useAdminStore()
+const { showSuccessAlert, showErrorAlert, showAlert } = useDialog()
 
 const isEdit = computed(() => !!route.params.id)
 const isLoading = ref(false)
@@ -62,6 +117,26 @@ const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
 const sourceUrl = ref<string | null>(null)
 const sourceFileType = ref<'json' | 'png' | null>(null)
 const sourceFile = ref<File | Blob | null>(null)
+
+const availableModels = ref<{ id: string; name: string }[]>([])
+const selectedModelId = ref<string>('')
+const showOptimizeModal = ref(false)
+const isOptimizing = ref(false)
+
+const optimizationPresets = [
+  { 
+    name: '优化1 - 丰富细节', 
+    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个专业的角色设计师和作家。你的任务是优化角色卡数据，使角色更加生动、立体、有深度。请保持原有的核心特征，同时丰富细节描写，让角色更加真实可信。优化时注意：1. 丰富角色描述，增加外貌、气质、习惯等细节；2. 深化人设，让性格特点更加鲜明；3. 完善场景设定，增加环境氛围描写；4. 优化开场白，使其更符合角色性格且更有吸引力。' 
+  },
+  { 
+    name: '优化2 - 情感深度', 
+    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个心理学专家和情感作家。你的任务是优化角色卡数据，使角色具有更丰富的情感层次和内心世界。请保持原有的核心特征，同时深化角色的情感表达。优化时注意：1. 为角色添加情感背景和内心冲突；2. 丰富角色的情感表达方式；3. 增加角色之间的情感互动可能性；4. 让开场白更能展现角色的情感状态。' 
+  },
+  { 
+    name: '优化3 - 故事性', 
+    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个资深的故事创作者和剧本作家。你的任务是优化角色卡数据，使角色具有更强的故事性和戏剧张力。请保持原有的核心特征，同时增强角色的叙事潜力。优化时注意：1. 为角色添加背景故事和成长经历；2. 设置角色的目标和动机；3. 创造角色面临的挑战和冲突；4. 让场景设定更具戏剧性；5. 优化开场白，使其暗示更多故事可能性。' 
+  }
+]
 
 const formData = ref({
   name: '',
@@ -99,6 +174,18 @@ function getCharacterMeta(character: any): any {
 
 onMounted(async () => {
   adminStore.showSaveButton(handleSave)
+  
+  try {
+    const result = await modelsApi.listUniqueAdmin()
+    availableModels.value = result.models || []
+    
+    const savedModelId = localStorage.getItem('admin_optimize_model_id')
+    if (savedModelId && availableModels.value.some(m => m.id === savedModelId)) {
+      selectedModelId.value = savedModelId
+    }
+  } catch (e) {
+    console.error('Failed to load models:', e)
+  }
   
   if (isEdit.value) {
     const characterId = route.params.id as string
@@ -171,6 +258,12 @@ onUnmounted(() => {
   adminStore.hideSaveButton()
 })
 
+watch(selectedModelId, (newId) => {
+  if (newId) {
+    localStorage.setItem('admin_optimize_model_id', newId)
+  }
+})
+
 async function handleSave() {
   if (characterFormRef.value) {
     await handleSubmit(characterFormRef.value.form)
@@ -205,13 +298,13 @@ async function handleSubmit(data: any) {
       
       if (sourceFileType.value === 'png' && sourceFile.value) {
         const buffer = await sourceFile.value.arrayBuffer()
+        const { data: cardData } = await extractCharacterFromPng(buffer)
         
         const dataToWrite = {
-          spec: 'chara_card_v2',
-          spec_version: '2.0',
+          ...cardData,
           data: {
-            ...characterData,
-            avatar: undefined
+            ...cardData.data,
+            ...characterData
           }
         }
         
@@ -228,10 +321,10 @@ async function handleSubmit(data: any) {
     } else {
       await adminStore.createCharacter({ data: characterData })
     }
-    alert('保存成功')
+    await showSuccessAlert('保存成功')
     router.push('/admin/characters')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isLoading.value = false
   }
@@ -244,7 +337,7 @@ function handleCancel() {
 async function loadFromSource(silent: boolean = false) {
   if (!sourceUrl.value) {
     if (!silent) {
-      alert('没有可用的源文件 URL')
+      await showErrorAlert('没有可用的源文件 URL')
     }
     return
   }
@@ -268,40 +361,12 @@ async function loadFromSource(silent: boolean = false) {
       const filename = url.split('/').pop() || 'character.png'
       sourceFile.value = new Blob([buffer], { type: mimeType })
       
-      const chunks = await readPngChunks(buffer)
+      const result = await extractCharacterFromPng(buffer)
       
-      let rawDataStr = chunks['chara'] || chunks['character'] || ''
-      
-      if (!rawDataStr) {
-        for (const key of Object.keys(chunks)) {
-          try {
-            const parsed = JSON.parse(chunks[key])
-            if (parsed.spec || parsed.data) {
-              rawDataStr = chunks[key]
-              break
-            }
-          } catch {
-            continue
-          }
-        }
-      }
-      
-      if (rawDataStr) {
-        try {
-          const charData = JSON.parse(decodeBase64Utf8(rawDataStr))
-          const normalized = normalizeCharacterData(charData)
-          if (normalized && !Array.isArray(normalized)) {
-            applyCharacterData(normalized)
-            if (!silent) {
-              alert('已从源文件加载数据')
-            }
-          } else if (!silent) {
-            alert('无法解析角色数据')
-          }
-        } catch {
-          if (!silent) {
-            alert('解析角色数据失败')
-          }
+      if (result.success && result.data) {
+        applyCharacterData(result.data)
+        if (!silent) {
+          await showSuccessAlert('已从源文件加载数据')
         }
       } else {
         applyCharacterData({
@@ -320,7 +385,11 @@ async function loadFromSource(silent: boolean = false) {
           }
         })
         if (!silent) {
-          alert('已加载图片，但没有嵌入角色数据')
+          if (result.error) {
+            await showAlert('已加载图片，但没有嵌入角色数据')
+          } else {
+            await showErrorAlert(result.error || '无法解析角色数据')
+          }
         }
       }
     } else {
@@ -343,20 +412,20 @@ async function loadFromSource(silent: boolean = false) {
       if (normalized && !Array.isArray(normalized)) {
         applyCharacterData(normalized)
         if (!silent) {
-          alert('已从源文件加载数据')
+          await showSuccessAlert('已从源文件加载数据')
         }
       } else if (Array.isArray(normalized)) {
         if (!silent) {
-          alert('源文件包含多个角色，无法加载')
+          await showErrorAlert('源文件包含多个角色，无法加载')
         }
       } else if (!silent) {
-        alert('无法解析角色数据')
+        await showErrorAlert('无法解析角色数据')
       }
     }
   } catch (e: any) {
     console.error('Failed to load from source:', e)
     if (!silent) {
-      alert('加载源文件失败: ' + e.message)
+      await showErrorAlert('加载源文件失败: ' + e.message)
     }
   } finally {
     isLoadingSource.value = false
@@ -388,6 +457,60 @@ function applyCharacterData(data: any) {
 function openSourceUrl() {
   if (sourceUrl.value) {
     window.open(sourceUrl.value, '_blank')
+  }
+}
+
+async function handleOptimize(preset: typeof optimizationPresets[0]) {
+  if (!selectedModelId.value) {
+    await showErrorAlert('请先选择模型')
+    return
+  }
+  
+  showOptimizeModal.value = false
+  isOptimizing.value = true
+  
+  try {
+    let fullResponse = ''
+    
+    for await (const chunk of adminApi.optimizeCharacterStream({
+      characterData: formData.value,
+      optimizationType: preset,
+      modelId: selectedModelId.value
+    })) {
+      fullResponse += chunk
+    }
+    
+    let jsonStr = fullResponse.trim()
+    
+    if (jsonStr.startsWith('```')) {
+      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim()
+      }
+    }
+    
+    if (!jsonStr.startsWith('{')) {
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0]
+      }
+    }
+    
+    const optimizedData = JSON.parse(jsonStr)
+    
+    formData.value = {
+      ...formData.value,
+      ...optimizedData,
+      character_book: optimizedData.character_book || formData.value.character_book || { entries: [] },
+      regex_scripts: optimizedData.regex_scripts || formData.value.regex_scripts || [],
+      tags: optimizedData.tags || formData.value.tags || []
+    }
+    await showSuccessAlert('优化成功！')
+  } catch (e: any) {
+    console.error('Optimization failed:', e)
+    await showErrorAlert('优化失败: ' + (e.message || '未知错误'))
+  } finally {
+    isOptimizing.value = false
   }
 }
 </script>

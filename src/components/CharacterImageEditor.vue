@@ -137,6 +137,9 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { getCharacterSourceType, getCharacterBlob } from '@/utils/localFriendStorage'
+import { useDialog } from '@/composables/useDialog'
+
+const { showErrorAlert } = useDialog()
 
 const props = defineProps<{
   visible: boolean
@@ -190,7 +193,7 @@ function handleFileSelect(event: Event) {
   
   if (file) {
     if (!file.type.startsWith('image/')) {
-      alert('请选择图片文件')
+      showErrorAlert('请选择图片文件')
       return
     }
     
@@ -249,7 +252,6 @@ async function handleSave() {
   try {
     let fileToSave = selectedFile.value
     
-    // 如果图片不是 PNG，转换为 PNG
     if (selectedFile.value.type !== 'image/png') {
       fileToSave = await convertImageToPng(selectedFile.value)
     }
@@ -258,7 +260,7 @@ async function handleSave() {
     emit('update:visible', false)
   } catch (error) {
     console.error('保存角色图片失败:', error)
-    alert('保存失败，请重试')
+    await showErrorAlert('保存失败，请重试')
   } finally {
     isSaving.value = false
   }

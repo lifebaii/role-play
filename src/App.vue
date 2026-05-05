@@ -8,6 +8,7 @@
     </div>
     <router-view v-else />
     <AuthNotification />
+    <DialogContainer />
   </div>
 </template>
 
@@ -16,6 +17,7 @@ import { onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { clearAvatarCache } from '@/composables/useAvatar'
 import AuthNotification from '@/components/AuthNotification.vue'
+import DialogContainer from '@/components/DialogContainer.vue'
 
 const userStore = useUserStore()
 

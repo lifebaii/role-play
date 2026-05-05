@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { setLocalUserName, getLocalUserName } from '@/utils/anonymousUser';
-import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, clearFriendsCache, type LocalFriend } from '@/utils/localFriendStorage';
+import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFriend, clearFriendsCache, type LocalFriend, sortFriendsByMeta } from '@/utils/localFriendStorage';
 import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
 
@@ -46,10 +46,16 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('role_play_unique_models');
   };
 
+  const handleFriendOrderChanged = () => {
+    const sortedFriends = sortFriendsByMeta([...friendCharacters.value]);
+    friendCharacters.value = sortedFriends;
+  };
+
   const initEventListeners = () => {
     if (isLogoutListenerInitialized) return;
     isLogoutListenerInitialized = true;
     eventBus.on('user-logout', handleUserLogout);
+    eventBus.on('friend-order-changed', handleFriendOrderChanged);
   };
 
   // 确保 store 初始化时注册监听器
@@ -58,7 +64,8 @@ export const useUserStore = defineStore('user', () => {
   const loadLocalFriends = async () => {
     clearFriendsCache();
     const localFriends = await getLocalFriends();
-    friendCharacters.value = [...localFriends];
+    const sortedFriends = sortFriendsByMeta(localFriends);
+    friendCharacters.value = [...sortedFriends];
   };
 
   if (typeof localStorage !== 'undefined') {
@@ -216,9 +223,23 @@ export const useUserStore = defineStore('user', () => {
     return newFriend;
   };
 
-  const addOnlineFriendCharacter = async (characterId: string) => {
+  const addOnlineFriendCharacter = async (characterId: string, sourceUrl?: string) => {
     try {
-      const { blob, contentType } = await charactersApi.getRaw(characterId);
+      let blob: Blob;
+      let contentType: string;
+      
+      if (sourceUrl) {
+        const response = await fetch(sourceUrl);
+        if (!response.ok) {
+          throw new Error('获取角色数据失败');
+        }
+        blob = await response.blob();
+        contentType = response.headers.get('Content-Type') || 'application/octet-stream';
+      } else {
+        const result = await charactersApi.getRaw(characterId);
+        blob = result.blob;
+        contentType = result.contentType;
+      }
       
       const newFriend = await addOnlineFriendFromBlob(blob, contentType, characterId, characterId);
       

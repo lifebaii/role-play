@@ -1,14 +1,16 @@
 import { ref, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
+import { useDialog } from '@/composables/useDialog'
 import type { Character } from '@/types'
-import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend, updateLocalFriendId, getCharacterBlob } from '@/utils/localFriendStorage'
+import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend, updateLocalFriendId, getCharacterBlob, sortFriendsByMeta } from '@/utils/localFriendStorage'
 import { charactersApi } from '@/api'
 import { readPngChunks, decodeBase64Utf8, normalizeCharacterData } from '@/utils/characterImport'
 
 export function useCharacter() {
   const chatStore = useChatStore()
   const userStore = useUserStore()
+  const { showDangerConfirm } = useDialog()
   
   const showCreateCharacterModal = ref(false)
   const showDeleteCharacterConfirm = ref(false)
@@ -84,20 +86,7 @@ export function useCharacter() {
   
   const friendCharacters = computed(() => {
     const result = [...userStore.friendCharacters]
-    const friendOrder = chatStore.getFriendOrder()
-    if (friendOrder.length > 0) {
-      result.sort((a, b) => {
-        const aIndex = friendOrder.indexOf(a.id)
-        const bIndex = friendOrder.indexOf(b.id)
-        if (aIndex !== -1 && bIndex !== -1) {
-          return aIndex - bIndex
-        }
-        if (aIndex !== -1) return -1
-        if (bIndex !== -1) return 1
-        return 0
-      })
-    }
-    return result
+    return sortFriendsByMeta(result)
   })
   
   const isCurrentCharacterFriend = computed(() => {
@@ -216,20 +205,20 @@ export function useCharacter() {
     // 元数据仅用于控制UI（图标、按钮状态）
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: character.role_play?.originalId || null,
-      shared: character.role_play?.shared || false,
-      likeCount: 0,
-      commentCount: 0,
-      isLiked: false,
+      originalId: character.role_play?.originalId || character.originalId || null,
+      shared: character.role_play?.shared || character.shared || false,
+      likeCount: character.likeCount || 0,
+      commentCount: character.commentCount || 0,
+      isLiked: character.liked || false,
       originalUserId: null,
-      thumbnailUrl: null,
-      sourceUrl: null,
+      thumbnailUrl: character.thumbnailUrl || null,
+      sourceUrl: character.sourceUrl || null,
       originalMeta: null
     }
     isViewOnlyMode.value = false
     isLoadingCharacterDetail.value = false
     isLoadingMeta.value = true
-    isOnlineFriend.value = !!character.role_play?.originalId
+    isOnlineFriend.value = !!(character.role_play?.originalId || character.originalId)
     existsOnServer.value = false
     isOwnerOfCharacter.value = false
     showCreateCharacterModal.value = true
@@ -295,21 +284,21 @@ export function useCharacter() {
     
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: character.role_play?.originalId || null,
-      shared: character.role_play?.shared || false,
-      likeCount: 0,
-      commentCount: 0,
-      isLiked: false,
+      originalId: character.role_play?.originalId || character.originalId || null,
+      shared: character.role_play?.shared || character.shared || false,
+      likeCount: character.likeCount || 0,
+      commentCount: character.commentCount || 0,
+      isLiked: character.liked || false,
       originalUserId: null,
       thumbnailUrl: character.thumbnailUrl || null,
-      sourceUrl: null,
+      sourceUrl: character.sourceUrl || null,
       originalMeta: null
     }
     isViewOnlyMode.value = true
     isLoadingCharacterDetail.value = false
     isLoadingMeta.value = true
     isLoadingViewData.value = true
-    isOnlineFriend.value = !!character.role_play?.originalId
+    isOnlineFriend.value = !!(character.role_play?.originalId || character.originalId)
     showCreateCharacterModal.value = true
     
     const charData = character.data || character
@@ -437,7 +426,8 @@ export function useCharacter() {
   }
   
   async function deleteUserCharacter(character: any) {
-    if (!confirm(`确定要删除角色 "${character.name || character.data?.name}" 吗？`)) return
+    const confirmed = await showDangerConfirm(`确定要删除角色 "${character.name || character.data?.name}" 吗？`)
+    if (!confirmed) return
     
     try {
       const charId = character.role_play?.id || character.id

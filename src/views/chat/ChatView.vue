@@ -20,7 +20,6 @@
       v-model="sidebarOpen"
       :friend-characters="friendCharacters"
       :avatar-update-trigger="avatarUpdateTrigger"
-      @open-theme-selector="showThemeSelector = true"
       @open-create-character="openCreateCharacterModal"
       @open-friend-selector="handleOpenFriendSelector"
       @open-user-settings="handleOpenUserSettings"
@@ -471,13 +470,6 @@
       </div>
     </div>
 
-    <ThemeSelectorModal
-      v-model:visible="showThemeSelector"
-      :themes="themes"
-      :current-theme-id="currentTheme.id"
-      @select-theme="selectTheme"
-    />
-
     <div v-if="showAbout" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click="showAbout = false">
       <div class="chat-card rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-theme-border" @click.stop>
         <div class="text-center">
@@ -491,7 +483,7 @@
             <p>🎭 与各种角色进行沉浸式对话</p>
             <p>✨ 支持自定义角色创建</p>
             <p>🌐 与好友分享角色</p>
-            <p>🎨 多种主题风格可选</p>
+            <p>🎨 支持亮色/暗色主题切换</p>
           </div>
           
           <div class="text-xs text-theme-text-secondary mb-3 sm:mb-4">
@@ -541,8 +533,8 @@
 
     <div 
       v-if="toastMessage" 
-      class="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 rounded-lg shadow-lg transition-all duration-300 chat-card border"
-      :class="toastType === 'success' ? 'border-[var(--theme-success)]/50 text-[var(--theme-success)]' : 'border-[var(--theme-danger)]/50 text-[var(--theme-danger)]'"
+      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 rounded-lg shadow-lg transition-all duration-300 border backdrop-blur-xl"
+      :class="toastType === 'success' ? 'bg-[var(--theme-success-bg)] border-[var(--theme-success)]/50 text-[var(--theme-success)]' : 'bg-[var(--theme-danger-bg)] border-[var(--theme-danger)]/50 text-[var(--theme-danger)]'"
     >
       {{ toastMessage }}
     </div>
@@ -554,7 +546,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useUserDataStore } from '@/stores/userData'
-import { themes, setTheme, getTheme, loadTheme, type Theme } from '@/utils/theme'
+import { loadTheme } from '@/utils/theme'
 import { characterGet } from '@/utils/db'
 import { chat as llmChat } from '@/utils/llmClient'
 import type { Character } from '@/types'
@@ -567,7 +559,6 @@ import ChatInput from './components/ChatInput.vue'
 import CharacterModal from './components/CharacterModal.vue'
 import UserSettingsModal from './components/UserSettingsModal.vue'
 import UserDataSettingsModal from './components/UserDataSettingsModal.vue'
-import ThemeSelectorModal from './components/ThemeSelectorModal.vue'
 import CustomModelConfigModal from './components/CustomModelConfigModal.vue'
 import ChatSyncModal from './components/ChatSyncModal.vue'
 import FriendSelector from '@/components/FriendSelector.vue'
@@ -576,6 +567,7 @@ import AvatarImage from '@/components/AvatarImage.vue'
 
 import { useCharacter } from '@/composables/useCharacter'
 import { useCustomModel } from '@/composables/useCustomModel'
+import { useDialog } from '@/composables/useDialog'
 import { getFriendAvatar, clearCharacterAvatarCache } from '@/utils/localFriendStorage'
 import { config } from '@/utils/config'
 
@@ -584,6 +576,7 @@ const showAuthEntry = config.showAuthEntry
 const devMarkerPosition = ref({ x: window.innerWidth - 50, y: window.innerHeight - 50 })
 let isDragging = false
 let dragOffset = { x: 0, y: 0 }
+const { showDangerConfirm } = useDialog()
 
 function startDragDevMarker(e: MouseEvent | TouchEvent) {
   isDragging = true
@@ -704,10 +697,8 @@ const errorMessage = ref('')
 const showFriendSelector = ref(false)
 const showUserSettings = ref(false)
 const showUserDataSettings = ref(false)
-const showThemeSelector = ref(false)
 const showChatSync = ref(false)
 const showAbout = ref(false)
-const currentTheme = ref<Theme>(getTheme())
 const backgroundImageUrl = ref<string | null>(null)
 let currentBgObjectUrl: string | null = null
 const characterLimit = ref<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number } | null>(null)
@@ -906,8 +897,9 @@ function sendEdit(index: number) {
   chatStore.regenerateFrom(index)
 }
 
-function deleteMessage(index: number) {
-  if (confirm('确定要删除这条消息吗？')) {
+async function deleteMessage(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这条消息吗？')
+  if (confirmed) {
     chatStore.deleteMessage(index)
     suggestions.value = []
     lastSuggestionsMessagesSnapshot = ''
@@ -950,8 +942,9 @@ async function regenerateGreeting() {
   }
 }
 
-function confirmClearHistory() {
-  if (confirm('确定要清空聊天记录吗？')) {
+async function confirmClearHistory() {
+  const confirmed = await showDangerConfirm('确定要清空聊天记录吗？')
+  if (confirmed) {
     chatStore.clearHistory()
   }
 }
@@ -1095,7 +1088,7 @@ async function sendSuggestion(suggestion: string) {
   showSuggestions.value = false
 }
 
-async function handleSubmit(text: string) {
+async function handleSubmit(text: string, clearInput: () => void) {
   if (!text.trim()) return
   
   if (!chatStore.userName || chatStore.userName === '游客') {
@@ -1104,7 +1097,10 @@ async function handleSubmit(text: string) {
     return
   }
   
-  await chatStore.sendMessage(text)
+  const success = await chatStore.sendMessage(text)
+  if (success) {
+    clearInput()
+  }
 }
 
 async function saveUserName() {
@@ -1176,11 +1172,6 @@ function openCharacterInfoFromCurrent() {
   if (chatStore.currentCharacter) {
     editUserCharacter(chatStore.currentCharacter)
   }
-}
-
-function selectTheme(themeId: string) {
-  setTheme(themeId)
-  currentTheme.value = getTheme()
 }
 
 async function loadBackground() {
@@ -1260,6 +1251,13 @@ watch(() => chatStore.isStreaming, (isStreaming) => {
 watch(() => chatStore.error, (newError) => {
   if (newError) {
     showToast(newError, 'error')
+    
+    if (newError.includes('API Key') || 
+        newError.includes('模型配置') ||
+        newError.includes('API配置')) {
+      showMenuDropdown.value = true
+    }
+    
     chatStore.error = null
   }
 })

@@ -286,6 +286,9 @@ import { useUserDataStore, type UserWorldInfo, type UserPreset, type UserRegexSc
 import WorldInfoEditor from '@/components/WorldInfoEditor.vue'
 import PresetEditor from '@/components/PresetEditor.vue'
 import RegexEditor from '@/components/RegexEditor.vue'
+import { useDialog } from '@/composables/useDialog'
+
+const { showDangerConfirm, showAlert, showErrorAlert } = useDialog()
 
 const props = defineProps<{
   visible: boolean
@@ -364,8 +367,9 @@ function savePreset(data: any) {
   editingPresetIndex.value = undefined
 }
 
-function removePreset(id: string) {
-  if (confirm('确定要删除这个预设吗？')) {
+async function removePreset(id: string) {
+  const confirmed = await showDangerConfirm('确定要删除这个预设吗？')
+  if (confirmed) {
     userDataStore.removePreset(id)
   }
 }
@@ -388,8 +392,9 @@ function saveWorldInfo(data: any) {
   editingWorldInfoIndex.value = undefined
 }
 
-function removeWorldInfo(id: string) {
-  if (confirm('确定要删除这个世界书条目吗？')) {
+async function removeWorldInfo(id: string) {
+  const confirmed = await showDangerConfirm('确定要删除这个世界书条目吗？')
+  if (confirmed) {
     userDataStore.removeWorldInfo(id)
   }
 }
@@ -412,8 +417,9 @@ function saveRegex(data: any) {
   editingRegexIndex.value = undefined
 }
 
-function removeRegex(id: string) {
-  if (confirm('确定要删除这个正则脚本吗？')) {
+async function removeRegex(id: string) {
+  const confirmed = await showDangerConfirm('确定要删除这个正则脚本吗？')
+  if (confirmed) {
     userDataStore.removeRegexScript(id)
   }
 }
@@ -427,7 +433,7 @@ function handleImportPresets(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target?.result as string)
       const presets = Array.isArray(data) ? data : (data.presets || [])
@@ -437,21 +443,21 @@ function handleImportPresets(event: Event) {
           id: p.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
         }))
         userDataStore._save()
-        alert(`成功导入 ${presets.length} 个预设`)
+        await showAlert(`成功导入 ${presets.length} 个预设`)
       } else {
-        alert('未找到有效的预设数据')
+        await showErrorAlert('未找到有效的预设数据')
       }
     } catch (err: any) {
-      alert('导入失败: ' + err.message)
+      await showErrorAlert('导入失败: ' + err.message)
     }
   }
   reader.readAsText(file)
   ;(event.target as HTMLInputElement).value = ''
 }
 
-function handleExportPresets() {
+async function handleExportPresets() {
   if (userDataStore.presets.length === 0) {
-    alert('暂无预设可导出')
+    await showErrorAlert('暂无预设可导出')
     return
   }
   const blob = new Blob([JSON.stringify(userDataStore.presets, null, 2)], { type: 'application/json' })
@@ -468,7 +474,7 @@ function handleImportWorldInfo(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target?.result as string)
       const worldInfo = Array.isArray(data) ? data : (data.worldInfo || data.world_info || [])
@@ -478,21 +484,21 @@ function handleImportWorldInfo(event: Event) {
           id: w.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
         }))
         userDataStore._save()
-        alert(`成功导入 ${worldInfo.length} 个世界书条目`)
+        await showAlert(`成功导入 ${worldInfo.length} 个世界书条目`)
       } else {
-        alert('未找到有效的世界书数据')
+        await showErrorAlert('未找到有效的世界书数据')
       }
     } catch (err: any) {
-      alert('导入失败: ' + err.message)
+      await showErrorAlert('导入失败: ' + err.message)
     }
   }
   reader.readAsText(file)
   ;(event.target as HTMLInputElement).value = ''
 }
 
-function handleExportWorldInfo() {
+async function handleExportWorldInfo() {
   if (userDataStore.worldInfo.length === 0) {
-    alert('暂无世界书可导出')
+    await showErrorAlert('暂无世界书可导出')
     return
   }
   const blob = new Blob([JSON.stringify(userDataStore.worldInfo, null, 2)], { type: 'application/json' })
@@ -509,7 +515,7 @@ function handleImportRegex(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target?.result as string)
       const regexScripts = Array.isArray(data) ? data : (data.regexScripts || data.regex_scripts || [])
@@ -519,21 +525,21 @@ function handleImportRegex(event: Event) {
           id: r.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
         }))
         userDataStore._save()
-        alert(`成功导入 ${regexScripts.length} 个正则脚本`)
+        await showAlert(`成功导入 ${regexScripts.length} 个正则脚本`)
       } else {
-        alert('未找到有效的正则脚本数据')
+        await showErrorAlert('未找到有效的正则脚本数据')
       }
     } catch (err: any) {
-      alert('导入失败: ' + err.message)
+      await showErrorAlert('导入失败: ' + err.message)
     }
   }
   reader.readAsText(file)
   ;(event.target as HTMLInputElement).value = ''
 }
 
-function handleExportRegex() {
+async function handleExportRegex() {
   if (userDataStore.regexScripts.length === 0) {
-    alert('暂无正则脚本可导出')
+    await showErrorAlert('暂无正则脚本可导出')
     return
   }
   const blob = new Blob([JSON.stringify(userDataStore.regexScripts, null, 2)], { type: 'application/json' })
@@ -550,7 +556,7 @@ function handleImportAll(event: Event) {
   if (!file) return
 
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target?.result as string)
       let importCount = 0
@@ -581,22 +587,22 @@ function handleImportAll(event: Event) {
       
       if (importCount > 0) {
         userDataStore._save()
-        alert(`成功导入 ${importCount} 条数据`)
+        await showAlert(`成功导入 ${importCount} 条数据`)
       } else {
-        alert('未找到有效的数据')
+        await showErrorAlert('未找到有效的数据')
       }
     } catch (err: any) {
-      alert('导入失败: ' + err.message)
+      await showErrorAlert('导入失败: ' + err.message)
     }
   }
   reader.readAsText(file)
   ;(event.target as HTMLInputElement).value = ''
 }
 
-function handleExportAll() {
+async function handleExportAll() {
   const total = userDataStore.presets.length + userDataStore.worldInfo.length + userDataStore.regexScripts.length
   if (total === 0) {
-    alert('暂无数据可导出')
+    await showErrorAlert('暂无数据可导出')
     return
   }
   const data = {

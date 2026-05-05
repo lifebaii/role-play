@@ -79,7 +79,7 @@
     
     <div 
       v-if="toastMessage" 
-      class="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg shadow-lg transition-all duration-300"
+      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg shadow-lg transition-all duration-300"
       :class="toastType === 'success' ? 'bg-[var(--theme-success)] text-white' : 'bg-[var(--theme-danger)] text-white'"
     >
       {{ toastMessage }}
@@ -153,9 +153,10 @@ const toggleFriend = async (character: Character) => {
     return
   }
   
+  const sourceUrl = character.sourceUrl
   actionCharacterId.value = characterId
   try {
-    await userStore.addOnlineFriendCharacter(characterId)
+    await userStore.addOnlineFriendCharacter(characterId, sourceUrl)
     character.isFriend = true
     await userStore.loadLocalFriends()
     showToast('添加成功', 'success')

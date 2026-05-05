@@ -209,6 +209,91 @@ export async function parseCharacterFromPng(file: File): Promise<{ data: any | n
   return { data: null, hasEmbeddedData: false }
 }
 
+export interface ExtractedPngResult {
+  success: boolean
+  data: NormalizedCharacter | null
+  rawData: any | null
+  error?: string
+}
+
+export async function extractCharacterFromPng(
+  source: ArrayBuffer | Blob | File
+): Promise<ExtractedPngResult> {
+  try {
+    let buffer: ArrayBuffer
+
+    if (source instanceof ArrayBuffer) {
+      buffer = source
+    } else if (source instanceof Blob) {
+      buffer = await source.arrayBuffer()
+    } else {
+      buffer = await source.arrayBuffer()
+    }
+
+    const chunks = await readPngChunks(buffer)
+
+    let rawDataStr = chunks['chara'] || chunks['character'] || ''
+
+    if (!rawDataStr) {
+      for (const key of Object.keys(chunks)) {
+        try {
+          const parsed = JSON.parse(chunks[key])
+          if (parsed.spec || parsed.data) {
+            rawDataStr = chunks[key]
+            break
+          }
+        } catch {
+          continue
+        }
+      }
+    }
+
+    if (!rawDataStr) {
+      return {
+        success: false,
+        data: null,
+        rawData: null,
+        error: 'PNG 文件中没有嵌入角色数据'
+      }
+    }
+
+    const decodedStr = decodeBase64Utf8(rawDataStr)
+    const charData = JSON.parse(decodedStr)
+    const normalized = normalizeCharacterData(charData)
+
+    if (Array.isArray(normalized)) {
+      return {
+        success: false,
+        data: null,
+        rawData: charData,
+        error: 'PNG 文件包含多个角色，无法加载'
+      }
+    }
+
+    if (!normalized) {
+      return {
+        success: false,
+        data: null,
+        rawData: charData,
+        error: '无法解析角色数据'
+      }
+    }
+
+    return {
+      success: true,
+      data: normalized,
+      rawData: charData
+    }
+  } catch (e: any) {
+    return {
+      success: false,
+      data: null,
+      rawData: null,
+      error: e.message || '解析 PNG 文件失败'
+    }
+  }
+}
+
 export function createCharacterFromImage(file: File, arrayBuffer?: ArrayBuffer): NormalizedCharacter {
   const buffer = arrayBuffer ? arrayBuffer : null
   const base64 = buffer ? arrayBufferToBase64(buffer) : ''
@@ -253,6 +338,46 @@ export interface NormalizedCharacter {
   spec_version?: string
 }
 
+function extractTagsFromCreatorNotes(creatorNotes: string): { tags: string[], isPureTags: boolean } {
+  if (!creatorNotes || typeof creatorNotes !== 'string') {
+    return { tags: [], isPureTags: false }
+  }
+
+  const trimmed = creatorNotes.trim()
+  if (!trimmed) {
+    return { tags: [], isPureTags: false }
+  }
+
+  const tagPattern = /^#[^\s]+$/
+  const parts = trimmed.split(/\s+/)
+
+  const isPureTags = parts.every(part => tagPattern.test(part))
+
+  if (!isPureTags) {
+    return { tags: [], isPureTags: false }
+  }
+
+  const tags = parts.map(part => part.slice(1))
+
+  const allTagsValidLength = tags.every(tag => tag.length <= 10)
+
+  if (!allTagsValidLength) {
+    return { tags: [], isPureTags: false }
+  }
+
+  return { tags, isPureTags: true }
+}
+
+function isTagsEmpty(tags: any): boolean {
+  if (!tags) {
+    return true
+  }
+  if (Array.isArray(tags) && tags.length === 0) {
+    return true
+  }
+  return false
+}
+
 export function normalizeCharacterData(charData: any): NormalizedCharacter | NormalizedCharacter[] | null {
   if (Array.isArray(charData)) {
     return charData.map(c => normalizeSingleCharacter(c))
@@ -265,7 +390,6 @@ export function normalizeCharacterData(charData: any): NormalizedCharacter | Nor
   return null
 }
 
-// 导入数据格式化处理
 function normalizeSingleCharacter(charData: any): NormalizedCharacter {
   // const isV2 = charData.spec === 'chara_card_v2' || charData.spec === 'chara_card_v3' || !!charData.data
   // const data = isV2 && charData.data ? charData.data : charData
@@ -308,6 +432,14 @@ function normalizeSingleCharacter(charData: any): NormalizedCharacter {
     if (!Array.isArray(res.data.extensions.regex_scripts)) {
       res.data.extensions.regex_scripts = res.data.regex_scripts;
       delete res.data.regex_scripts;
+    }
+  }
+
+  if (res.data && isTagsEmpty(res.data.tags)) {
+    const { tags: extractedTags, isPureTags } = extractTagsFromCreatorNotes(res.data.creator_notes)
+    if (isPureTags && extractedTags.length > 0) {
+      res.data.tags = extractedTags
+      res.data.creator_notes = ''
     }
   }
 

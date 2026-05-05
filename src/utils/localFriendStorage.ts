@@ -1,13 +1,88 @@
 import { dbGet, dbDelete, fileGet, fileDelete, deleteByPrefix, STORE_NAME, FILES_STORE_NAME, characterSet, characterGet, characterDelete, characterGetAll, characterClear } from './db'
 import { parseCharacterFromPng, normalizeCharacterData, writePngChunks } from './characterImport'
+import { eventBus } from './eventBus'
 
 const LOCAL_FRIENDS_KEY = 'local_friends_list'
 const FRIEND_IMG_PREFIX = 'character_img_'
+const FRIEND_META_KEY = 'friend_meta'
+
+export type FriendAddType = 'import' | 'create' | 'add'
+
+export interface FriendMetaItem {
+  id: string
+  addType: FriendAddType
+  addedAt?: number
+}
 
 let friendsCache: LocalFriend[] | null = null
 
 export function clearFriendsCache(): void {
   friendsCache = null
+}
+
+export function getFriendMetaList(): FriendMetaItem[] {
+  try {
+    const saved = localStorage.getItem(FRIEND_META_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
+export function setFriendMetaList(list: FriendMetaItem[]): void {
+  localStorage.setItem(FRIEND_META_KEY, JSON.stringify(list))
+}
+
+export function addFriendMeta(id: string, addType: FriendAddType): void {
+  const list = getFriendMetaList()
+  const existingIndex = list.findIndex(item => item.id === id)
+  
+  const newItem: FriendMetaItem = {
+    id,
+    addType,
+    addedAt: Date.now()
+  }
+  
+  if (existingIndex !== -1) {
+    list.splice(existingIndex, 1)
+  }
+  
+  list.unshift(newItem)
+  setFriendMetaList(list)
+  eventBus.emit('friend-order-changed', id)
+}
+
+export function removeFriendMeta(id: string): void {
+  const list = getFriendMetaList()
+  const filtered = list.filter(item => item.id !== id)
+  setFriendMetaList(filtered)
+}
+
+export function pinFriendToTop(id: string): void {
+  const list = getFriendMetaList()
+  const index = list.findIndex(item => item.id === id)
+  
+  if (index !== -1) {
+    const [item] = list.splice(index, 1)
+    list.unshift(item)
+    setFriendMetaList(list)
+    eventBus.emit('friend-order-changed', id)
+  }
+}
+
+export function sortFriendsByMeta(friends: LocalFriend[]): LocalFriend[] {
+  const metaList = getFriendMetaList()
+  if (metaList.length === 0) return friends
+  
+  const orderMap = new Map(metaList.map((item, index) => [item.id, index]))
+  
+  return [...friends].sort((a, b) => {
+    const idA = a.role_play?.id || a.id
+    const idB = b.role_play?.id || b.id
+    const indexA = orderMap.get(idA) ?? Infinity
+    const indexB = orderMap.get(idB) ?? Infinity
+    return indexA - indexB
+  })
 }
 
 function generateUUID(): string {
@@ -273,6 +348,8 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
   friends.unshift(newFriend)
   friendsCache = friends
 
+  addFriendMeta(newId, 'import')
+
   return newFriend
 }
 
@@ -376,6 +453,8 @@ export async function addOnlineFriendFromBlob(
   friends.unshift(newFriend)
   friendsCache = friends
 
+  addFriendMeta(characterId, 'add')
+
   console.log(`[LocalFriend] Added online friend from blob: ${characterId}, originalId: ${originalId}`)
 
   return newFriend
@@ -466,6 +545,8 @@ export async function createLocalFriend(characterData: any, _shared: boolean = f
     friendsCache = null
   }
 
+  addFriendMeta(newId, 'create')
+
   console.log(`[LocalFriend] Created new friend: ${newId}`)
 
   return newFriend
@@ -549,6 +630,8 @@ export async function removeLocalFriend(friendId: string): Promise<boolean> {
       friendsCache.splice(index, 1)
     }
   }
+
+  removeFriendMeta(friendId)
 
   return true
 }
@@ -916,6 +999,13 @@ export async function importLocalFriends(friendsData: any[]): Promise<{ success:
     }
   }
 
+  for (let i = importedFriends.length - 1; i >= 0; i--) {
+    const friendId = importedFriends[i].role_play?.id
+    if (friendId) {
+      addFriendMeta(friendId, 'import')
+    }
+  }
+
   return { success, failed, friends: importedFriends }
 }
 
@@ -931,6 +1021,7 @@ export async function importFriendFromFile(file: File): Promise<LocalFriend> {
   const newFriend = friends.find(f => getFriendId(f) === newId)
 
   if (newFriend) {
+    addFriendMeta(newId, 'import')
     return newFriend
   }
 
@@ -949,6 +1040,8 @@ export async function importFriendFromFile(file: File): Promise<LocalFriend> {
     friendData = JSON.parse(text)
   }
 
+  addFriendMeta(newId, 'import')
+
   return {
     data: friendData,
     role_play: {
@@ -966,6 +1059,8 @@ export async function importRawFile(file: File): Promise<{ id: string; fileType:
   const fileType = isImage ? 'image' : 'json'
 
   friendsCache = null
+
+  addFriendMeta(newId, 'import')
 
   return { id: newId, fileType }
 }

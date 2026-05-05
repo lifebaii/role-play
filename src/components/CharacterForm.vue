@@ -1,7 +1,7 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <div 
-      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-[var(--theme-card-bg)]"
     >
       <button
         type="button"
@@ -122,7 +122,7 @@
     </div>
 
     <div 
-      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-[var(--theme-card-bg)]"
     >
       <button
         type="button"
@@ -235,7 +235,7 @@
     </div>
 
     <div 
-      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-[var(--theme-card-bg)]"
     >
       <button
         type="button"
@@ -348,7 +348,7 @@
     </div>
 
     <div 
-      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-[var(--theme-card-bg)]"
     >
       <button
         type="button"
@@ -497,6 +497,9 @@ import CharacterImageEditor from './CharacterImageEditor.vue'
 import { exportCharacterFile, getCharacterSourceType, getCharacterBlob, saveCharacterImage } from '@/utils/localFriendStorage'
 import { exportCharacterAsPng, parseCharacterFromPng, downloadBlob } from '@/utils/characterImport'
 import { charactersApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
+
+const { showDangerConfirm, showErrorAlert } = useDialog()
 
 interface CharacterFormData {
   id?: string
@@ -683,8 +686,9 @@ function saveWorldInfoEditing(data: any) {
   editingWorldInfoIndex.value = undefined
 }
 
-function removeWorldInfo(index: number) {
-  if (confirm('确定要删除这个世界书条目吗？')) {
+async function removeWorldInfo(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这个世界书条目吗？')
+  if (confirmed) {
     form.value.character_book.entries.splice(index, 1)
   }
 }
@@ -709,10 +713,10 @@ function saveRegexEditing(data: any) {
   editingRegexIndex.value = undefined
 }
 
-function removeRegex(index: number) {
-  if (confirm('确定要删除这个正则脚本吗？')) {
+async function removeRegex(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这个正则脚本吗？')
+  if (confirmed) {
     form.value.regex_scripts.splice(index, 1)
-    // 同时也更新 extensions.regex_scripts，保持一致性
     form.value.extensions = {
       ...form.value.extensions,
       regex_scripts: form.value.regex_scripts
@@ -732,8 +736,9 @@ async function handleSubmit() {
   emit('submit', submitData)
 }
 
-function handleDelete() {
-  if (confirm('确定要删除这个角色吗？删除后聊天记录也会一并删除。')) {
+async function handleDelete() {
+  const confirmed = await showDangerConfirm('确定要删除这个角色吗？删除后聊天记录也会一并删除。')
+  if (confirmed) {
     emit('delete')
   }
 }
@@ -751,7 +756,7 @@ async function handleExport() {
     showExportFormatModal.value = true
   } catch (error) {
     console.error('导出失败:', error)
-    alert('导出角色失败，请重试')
+    await showErrorAlert('导出角色失败，请重试')
   }
 }
 
@@ -772,7 +777,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         downloadBlob(blob, fileName)
       } else {
         if (!form.value.avatar) {
-          alert('无法生成图片：缺少头像数据')
+          await showErrorAlert('无法生成图片：缺少头像数据')
           return
         }
         const pngBlob = await exportCharacterAsPng({ data: form.value, role_play: { id: '' } })
@@ -780,7 +785,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
           const fileName = form.value.name ? `${form.value.name}.png` : 'character.png'
           downloadBlob(pngBlob, fileName)
         } else {
-          alert('无法生成图片：头像数据格式不支持')
+          await showErrorAlert('无法生成图片：头像数据格式不支持')
         }
       }
       return
@@ -791,14 +796,14 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
     if (sourceType === 'image' && format === 'image') {
       const result = await exportCharacterFile(charId)
       if (!result) {
-        alert('导出角色失败，未找到角色数据')
+        await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
       downloadBlob(result.blob, result.fileName)
     } else if (sourceType === 'image' && format === 'json') {
       const blob = await getCharacterBlob(charId)
       if (!blob) {
-        alert('导出角色失败，未找到角色数据')
+        await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
       const file = new File([blob], 'character.png', { type: blob.type || 'image/png' })
@@ -814,19 +819,19 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         const name = data.data?.name || data.name || 'character'
         downloadBlob(jsonBlob, `${name}.json`)
       } else {
-        alert('无法解析图片中的角色数据')
+        await showErrorAlert('无法解析图片中的角色数据')
       }
     } else if (sourceType === 'json' && format === 'json') {
       const result = await exportCharacterFile(charId)
       if (!result) {
-        alert('导出角色失败，未找到角色数据')
+        await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
       downloadBlob(result.blob, result.fileName)
     } else if (sourceType === 'json' && format === 'image') {
       const result = await exportCharacterFile(charId)
       if (!result) {
-        alert('导出角色失败，未找到角色数据')
+        await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
       const text = await result.blob.text()
@@ -834,7 +839,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
       const normalizedData = charData.data || charData
       
       if (!normalizedData.avatar) {
-        alert('无法生成图片：缺少头像数据')
+        await showErrorAlert('无法生成图片：缺少头像数据')
         return
       }
       
@@ -843,12 +848,12 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         const name = normalizedData.name || 'character'
         downloadBlob(pngBlob, `${name}.png`)
       } else {
-        alert('无法生成图片：头像数据格式不支持')
+        await showErrorAlert('无法生成图片：头像数据格式不支持')
       }
     }
   } catch (error) {
     console.error('导出失败:', error)
-    alert('导出角色失败，请重试')
+    await showErrorAlert('导出角色失败，请重试')
   }
 }
 
@@ -860,7 +865,7 @@ async function handleImageSave(file: File) {
     if (props.isAdminMode) {
       const result = await charactersApi.uploadCharacterImage(props.characterId, file)
       if (!result) {
-        alert('保存角色图片失败，请重试')
+        await showErrorAlert('保存角色图片失败，请重试')
       } else {
         emit('imageSaved', props.characterId)
       }
@@ -883,14 +888,14 @@ async function handleImageSave(file: File) {
       const success = await saveCharacterImage(props.characterId, file, characterData)
       
       if (!success) {
-        alert('保存角色图片失败，请重试')
+        await showErrorAlert('保存角色图片失败，请重试')
       } else {
         emit('imageSaved', props.characterId)
       }
     }
   } catch (error) {
     console.error('保存角色图片失败:', error)
-    alert('保存角色图片失败，请重试')
+    await showErrorAlert('保存角色图片失败，请重试')
   } finally {
     isSavingImage.value = false
   }

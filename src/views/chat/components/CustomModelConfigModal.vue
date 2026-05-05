@@ -112,7 +112,7 @@
               </svg>
               <span class="font-medium text-sm">提示</span>
             </div>
-            <p class="text-sm text-theme-text-secondary">使用自定义模型不会扣除您的对话额度，配置信息仅保存到您的浏览器本地。但每次对话请求都会将模型配置发送到服务器，请仅使用您信任的API地址。</p>
+            <p class="text-sm text-theme-text-secondary">登录后可领取免费的对话额度，使用自定义模型不会扣除您的对话额度，大模型配置信息仅保存到您的浏览器本地，请放心使用</p>
           </div>
         </div>
       </div>

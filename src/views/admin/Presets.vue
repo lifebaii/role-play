@@ -140,7 +140,9 @@ import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { Preset } from '@/types'
 import { presetsApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
+const { showSuccessAlert, showErrorAlert, showDangerConfirm, showAlert } = useDialog()
 const presets = ref<Preset[]>([])
 const isSaving = ref(false)
 
@@ -156,9 +158,9 @@ async function savePresets() {
   try {
     isSaving.value = true
     await presetsApi.update(presets.value)
-    alert('保存成功')
+    await showSuccessAlert('保存成功')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isSaving.value = false
   }
@@ -172,8 +174,9 @@ function addPreset() {
   })
 }
 
-function removePreset(index: number) {
-  if (confirm('确定要删除这个预设吗？')) {
+async function removePreset(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这个预设吗？')
+  if (confirmed) {
     presets.value.splice(index, 1)
   }
 }
@@ -192,9 +195,9 @@ async function handleImport(event: Event) {
 
     await presetsApi.import({ presets: data })
     await loadPresets()
-    alert(`成功导入 ${data.length} 个预设`)
+    await showAlert(`成功导入 ${data.length} 个预设`)
   } catch (err: any) {
-    alert('导入失败: ' + err.message)
+    await showErrorAlert('导入失败: ' + err.message)
   }
 
   ;(event.target as HTMLInputElement).value = ''

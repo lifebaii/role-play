@@ -2,6 +2,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useUserDataStore } from '@/stores/userData'
+import { useDialog } from '@/composables/useDialog'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -18,6 +19,7 @@ export function useChat(globalRegex: any[] = []) {
   const chatStore = useChatStore()
   const userStore = useUserStore()
   const userDataStore = useUserDataStore()
+  const { showConfirm, showDangerConfirm, showErrorAlert } = useDialog()
   
   const messagesContainer = ref<HTMLElement | null>(null)
   const editingIndex = ref(-1)
@@ -439,8 +441,9 @@ ${rawHtml}
     showSuggestions.value = false
   }
 
-  function deleteMessage(index: number) {
-    if (confirm('确定要删除这条消息吗？')) {
+  async function deleteMessage(index: number) {
+    const confirmed = await showDangerConfirm('确定要删除这条消息吗？')
+    if (confirmed) {
       chatStore.deleteMessage(index)
       suggestions.value = []
       lastSuggestionsMessagesSnapshot = ''
@@ -485,8 +488,9 @@ ${rawHtml}
     }
   }
 
-  function confirmClearHistory() {
-    if (confirm('确定要清空聊天记录吗？')) {
+  async function confirmClearHistory() {
+    const confirmed = await showDangerConfirm('确定要清空聊天记录吗？')
+    if (confirmed) {
       chatStore.clearHistory()
     }
   }
@@ -560,7 +564,7 @@ ${rawHtml}
       if (data.error) {
         if (data.error === 'Insufficient quota') {
           setTimeout(() => {
-            alert('对话额度不足，请签到获取更多额度或联系管理员')
+            showErrorAlert('对话额度不足，请签到获取更多额度或联系管理员')
           }, 100)
         }
         return

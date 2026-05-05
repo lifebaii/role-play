@@ -128,6 +128,52 @@
             />
             <p class="mt-1.5 text-xs text-theme-text-secondary">单个角色数据的最大字节数 (1KB-100MB)，当前: {{ formatSize(settings.maxCharacterSize) }}</p>
           </div>
+
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">每个用户在每个角色的最大评论数</label>
+            <input
+              v-model.number="settings.maxCommentsPerUserPerCharacter"
+              type="number"
+              min="1"
+              class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
+              placeholder="5"
+            />
+            <p class="mt-1.5 text-xs text-theme-text-secondary">每个用户在每个角色下最多可以发表的评论数量</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-card rounded-2xl p-4 sm:p-6 border border-theme-border shadow-lg shadow-[var(--theme-primary)]/5">
+        <h2 class="text-lg font-semibold text-theme-text-primary mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-theme-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          聊天同步设置
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">总同步次数上限</label>
+            <input
+              v-model.number="settings.chatSyncTotalLimit"
+              type="number"
+              min="0"
+              class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
+              placeholder="10"
+            />
+            <p class="mt-1.5 text-xs text-theme-text-secondary">每个用户总共可以进行的同步次数</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">每日同步次数上限</label>
+            <input
+              v-model.number="settings.chatSyncDailyLimit"
+              type="number"
+              min="0"
+              class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
+              placeholder="3"
+            />
+            <p class="mt-1.5 text-xs text-theme-text-secondary">每个用户每天可以进行的同步次数</p>
+          </div>
         </div>
       </div>
 
@@ -155,8 +201,10 @@
 import { ref, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import type { AdminSettings } from '@/types'
+import { useDialog } from '@/composables/useDialog'
 
 const adminStore = useAdminStore()
+const { showSuccessAlert, showErrorAlert } = useDialog()
 const isSaving = ref(false)
 
 const settings = ref<AdminSettings>({
@@ -166,7 +214,10 @@ const settings = ref<AdminSettings>({
   chatQuotaCost: 1,
   suggestionQuotaCost: 0.5,
   maxUserCharacters: 5,
-  maxCharacterSize: 1048576
+  maxCharacterSize: 1048576,
+  maxCommentsPerUserPerCharacter: 5,
+  chatSyncTotalLimit: 10,
+  chatSyncDailyLimit: 3
 })
 
 function formatSize(bytes: number | undefined): string {
@@ -191,9 +242,9 @@ async function saveSettings() {
   try {
     isSaving.value = true
     await adminStore.saveSettings(settings.value)
-    alert('设置已保存')
+    await showSuccessAlert('设置已保存')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isSaving.value = false
   }

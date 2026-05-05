@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 import { eventBus } from '@/utils/eventBus'
+import { compressBody } from '@/utils/gzipRequest'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -37,12 +38,17 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
 
     // 只有当 body 不是 FormData 时才设置 Content-Type
     if (!(body instanceof FormData)) {
-      config.headers['Content-Type'] = 'application/json'
-      // 合并用户自定义 headers
       Object.assign(config.headers, headers)
       
       if (body && method !== 'GET') {
-        config.body = JSON.stringify(body)
+        const compressed = compressBody(body)
+        config.headers['Content-Type'] = compressed.headers['Content-Type']
+        if (compressed.compressed) {
+          config.headers['Content-Encoding'] = 'gzip'
+        }
+        config.body = compressed.body
+      } else {
+        config.headers['Content-Type'] = 'application/json'
       }
     } else {
       // 如果是 FormData，直接使用，不设置 Content-Type，让浏览器自动设置
@@ -65,7 +71,9 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
     const response = await fetch(url, config)
 
     if (!response.ok) {
-      // 401 错误处理：自动退出登录
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      const errorMessage = error.error || `HTTP ${response.status}`
+      
       if (response.status === 401) {
         console.log('[API] 401 Unauthorized, logging out')
         if (tokenSource === 'admin-only') {
@@ -77,10 +85,11 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
           eventBus.emit('user-logout')
         }
         eventBus.emit('auth-error', { type: tokenSource, message: '登录已过期，请重新登录' })
+      } else {
+        eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
       
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(error.error || `HTTP ${response.status}`)
+      throw new Error(errorMessage)
     }
 
     return response.json()
@@ -113,14 +122,18 @@ export const api = {
     })
     
     if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+      const errorMessage = error.error || `HTTP ${response.status}`
+      
       if (response.status === 401) {
         localStorage.removeItem('user_token')
         localStorage.removeItem('user_data')
         eventBus.emit('user-logout')
         eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      } else {
+        eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-      throw new Error(error.error || `HTTP ${response.status}`)
+      throw new Error(errorMessage)
     }
     
     const contentType = response.headers.get('Content-Type') || 'application/octet-stream'
@@ -511,6 +524,9 @@ export interface AdminSettings {
   suggestionQuotaCost: number
   maxUserCharacters: number
   maxCharacterSize: number
+  maxCommentsPerUserPerCharacter: number
+  chatSyncTotalLimit: number
+  chatSyncDailyLimit: number
 }
 
 export const adminApi = {
@@ -535,7 +551,74 @@ export const adminApi = {
   
   gitPush: () => adminApiClient.post<{ success: boolean }>('/admin/git-sync/push'),
   
-  gitPull: () => adminApiClient.post<{ success: boolean }>('/admin/git-sync/pull')
+  gitPull: () => adminApiClient.post<{ success: boolean }>('/admin/git-sync/pull'),
+  
+  optimizeCharacterStream: async function* (
+    params: {
+      characterData: any
+      optimizationType: { name: string; system_prompt: string }
+      modelId: string
+    },
+    signal?: AbortSignal
+  ): AsyncGenerator<string> {
+    const token = localStorage.getItem('admin_token')
+    
+    const response = await fetch(`${API_BASE}/admin/characters/optimize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(params),
+      signal
+    })
+    
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          errorMessage = errorData.error
+        }
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(errorMessage)
+    }
+    
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    if (!reader) return
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') return
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.content) yield parsed.content
+              if (parsed.error) throw new Error(parsed.error)
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
 }
 
 export const modelsApi = {
@@ -647,12 +730,6 @@ export const v1Api = {
     })
     
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('user_token')
-        localStorage.removeItem('user_data')
-        eventBus.emit('user-logout')
-        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
-      }
       let errorMessage = `HTTP ${response.status}`
       try {
         const errorData = await response.json()
@@ -661,6 +738,15 @@ export const v1Api = {
         }
       } catch (e) {
         // ignore
+      }
+      
+      if (response.status === 401) {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_data')
+        eventBus.emit('user-logout')
+        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      } else {
+        eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
       throw new Error(errorMessage)
     }
@@ -718,12 +804,6 @@ export const v1Api = {
     })
     
     if (!response.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('user_token')
-        localStorage.removeItem('user_data')
-        eventBus.emit('user-logout')
-        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
-      }
       let errorMessage = `HTTP ${response.status}`
       try {
         const errorData = await response.json()
@@ -732,6 +812,15 @@ export const v1Api = {
         }
       } catch (e) {
         // ignore
+      }
+      
+      if (response.status === 401) {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_data')
+        eventBus.emit('user-logout')
+        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+      } else {
+        eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
       throw new Error(errorMessage)
     }
@@ -767,7 +856,6 @@ export interface UploadResult {
 
 export interface DownloadResult {
   success: boolean
-  characterId: string
   characterName: string
   messages: Message[]
   messageCount: number
@@ -780,7 +868,7 @@ export const chatSyncApi = {
   download: (syncCode: string) =>
     api.post<DownloadResult>('/chat-sync/download', { syncCode: syncCode.toUpperCase() }),
   
-  getStatus: () => api.get<SyncStatus>('/chat-sync/status'),
+  getStatus: (characterId: string) => api.get<SyncStatus>(`/chat-sync/status?characterId=${characterId}`),
   
-  cancel: () => api.delete<{ success: boolean }>('/chat-sync/cancel')
+  cancel: (characterId: string) => api.delete<{ success: boolean }>(`/chat-sync/cancel?characterId=${characterId}`)
 }

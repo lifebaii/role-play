@@ -6,9 +6,8 @@ import { useUserStore } from './user'
 import { useUserDataStore } from './userData'
 import { buildContext } from '@/utils/contextBuilder'
 import { streamChat } from '@/utils/llmClient'
-import { getLocalFriends, isLocalFriend, getLocalFriend } from '@/utils/localFriendStorage'
-import { exportChatToFile, importChatFromFile, getSyncStatus as getLocalSyncStatus, cancelSync as cancelLocalSync } from '@/utils/chatSync'
-import { modelsApi } from '@/api'
+import { getLocalFriends, isLocalFriend, getLocalFriend, pinFriendToTop } from '@/utils/localFriendStorage'
+import { modelsApi, v1Api, chatSyncApi } from '@/api'
 
 function useCustomModelConfig(): CustomModelConfig {
   try {
@@ -72,24 +71,6 @@ export const useChatStore = defineStore('chat', () => {
   const userCharacters = ref<Character[]>([])
   const sharedCharacters = ref<Character[]>([])
   const localCharacters = ref<Character[]>([])
-  
-  const friendOrderKey = 'friend_order'
-  const getFriendOrder = (): string[] => {
-    try {
-      const saved = localStorage.getItem(friendOrderKey)
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  }
-  const setFriendOrder = (order: string[]) => {
-    localStorage.setItem(friendOrderKey, JSON.stringify(order))
-  }
-  const pinFriendToTop = (characterId: string) => {
-    const currentOrder = getFriendOrder()
-    const newOrder = [characterId, ...currentOrder.filter(id => id !== characterId)]
-    setFriendOrder(newOrder)
-  }
   
   try {
     const cached = localStorage.getItem('characters_list')
@@ -558,18 +539,17 @@ const globalDefaultModel = ref('')
           modelToUse = globalDefaultModel.value
         }
 
-        const customModelConfig: CustomModelConfig = useCustomModelConfig()
-
-        const asyncIterator = streamChat(
-          customModelConfig,
-          contextResult.messages.map((m: any) => ({
-            role: m.role,
-            content: m.content,
-            name: m.name
-          })),
+        const asyncIterator = v1Api.chatCompletions(
           {
+            messages: contextResult.messages.map((m: any) => ({
+              role: m.role,
+              content: m.content,
+              name: m.name
+            })),
             temperature: contextResult.temperature,
             model: modelToUse,
+            stream: true,
+            mode: 'chat'
           },
           ctx.abortController.signal
         )
@@ -664,21 +644,21 @@ const globalDefaultModel = ref('')
     }
   }
 
-  async function sendMessage(content: string) {
-    if (!currentCharacter.value) return
+  async function sendMessage(content: string): Promise<boolean> {
+    if (!currentCharacter.value) return false
     const characterId = currentCharacter.value.id
-    if (backgroundStreams.value.has(characterId)) return
+    if (backgroundStreams.value.has(characterId)) return false
     
     if (userStore.isAnonymous && !useCustomModel.value) {
       error.value = '匿名用户只能使用自定义模型，请先配置您的 API Key'
-      return
+      return false
     }
     
     if (useCustomModel.value) {
       const config = customModelConfig.value
       if (!config?.api_url || !config?.api_key || !config?.default_model) {
         error.value = '请先完成自定义模型配置（API地址、API密钥、模型名称）'
-        return
+        return false
       }
     }
 
@@ -716,6 +696,7 @@ const globalDefaultModel = ref('')
       historyForApi,
       allMessages
     )
+    return true
   }
 
   function deleteMessage(index: number) {
@@ -752,23 +733,23 @@ const globalDefaultModel = ref('')
     }
   }
 
-  async function regenerateFrom(userMessageIndex: number) {
-    if (!currentCharacter.value) return
+  async function regenerateFrom(userMessageIndex: number): Promise<boolean> {
+    if (!currentCharacter.value) return false
     const characterId = currentCharacter.value.id
-    if (backgroundStreams.value.has(characterId)) return
-    if (userMessageIndex < 0 || userMessageIndex >= messages.value.length) return
-    if (messages.value[userMessageIndex].role !== 'user') return
+    if (backgroundStreams.value.has(characterId)) return false
+    if (userMessageIndex < 0 || userMessageIndex >= messages.value.length) return false
+    if (messages.value[userMessageIndex].role !== 'user') return false
 
     if (userStore.isAnonymous && !useCustomModel.value) {
       error.value = '匿名用户只能使用自定义模型，请先配置您的 API Key'
-      return
+      return false
     }
     
     if (useCustomModel.value) {
       const config = customModelConfig.value
       if (!config?.api_url || !config?.api_key || !config?.default_model) {
         error.value = '请先完成自定义模型配置（API地址、API密钥、模型名称）'
-        return
+        return false
       }
     }
 
@@ -800,6 +781,7 @@ const globalDefaultModel = ref('')
       historyForApi,
       newMessages
     )
+    return true
   }
 
   function abortStream(characterId?: string) {
@@ -892,7 +874,11 @@ const globalDefaultModel = ref('')
     
     try {
       const history = await getChatHistory(currentCharacter.value.id)
-      const result = await exportChatToFile(currentCharacter.value.id)
+      const result = await chatSyncApi.upload(
+        currentCharacter.value.id,
+        currentCharacter.value.name || '',
+        history
+      )
       
       await loadSyncStatus()
       
@@ -910,11 +896,21 @@ const globalDefaultModel = ref('')
       throw new Error('请先登录后再使用同步功能')
     }
     
+    if (!currentCharacter.value) {
+      throw new Error('请先选择角色')
+    }
+    
     isSyncing.value = true
     syncError.value = null
     
     try {
-      const result = { success: false, characterId: '', characterName: '', messages: [], messageCount: 0 }
+      const result = await chatSyncApi.download(syncCode)
+      
+      if (result.messages && result.messages.length > 0) {
+        await saveChatHistory(currentCharacter.value.id, result.messages)
+        messages.value = result.messages
+      }
+      
       await loadSyncStatus()
       return result
     } catch (e: any) {
@@ -931,16 +927,25 @@ const globalDefaultModel = ref('')
       return
     }
     
+    if (!currentCharacter.value?.id) {
+      syncStatus.value = null
+      return
+    }
+    
     try {
-      syncStatus.value = await getLocalSyncStatus()
+      syncStatus.value = await chatSyncApi.getStatus(currentCharacter.value.id)
     } catch (e: any) {
       console.error('Failed to load sync status:', e)
     }
   }
 
   async function cancelChatSync() {
+    if (!currentCharacter.value?.id) {
+      throw new Error('请先选择角色')
+    }
+    
     try {
-      await cancelLocalSync()
+      await chatSyncApi.cancel(currentCharacter.value.id)
       await loadSyncStatus()
     } catch (e) {
       throw e
@@ -1007,8 +1012,6 @@ const globalDefaultModel = ref('')
     uploadChatSync,
     downloadChatSync,
     loadSyncStatus,
-    cancelChatSync,
-    getFriendOrder,
-    pinFriendToTop
+    cancelChatSync
   }
 })

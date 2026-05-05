@@ -28,10 +28,10 @@
   --theme-text-secondary: #0f766e;
   --theme-text-accent: #0d9488;
   --theme-border: rgba(18, 172, 153, 0.2);
-  --theme-sidebar: rgba(255, 255, 255, 0.95);
+  --theme-sidebar: rgba(255, 255, 255, 0.7);
   --theme-sidebar-hover: rgba(18, 172, 153, 0.08);
   --theme-input-area: rgba(255, 255, 255, 0.7);
-  --theme-input-bg: #ffffff;
+  --theme-input-bg: rgba(255, 255, 255, 0.5);
   --theme-bubble-assistant: rgba(255, 255, 255, 0.92);
   --theme-bubble-assistant-border: rgba(18, 172, 153, 0.15);
   --theme-card-bg: rgba(255, 255, 255, 0.95);
@@ -304,7 +304,7 @@ body {
 }
 
 .chat-sidebar {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--theme-sidebar);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
 }
@@ -319,7 +319,7 @@ body {
 }
 
 .chat-input-field {
-  background: transparent;
+  background: var(--theme-input-bg);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   color: var(--theme-text-primary);
@@ -341,14 +341,14 @@ body {
 }
 
 .bubble-assistant {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--theme-bubble-assistant);
   border: 1px solid var(--theme-bubble-assistant-border);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
 }
 
 .bubble-user {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--theme-bubble-assistant);
   border: 1px solid color-mix(in srgb, var(--theme-primary-light) 30%, transparent);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
@@ -376,7 +376,7 @@ body {
 }
 
 .menu-dropdown {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--theme-menu-bg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }

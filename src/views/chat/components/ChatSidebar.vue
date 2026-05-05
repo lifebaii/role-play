@@ -6,9 +6,15 @@
     <div class="h-14 px-2 sm:px-4 border-b border-theme-border flex items-center justify-between bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0">
       <h1 @click="$emit('openAbout')" class="text-lg sm:text-xl font-bold gradient-text cursor-pointer hover:opacity-80 transition-opacity">ROLE PLAY</h1>
       <div class="flex items-center gap-1 sm:gap-2">
-        <button @click="$emit('openThemeSelector')" class="p-1.5 sm:p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" title="切换主题">
-          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        <button @click="handleToggleColorMode" class="p-1.5 sm:p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" :title="colorModeTitle">
+          <svg v-if="currentColorMode === 'light'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg v-else-if="currentColorMode === 'dark'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+          <svg v-else class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
         </button>
         <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all">
@@ -209,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, onMounted, onUnmounted } from 'vue'
+import { watch, ref, onMounted, onUnmounted, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
@@ -218,6 +224,10 @@ import { clearCharacterAvatarCache, getFriendAvatar } from '@/utils/localFriendS
 import { eventBus } from '@/utils/eventBus'
 import { config } from '@/utils/config'
 import AvatarImage from '@/components/AvatarImage.vue'
+import { toggleColorMode, getColorMode, type ColorMode } from '@/utils/theme'
+import { useDialog } from '@/composables/useDialog'
+
+const { showConfirm } = useDialog()
 
 const props = defineProps<{
   modelValue: boolean
@@ -227,7 +237,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'openThemeSelector'): void
   (e: 'openCreateCharacter'): void
   (e: 'openFriendSelector'): void
   (e: 'openUserSettings'): void
@@ -242,6 +251,19 @@ const chatStore = useChatStore()
 const userStore = useUserStore()
 const avatarMap = ref(new Map<string, string>())
 const showAuthEntry = config.showAuthEntry
+const currentColorMode = ref<ColorMode>(getColorMode())
+
+const colorModeTitle = computed(() => {
+  switch (currentColorMode.value) {
+    case 'light': return '亮色模式（点击切换）'
+    case 'dark': return '暗色模式（点击切换）'
+    default: return '跟随系统（点击切换）'
+  }
+})
+
+function handleToggleColorMode() {
+  currentColorMode.value = toggleColorMode()
+}
 
 async function loadAvatarForCharacter(character: any) {
   const key = character.role_play?.id || character.id
@@ -306,8 +328,9 @@ function selectCharacter(character: any) {
   emit('update:modelValue', false)
 }
 
-function handleLogout() {
-  if (confirm('确定要退出登录吗？')) {
+async function handleLogout() {
+  const confirmed = await showConfirm('确定要退出登录吗？')
+  if (confirmed) {
     userStore.logout()
   }
 }

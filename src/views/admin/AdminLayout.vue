@@ -13,11 +13,24 @@
         <router-link to="/chat" class="text-xl font-bold gradient-text hover:opacity-80 transition-opacity">
           Role-Play
         </router-link>
-        <button @click="sidebarOpen = false" class="lg:hidden p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
+        <div class="flex items-center gap-1">
+          <button @click="handleToggleColorMode" class="p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" :title="colorModeTitle">
+            <svg v-if="currentColorMode === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <svg v-else-if="currentColorMode === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </button>
+          <button @click="sidebarOpen = false" class="lg:hidden p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <nav class="p-3 flex-1 space-y-1">
@@ -93,11 +106,25 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
+import { toggleColorMode, getColorMode, type ColorMode } from '@/utils/theme'
 
 const route = useRoute()
 const router = useRouter()
 const adminStore = useAdminStore()
 const sidebarOpen = ref(false)
+const currentColorMode = ref<ColorMode>(getColorMode())
+
+const colorModeTitle = computed(() => {
+  switch (currentColorMode.value) {
+    case 'light': return '亮色模式（点击切换）'
+    case 'dark': return '暗色模式（点击切换）'
+    default: return '跟随系统（点击切换）'
+  }
+})
+
+function handleToggleColorMode() {
+  currentColorMode.value = toggleColorMode()
+}
 
 const menuItems = [
   { path: '/admin', name: '仪表盘', icon: '📊' },

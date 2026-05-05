@@ -142,7 +142,9 @@ import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { RegexScript } from '@/types'
 import { regexApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
+const { showSuccessAlert, showErrorAlert, showDangerConfirm } = useDialog()
 const scripts = ref<RegexScript[]>([])
 const isSaving = ref(false)
 
@@ -158,9 +160,9 @@ async function saveScripts() {
   try {
     isSaving.value = true
     await regexApi.update(scripts.value)
-    alert('保存成功')
+    await showSuccessAlert('保存成功')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isSaving.value = false
   }
@@ -177,8 +179,9 @@ function addScript() {
   })
 }
 
-function removeScript(index: number) {
-  if (confirm('确定要删除这个脚本吗？')) {
+async function removeScript(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这个脚本吗？')
+  if (confirmed) {
     scripts.value.splice(index, 1)
   }
 }

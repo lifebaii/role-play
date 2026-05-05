@@ -189,7 +189,9 @@ import { ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import type { WorldInfoEntry } from '@/types'
 import { worldInfoApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
+const { showSuccessAlert, showErrorAlert, showDangerConfirm, showAlert } = useDialog()
 const entries = ref<WorldInfoEntry[]>([])
 const isSaving = ref(false)
 
@@ -205,9 +207,9 @@ async function saveEntries() {
   try {
     isSaving.value = true
     await worldInfoApi.update(entries.value)
-    alert('保存成功')
+    await showSuccessAlert('保存成功')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isSaving.value = false
   }
@@ -228,8 +230,9 @@ function addEntry() {
   })
 }
 
-function removeEntry(index: number) {
-  if (confirm('确定要删除这个条目吗？')) {
+async function removeEntry(index: number) {
+  const confirmed = await showDangerConfirm('确定要删除这个条目吗？')
+  if (confirmed) {
     entries.value.splice(index, 1)
   }
 }
@@ -248,9 +251,9 @@ async function handleImport(event: Event) {
 
     await worldInfoApi.import({ entries: data })
     await loadEntries()
-    alert(`成功导入 ${data.length} 个条目`)
+    await showAlert(`成功导入 ${data.length} 个条目`)
   } catch (err: any) {
-    alert('导入失败: ' + err.message)
+    await showErrorAlert('导入失败: ' + err.message)
   }
 
   ;(event.target as HTMLInputElement).value = ''

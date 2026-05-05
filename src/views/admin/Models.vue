@@ -203,8 +203,10 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import type { Model } from '@/types'
+import { useDialog } from '@/composables/useDialog'
 
 const adminStore = useAdminStore()
+const { showDangerConfirm, showSuccessAlert, showErrorAlert, showAlert } = useDialog()
 const models = ref<Model[]>([])
 const uniqueModels = ref<{ id: string; name: string; providers: { id: string; name: string }[] }[]>([])
 const globalDefaultModel = ref<string>('')
@@ -276,7 +278,8 @@ function copyModelItem(index: number) {
 
 async function deleteModelItem(index: number) {
   const model = models.value[index]
-  if (!confirm(`确定要删除模型提供商 "${model.name || '未命名'}" 吗？`)) {
+  const confirmed = await showDangerConfirm(`确定要删除模型提供商 "${model.name || '未命名'}" 吗？`)
+  if (!confirmed) {
     return
   }
 
@@ -285,7 +288,7 @@ async function deleteModelItem(index: number) {
     await adminStore.deleteModel(model.id)
     models.value.splice(index, 1)
   } catch (e: any) {
-    alert('删除失败: ' + e.message)
+    await showErrorAlert('删除失败: ' + e.message)
   } finally {
     isDeleting.value = null
   }
@@ -331,7 +334,7 @@ async function fetchModels(index: number) {
       models.value[index].selected_models.push(models.value[index].default_model)
     }
   } catch (e: any) {
-    alert('获取模型列表失败: ' + e.message)
+    await showErrorAlert('获取模型列表失败: ' + e.message)
   } finally {
     fetchingIndex.value = null
   }
@@ -396,9 +399,9 @@ async function saveModels() {
   try {
     isSaving.value = true
     await adminStore.saveModels(models.value, globalDefaultModel.value)
-    alert('保存成功')
+    await showSuccessAlert('保存成功')
   } catch (e: any) {
-    alert('保存失败: ' + e.message)
+    await showErrorAlert('保存失败: ' + e.message)
   } finally {
     isSaving.value = false
   }
@@ -415,7 +418,7 @@ async function testModel(id: string) {
       apiUrl: model.api_url,
       provider: model.provider
     })
-    alert(success ? '连接成功' : '连接失败')
+    await showAlert(success ? '连接成功' : '连接失败')
   } finally {
     testingId.value = null
   }

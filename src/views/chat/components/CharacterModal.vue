@@ -5,13 +5,17 @@
       <div 
         v-if="backgroundImageUrl"
         class="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-        :style="{ backgroundImage: `url(${backgroundImageUrl})`, opacity: 1 }"
+        :style="{ backgroundImage: `url(${backgroundImageUrl})`, opacity: 0.3 }"
+      ></div>
+      <div 
+        v-if="backgroundImageUrl"
+        class="absolute inset-0 bg-[var(--theme-bg-start)]/70 pointer-events-none"
       ></div>
       
       <!-- 内容层 -->
       <div class="relative z-10 flex flex-col h-full">
         <div class="flex-1 overflow-y-auto overscroll-contain" data-scrollable="true" style="-webkit-overflow-scrolling: touch;">
-        <div class="sticky top-0 z-10 p-3 sm:p-6 border-b border-theme-border/50 flex items-center justify-between bg-[var(--theme-card)]/80 backdrop-blur-xl">
+        <div class="sticky top-0 z-10 p-3 sm:p-6 border-b border-theme-border/50 flex items-center justify-between bg-[var(--theme-card-bg)]/80 backdrop-blur-xl">
           <div class="flex items-center gap-2 sm:gap-3">
             <h2 class="text-base sm:text-xl font-bold gradient-text flex items-center gap-2">
               <template v-if="editingCharacter">
@@ -145,7 +149,7 @@
           />
         </div>
         
-        <div v-if="!isViewOnlyMode" class="sticky bottom-0 flex flex-row justify-between items-center gap-1.5 sm:gap-0 bg-[var(--theme-card)]/80 backdrop-blur-xl border-t border-theme-border/50 px-3 sm:px-6 py-2.5 sm:py-4 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <div v-if="!isViewOnlyMode" class="sticky bottom-0 flex flex-row justify-between items-center gap-1.5 sm:gap-0 bg-[var(--theme-card-bg)]/80 backdrop-blur-xl border-t border-theme-border/50 px-3 sm:px-6 py-2.5 sm:py-4 z-10 shadow-[0_-4px_6px_-1px_var(--theme-shadow)]">
           <div v-if="editingCharacter" class="flex gap-1.5 sm:gap-3">
             <button
               type="button"
@@ -212,7 +216,7 @@
               
               <div
                 v-if="showMoreActions"
-                class="absolute bottom-full left-0 mb-2 min-w-[200px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-2xl border border-theme-border/30 overflow-hidden z-50"
+                class="absolute bottom-full left-0 mb-2 min-w-[200px] bg-[var(--theme-menu-bg)] backdrop-blur-xl rounded-xl shadow-2xl border border-theme-border/30 overflow-hidden z-50"
                 @click.stop
               >
                 <button
@@ -227,7 +231,7 @@
                   <span>{{ editingCharacterMeta.originalId ? '在线添加的角色无法导出' : '导出角色' }}</span>
                 </button>
                 
-                <div class="border-t border-gray-300 dark:border-gray-600"></div>
+                <div class="border-t border-theme-border/50"></div>
                 
                 <button
                   type="button"
@@ -241,7 +245,7 @@
                 </button>
                 
                 <template v-if="isLoggedIn">
-                  <div class="border-t border-gray-300 dark:border-gray-600"></div>
+                  <div class="border-t border-theme-border/50"></div>
                   
                   <template v-if="!editingCharacterMeta.originalId">
                     <button
@@ -353,8 +357,10 @@ import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob } from '@/
 import { characterGet } from '@/utils/db'
 import { useUserStore } from '@/stores/user'
 import { charactersApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
 const userStore = useUserStore()
+const { showAlert, showConfirm, showErrorAlert } = useDialog()
 
 interface MetaData {
   originalId: string | null
@@ -456,11 +462,13 @@ async function loadAvatar() {
     return
   }
   
-  if (props.thumbnailUrl) {
+  // 查看模式：使用在线URL
+  if (props.isViewOnlyMode && props.thumbnailUrl) {
     avatarUrl.value = props.thumbnailUrl
     return
   }
   
+  // 编辑模式：使用本地头像
   try {
     const url = await getFriendAvatar(props.editingCharacter as any)
     avatarUrl.value = url
@@ -554,9 +562,9 @@ const sharedDisabledReason = computed(() => {
   return ''
 })
 
-function handleSharedClick(event: MouseEvent) {
+async function handleSharedClick(event: MouseEvent) {
   if (!canToggleShared.value) {
-    alert(sharedDisabledReason.value)
+    await showAlert(sharedDisabledReason.value)
     event.preventDefault()
     event.stopPropagation()
   }
@@ -576,7 +584,7 @@ async function handleToggleShared() {
   const newSharedState = !props.editingCharacterMeta.shared
   
   if (newSharedState) {
-    const confirmed = confirm('分享后其他用户可以添加此角色，确定要分享吗？')
+    const confirmed = await showConfirm('分享后其他用户可以添加此角色，确定要分享吗？')
     if (!confirmed) {
       return
     }
@@ -588,7 +596,7 @@ async function handleToggleShared() {
     if (newSharedState) {
       const blob = await getCharacterBlob(characterId)
       if (!blob) {
-        alert('无法获取角色数据')
+        await showErrorAlert('无法获取角色数据')
         return
       }
       
@@ -608,7 +616,7 @@ async function handleToggleShared() {
     emit('update:shared', newSharedState)
   } catch (error: any) {
     console.error('更新分享状态失败:', error)
-    alert('更新分享状态失败: ' + error.message)
+    await showErrorAlert('更新分享状态失败: ' + error.message)
   } finally {
     localIsUpdatingShared.value = false
   }

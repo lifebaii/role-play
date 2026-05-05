@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-4 rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90">
+  <div class="mt-4 rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-[var(--theme-card-bg)]">
     <button
       @click="toggleExpand"
       class="w-full flex items-center justify-between p-4 sm:p-6 text-left hover:bg-[var(--theme-card-hover)] transition-colors"
@@ -129,12 +129,15 @@ import { ref, computed, watch } from 'vue'
 import type { Comment } from '@/types'
 import { generateAnonymousName } from '@/utils/anonymousName'
 import { charactersApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
 const props = defineProps<{
   characterId: string
   showOriginalHint?: boolean
   initialCommentCount?: number
 }>()
+
+const { showErrorAlert, showDangerConfirm } = useDialog()
 
 const isExpanded = ref(false)
 const comments = ref<Comment[]>([])
@@ -202,13 +205,15 @@ const submitComment = async () => {
     newComment.value = ''
   } catch (error) {
     console.error('Failed to add comment:', error)
+    await showErrorAlert(error.message || '评论发送失败')
   } finally {
     isSubmitting.value = false
   }
 }
 
 const handleDelete = async (commentId: string) => {
-  if (!confirm('确定要删除这条评论吗？')) return
+  const confirmed = await showDangerConfirm('确定要删除这条评论吗？')
+  if (!confirmed) return
   
   try {
     await charactersApi.deleteComment(props.characterId, commentId)

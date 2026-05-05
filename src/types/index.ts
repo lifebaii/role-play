@@ -215,6 +215,9 @@ export interface AdminSettings {
   suggestionQuotaCost?: number
   maxUserCharacters?: number
   maxCharacterSize?: number
+  maxCommentsPerUserPerCharacter?: number
+  chatSyncTotalLimit?: number
+  chatSyncDailyLimit?: number
 }
 
 export interface WorldInfoEntry {
@@ -250,12 +253,24 @@ export interface WorldInfoEntry {
 
 export interface UploadResult {
   success: boolean
-  message?: string
-  syncedCount?: number
+  syncId: string
+  syncCode: string
+  expiresAt: string
+  remainingCount: number
 }
 
 export interface SyncStatus {
-  isSyncing: boolean
-  lastSyncAt?: string
-  progress?: number
+  totalLimit: number
+  dailyLimit: number
+  totalUsed: number
+  dailyUsed: number
+  remainingTotal: number
+  remainingDaily: number
+  activeSync?: {
+    syncId: string
+    syncCode: string
+    characterName: string
+    createdAt: string
+    expiresAt: string
+  }
 }

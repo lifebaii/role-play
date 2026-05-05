@@ -55,9 +55,11 @@ import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import CharacterList from '@/components/CharacterList.vue'
 import { charactersApi } from '@/api'
+import { useDialog } from '@/composables/useDialog'
 
 const router = useRouter()
 const adminStore = useAdminStore()
+const { showDangerConfirm, showAlert, showErrorAlert } = useDialog()
 const isImporting = ref(false)
 const isDeleting = ref(false)
 const isLoading = ref(false)
@@ -139,17 +141,18 @@ function getCharacterId(character: any): string {
   }
 
   async function handleDelete(character: any) {
-  if (confirm('确定要删除这个角色吗？此操作不可撤销。')) {
+  const confirmed = await showDangerConfirm('确定要删除这个角色吗？此操作不可撤销。')
+  if (confirmed) {
     isDeleting.value = true
     try {
       const id = getCharacterId(character)
       const result = await adminStore.deleteCharacter(id)
       
       if (result && result.warning) {
-        alert(`角色已删除，但存在警告: ${result.warning}`)
+        await showAlert(`角色已删除，但存在警告: ${result.warning}`)
       }
     } catch (error: any) {
-      alert('删除失败: ' + (error.message || '未知错误'))
+      await showErrorAlert('删除失败: ' + (error.message || '未知错误'))
     } finally {
       isDeleting.value = false
     }
@@ -210,17 +213,17 @@ async function handleImport(event: Event) {
         }
       }
       
-      alert(message)
+      await showAlert(message)
     } else {
       let errorMessage = `所有 ${result.failed} 个文件导入失败`
       if (result.failedFiles && result.failedFiles.length > 0) {
         errorMessage += ':\n' + result.failedFiles.map(f => `- ${f.filename}: ${f.error}`).join('\n')
       }
-      alert(errorMessage)
+      await showErrorAlert(errorMessage)
     }
   } catch (error: any) {
     console.error('[Admin Import] Import failed:', error)
-    alert('导入失败: ' + (error.message || '未知错误'))
+    await showErrorAlert('导入失败: ' + (error.message || '未知错误'))
   } finally {
     isImporting.value = false
     ;(event.target as HTMLInputElement).value = ''
