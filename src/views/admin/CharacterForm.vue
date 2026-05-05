@@ -217,11 +217,11 @@ async function handleSubmit(data: any) {
         
         const pngBlob = await writePngChunks(buffer, dataToWrite)
         const pngFile = new File([pngBlob], `${id}.png`, { type: 'image/png' })
-        await charactersApi.importFiles([pngFile], id)
+        await charactersApi.importFilesAdmin([pngFile], id)
       } else {
         const jsonBlob = new Blob([JSON.stringify(characterData, null, 2)], { type: 'application/json' })
         const jsonFile = new File([jsonBlob], `${id}.json`, { type: 'application/json' })
-        await charactersApi.importFiles([jsonFile], id)
+        await charactersApi.importFilesAdmin([jsonFile], id)
       }
       
       await adminStore.loadCharacters()
