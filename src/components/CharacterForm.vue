@@ -44,7 +44,9 @@
               v-model="form.name"
               type="text"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200"
+              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
               placeholder="输入角色名称..."
+              :disabled="viewOnly"
               required
             />
           </div>
@@ -55,7 +57,9 @@
               ref="descriptionTextarea"
               v-model="form.description"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
               placeholder="简短描述这个角色..."
+              :disabled="viewOnly"
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
           </div>
@@ -71,6 +75,7 @@
                 >
                   {{ tag }}
                   <button
+                    v-if="!viewOnly"
                     type="button"
                     @click="removeTag(index)"
                     class="w-4 h-4 flex items-center justify-center rounded-full hover:bg-[var(--theme-danger)]/20 hover:text-[var(--theme-danger)] transition-colors"
@@ -81,7 +86,7 @@
                   </button>
                 </span>
               </div>
-              <div class="flex gap-2">
+              <div v-if="!viewOnly" class="flex gap-2">
                 <input
                   v-model="newTagInput"
                   type="text"
@@ -106,7 +111,9 @@
               ref="creatorNotesTextarea"
               v-model="form.creator_notes"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
               placeholder="输入备注信息..."
+              :disabled="viewOnly"
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
           </div>
@@ -157,7 +164,9 @@
             ref="personalityTextarea"
             v-model="form.personality"
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-secondary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+            :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
             placeholder="描述角色的性格、特点、背景故事..."
+            :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
         </div>
@@ -171,7 +180,9 @@
             ref="scenarioTextarea"
             v-model="form.scenario"
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-accent)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+            :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
             placeholder="描述角色所处的场景和环境..."
+            :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
         </div>
@@ -185,7 +196,9 @@
             ref="first_mesTextarea"
             v-model="form.first_mes"
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+            :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
             placeholder="角色初次见面时说的话..."
+            :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
         </div>
@@ -200,6 +213,7 @@
               max="1"
               step="0.1"
               class="w-full h-2 bg-[var(--theme-card-hover)] rounded-lg appearance-none cursor-pointer accent-[var(--theme-primary)] range-slider"
+              :disabled="viewOnly"
             />
             <div class="flex justify-between items-center">
               <span class="text-sm text-theme-text-secondary">0.0</span>
@@ -210,6 +224,8 @@
                 max="1"
                 step="0.1"
                 class="w-20 px-3 py-1.5 chat-input-field border border-theme-border rounded-lg text-center text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)]"
+                :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
+                :disabled="viewOnly"
               />
               <span class="text-sm text-theme-text-secondary">1.0</span>
             </div>
@@ -255,6 +271,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div></div>
           <button
+            v-if="!viewOnly"
             type="button"
             @click="openWorldInfoEditor()"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[var(--theme-accent)] to-[var(--theme-accent-light)] text-white rounded-xl hover:from-[var(--theme-accent-dark)] hover:to-[var(--theme-accent)] transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm active:scale-95"
@@ -306,7 +323,7 @@
                   <div class="text-xs text-theme-text-secondary">
                     关键词: {{ Array.isArray(element.keys) ? element.keys.join(', ') : element.keys || '无' }}
                   </div>
-                  <div class="flex gap-2 mt-3">
+                  <div v-if="!viewOnly" class="flex gap-2 mt-3">
                     <button
                       type="button"
                       @click="openWorldInfoEditor(index)"
@@ -367,6 +384,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div></div>
           <button
+            v-if="!viewOnly"
             type="button"
             @click="openRegexEditor()"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[var(--theme-primary-light)] to-[var(--theme-primary)] text-white rounded-xl hover:from-[var(--theme-primary)] hover:to-[var(--theme-primary-dark)] transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm active:scale-95"
@@ -419,7 +437,7 @@
                   <div class="text-xs text-theme-text-secondary font-mono bg-[var(--theme-input-bg)] px-2 py-1 rounded inline-block">
                     {{ element.regex || element.findRegex || '无正则表达式' }}
                   </div>
-                  <div class="flex gap-2 mt-3">
+                  <div v-if="!viewOnly" class="flex gap-2 mt-3">
                     <button
                       type="button"
                       @click="openRegexEditor(index)"

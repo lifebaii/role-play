@@ -41,8 +41,8 @@
 
       <div v-if="!chatStore.isLoading && !chatStore.currentCharacter" class="flex-1 flex items-center justify-center">
         <div class="text-center px-4">
-          <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-[var(--theme-primary)] via-[var(--theme-secondary)] to-[var(--theme-accent)] flex items-center justify-center shadow-2xl shadow-[var(--theme-primary)]/30 animate-float">
-            <span class="text-5xl">💬</span>
+          <div class="w-32 h-32 mx-auto mb-6 animate-float">
+            <img src="/pwa-512x512.png" alt="Logo" class="w-full h-full object-contain" style="filter: drop-shadow(0 25px 25px rgba(59, 130, 246, 0.3));" />
           </div>
           <h2 class="text-2xl font-bold gradient-text mb-2">开始你的故事</h2>
           <p class="text-theme-text-secondary mb-6">选择一个角色开始聊天</p>
@@ -107,18 +107,20 @@
           @click="showMenuDropdown = false"
         >
           <div class="px-4 py-3 border-b border-theme-border mb-1" @click.stop>
-            <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">选择服务</div>
-            <select
-              :value="chatStore.useCustomModel ? 'custom' : 'builtin'"
-              @change.stop="handleServiceSelect($event)"
-              class="w-full px-3 py-2 text-sm border border-theme-border rounded-xl select-field focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] mb-3"
-            >
-              <option value="custom">自定义模型</option>
-              <option value="builtin">内置模型服务</option>
-            </select>
+            <template v-if="showAuthEntry">
+              <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">选择服务</div>
+              <select
+                :value="chatStore.useCustomModel ? 'custom' : 'builtin'"
+                @change.stop="handleServiceSelect($event)"
+                class="w-full px-3 py-2 text-sm border border-theme-border rounded-xl select-field focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] mb-3"
+              >
+                <option value="custom">自定义模型</option>
+                <option value="builtin">内置模型服务</option>
+              </select>
+            </template>
 
             <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">选择模型</div>
-            <template v-if="chatStore.useCustomModel">
+            <template v-if="chatStore.useCustomModel || !showAuthEntry">
               <select
                 :value="chatStore.customModelConfig?.default_model || ''"
                 @change.stop="updateCustomModelConfig('default_model', ($event.target as HTMLSelectElement).value)"
@@ -439,6 +441,7 @@
       :is-saving-character="isSavingCharacter"
       :is-loading-original="isLoadingOriginal"
       :is-loading-source="isLoadingSource"
+      :is-loading-view-data="isLoadingViewData"
       :is-liking-in-edit="isLikingInEdit"
       :exists-on-server="existsOnServer"
       :is-owner-of-character="isOwnerOfCharacter"
@@ -574,8 +577,10 @@ import AvatarImage from '@/components/AvatarImage.vue'
 import { useCharacter } from '@/composables/useCharacter'
 import { useCustomModel } from '@/composables/useCustomModel'
 import { getFriendAvatar, clearCharacterAvatarCache } from '@/utils/localFriendStorage'
+import { config } from '@/utils/config'
 
 const isDev = import.meta.env.DEV
+const showAuthEntry = config.showAuthEntry
 const devMarkerPosition = ref({ x: window.innerWidth - 50, y: window.innerHeight - 50 })
 let isDragging = false
 let dragOffset = { x: 0, y: 0 }
@@ -734,6 +739,7 @@ const {
   isLikingInEdit,
   isLoadingOriginal,
   isLoadingSource,
+  isLoadingViewData,
   existsOnServer,
   isOwnerOfCharacter,
   showCommentSection,

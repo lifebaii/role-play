@@ -52,6 +52,7 @@
               创建
             </button>
             <button
+              v-if="showAuthEntry"
               @click="$emit('openFriendSelector')"
               class="text-xs font-medium text-theme-text-accent hover:text-[var(--theme-primary-dark)] flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--theme-primary)]/10 transition-all"
             >
@@ -186,6 +187,7 @@
           </div>
         </div>
         <button
+          v-if="showAuthEntry"
           @click="userStore.requireLogin()"
           class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
         >
@@ -214,6 +216,7 @@ import type { Character } from '@/types'
 import { getAvatarUrl, preloadAvatars, getCharacterDisplayName, getCharacterDisplayDescription, useAvatar } from '@/composables/useAvatar'
 import { clearCharacterAvatarCache, getFriendAvatar } from '@/utils/localFriendStorage'
 import { eventBus } from '@/utils/eventBus'
+import { config } from '@/utils/config'
 import AvatarImage from '@/components/AvatarImage.vue'
 
 const props = defineProps<{
@@ -238,6 +241,7 @@ const emit = defineEmits<{
 const chatStore = useChatStore()
 const userStore = useUserStore()
 const avatarMap = ref(new Map<string, string>())
+const showAuthEntry = config.showAuthEntry
 
 async function loadAvatarForCharacter(character: any) {
   const key = character.role_play?.id || character.id

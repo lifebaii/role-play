@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useAdminStore } from '@/stores/admin'
+import { config } from '@/utils/config'
 
 const routes = [
   {
@@ -88,6 +89,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const adminStore = useAdminStore()
+  
+  // 检查是否是管理员路由（包括登录页面）
+  if (to.path.startsWith('/admin')) {
+    // 如果不显示认证入口，则重定向到聊天页面
+    if (!config.showAuthEntry) {
+      next('/chat')
+      return
+    }
+  }
   
   // 检查是否是管理员路由（不包括登录页面）
   if (to.path.startsWith('/admin') && to.path !== '/admin/login') {

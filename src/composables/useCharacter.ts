@@ -21,6 +21,7 @@ export function useCharacter() {
   const isLikingInEdit = ref(false)
   const isLoadingOriginal = ref(false)
   const isLoadingSource = ref(false)
+  const isLoadingViewData = ref(false)
   
   const editingCharacterMeta = ref({
     originalId: null as string | null,
@@ -211,7 +212,8 @@ export function useCharacter() {
     
     const charId = character.role_play?.id || character.id
     
-    // 先设置基本数据，立即显示
+    // 编辑模式：数据来自本地，立即显示
+    // 元数据仅用于控制UI（图标、按钮状态）
     editingCharacter.value = character
     editingCharacterMeta.value = {
       originalId: character.role_play?.originalId || null,
@@ -225,14 +227,14 @@ export function useCharacter() {
       originalMeta: null
     }
     isViewOnlyMode.value = false
-    isLoadingCharacterDetail.value = false  // 立即显示数据
-    isLoadingMeta.value = true               // 元数据加载中
+    isLoadingCharacterDetail.value = false
+    isLoadingMeta.value = true
     isOnlineFriend.value = !!character.role_play?.originalId
     existsOnServer.value = false
     isOwnerOfCharacter.value = false
     showCreateCharacterModal.value = true
     
-    // 立即设置表单数据
+    // 立即设置表单数据（来自本地）
     const charData = character.data || character
     newCharacterData.value = {
       name: charData.name || '',
@@ -250,7 +252,7 @@ export function useCharacter() {
       tags: charData.tags || []
     }
     
-    // 异步获取元数据
+    // 异步获取元数据（仅用于UI控制）
     if (userStore.isLoggedIn()) {
       try {
         const meta = await charactersApi.getCharacterMeta(charId)
@@ -273,38 +275,6 @@ export function useCharacter() {
               editingCharacterMeta.value.originalMeta = meta.originalMeta
             }
           }
-          
-          // 如果有 sourceUrl，加载原文件
-          if (meta.sourceUrl) {
-            isLoadingSource.value = true
-            try {
-              const sourceData = await loadCharacterFromSource(
-                meta.sourceUrl,
-                meta.file_type as 'json' | 'png' | null
-              )
-              
-              if (sourceData) {
-                const charData = sourceData.data || sourceData
-                newCharacterData.value = {
-                  name: charData.name || '',
-                  description: charData.description || '',
-                  avatar: charData.avatar || '',
-                  first_mes: charData.first_mes || charData.greeting || '',
-                  personality: charData.personality || '',
-                  scenario: charData.scenario || '',
-                  system_prompt: charData.system_prompt || '',
-                  creator_notes: charData.creator_notes || '',
-                  temperature: charData.temperature ?? 1,
-                  character_book: { entries: charData.character_book?.entries || [] },
-                  extensions: charData.extensions || {},
-                  regex_scripts: charData.extensions?.regex_scripts || [],
-                  tags: charData.tags || []
-                }
-              }
-            } finally {
-              isLoadingSource.value = false
-            }
-          }
         }
       } catch (e) {
         console.log('[Character] Failed to get meta, character may not exist on server')
@@ -323,7 +293,6 @@ export function useCharacter() {
     
     const charId = character.role_play?.id || character.id
     
-    // 先设置基本数据，立即显示
     editingCharacter.value = character
     editingCharacterMeta.value = {
       originalId: character.role_play?.originalId || null,
@@ -332,35 +301,55 @@ export function useCharacter() {
       commentCount: 0,
       isLiked: false,
       originalUserId: null,
-      thumbnailUrl: null,
+      thumbnailUrl: character.thumbnailUrl || null,
       sourceUrl: null,
       originalMeta: null
     }
     isViewOnlyMode.value = true
-    isLoadingCharacterDetail.value = false  // 立即显示数据
-    isLoadingMeta.value = true               // 元数据加载中
+    isLoadingCharacterDetail.value = false
+    isLoadingMeta.value = true
+    isLoadingViewData.value = true
     isOnlineFriend.value = !!character.role_play?.originalId
     showCreateCharacterModal.value = true
     
-    // 立即设置表单数据
     const charData = character.data || character
-    newCharacterData.value = {
-      name: charData.name || '',
-      description: charData.description || '',
-      avatar: charData.avatar || '',
-      first_mes: charData.first_mes || '',
-      personality: charData.personality || '',
-      scenario: charData.scenario || '',
-      system_prompt: charData.system_prompt || '',
-      creator_notes: charData.creator_notes || '',
-      temperature: charData.temperature || 1,
-      character_book: { entries: charData.character_book?.entries || [] },
-      extensions: charData.extensions || {},
-      regex_scripts: charData.extensions?.regex_scripts || [],
-      tags: charData.tags || []
+    const hasLocalData = charData.name || charData.description || charData.first_mes
+    
+    if (hasLocalData) {
+      newCharacterData.value = {
+        name: charData.name || '',
+        description: charData.description || '',
+        avatar: charData.avatar || character.thumbnailUrl || '',
+        first_mes: charData.first_mes || '',
+        personality: charData.personality || '',
+        scenario: charData.scenario || '',
+        system_prompt: charData.system_prompt || '',
+        creator_notes: charData.creator_notes || '',
+        temperature: charData.temperature || 1,
+        character_book: { entries: charData.character_book?.entries || [] },
+        extensions: charData.extensions || {},
+        regex_scripts: charData.extensions?.regex_scripts || [],
+        tags: charData.tags || []
+      }
+      isLoadingViewData.value = false
+    } else {
+      newCharacterData.value = {
+        name: character.name || character.character?.name || '加载中...',
+        description: character.description || character.character?.description || '',
+        avatar: character.thumbnailUrl || character.avatar || '',
+        first_mes: '',
+        personality: '',
+        scenario: '',
+        system_prompt: '',
+        creator_notes: '',
+        temperature: 1,
+        character_book: { entries: [] },
+        extensions: {},
+        regex_scripts: [],
+        tags: []
+      }
     }
     
-    // 异步获取元数据
     if (userStore.isLoggedIn()) {
       try {
         const meta = await charactersApi.getCharacterMeta(charId)
@@ -380,7 +369,6 @@ export function useCharacter() {
             }
           }
           
-          // 如果有 sourceUrl，加载原文件
           if (meta.sourceUrl) {
             isLoadingSource.value = true
             try {
@@ -390,25 +378,49 @@ export function useCharacter() {
               )
               
               if (sourceData) {
-                const charData = sourceData.data || sourceData
+                const sourceCharData = sourceData.data || sourceData
                 newCharacterData.value = {
-                  name: charData.name || '',
-                  description: charData.description || '',
-                  avatar: charData.avatar || '',
-                  first_mes: charData.first_mes || charData.greeting || '',
-                  personality: charData.personality || '',
-                  scenario: charData.scenario || '',
-                  system_prompt: charData.system_prompt || '',
-                  creator_notes: charData.creator_notes || '',
-                  temperature: charData.temperature ?? 1,
-                  character_book: { entries: charData.character_book?.entries || [] },
-                  extensions: charData.extensions || {},
-                  regex_scripts: charData.extensions?.regex_scripts || [],
-                  tags: charData.tags || []
+                  name: sourceCharData.name || '',
+                  description: sourceCharData.description || '',
+                  avatar: sourceCharData.avatar || '',
+                  first_mes: sourceCharData.first_mes || sourceCharData.greeting || '',
+                  personality: sourceCharData.personality || '',
+                  scenario: sourceCharData.scenario || '',
+                  system_prompt: sourceCharData.system_prompt || '',
+                  creator_notes: sourceCharData.creator_notes || '',
+                  temperature: sourceCharData.temperature ?? 1,
+                  character_book: { entries: sourceCharData.character_book?.entries || [] },
+                  extensions: sourceCharData.extensions || {},
+                  regex_scripts: sourceCharData.extensions?.regex_scripts || [],
+                  tags: sourceCharData.tags || []
                 }
               }
             } finally {
               isLoadingSource.value = false
+            }
+          } else if (!hasLocalData) {
+            try {
+              const detail = await charactersApi.getCharacterDetail(charId)
+              if (detail.character) {
+                const serverData = detail.character.data || detail.character
+                newCharacterData.value = {
+                  name: serverData.name || '',
+                  description: serverData.description || '',
+                  avatar: serverData.avatar || '',
+                  first_mes: serverData.first_mes || '',
+                  personality: serverData.personality || '',
+                  scenario: serverData.scenario || '',
+                  system_prompt: serverData.system_prompt || '',
+                  creator_notes: serverData.creator_notes || '',
+                  temperature: serverData.temperature ?? 1,
+                  character_book: { entries: serverData.character_book?.entries || [] },
+                  extensions: serverData.extensions || {},
+                  regex_scripts: serverData.extensions?.regex_scripts || [],
+                  tags: serverData.tags || []
+                }
+              }
+            } catch (e) {
+              console.log('[Character] Failed to get character detail')
             }
           }
         }
@@ -416,9 +428,11 @@ export function useCharacter() {
         console.log('[Character] Failed to get meta, character may not exist on server')
       } finally {
         isLoadingMeta.value = false
+        isLoadingViewData.value = false
       }
     } else {
       isLoadingMeta.value = false
+      isLoadingViewData.value = false
     }
   }
   
@@ -870,6 +884,7 @@ export function useCharacter() {
     isLikingInEdit,
     isLoadingOriginal,
     isLoadingSource,
+    isLoadingViewData,
     friendCharacters,
     isCurrentCharacterFriend,
     isCurrentCharacterUserOwned,

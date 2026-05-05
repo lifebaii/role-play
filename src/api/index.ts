@@ -557,7 +557,7 @@ export const modelsApi = {
       provider: params.provider 
     }),
   delete: (modelId: string) => adminApiClient.delete<any>(`/models/${modelId}`),
-  listUnique: () => adminApiClient.get<{ models: { id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[] }>('/models/list-unique')
+  listUnique: () => api.get<{ models: { id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[] }>('/models/list-unique')
 }
 
 export const presetsApi = {

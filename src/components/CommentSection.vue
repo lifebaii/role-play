@@ -1,23 +1,26 @@
 <template>
-  <div class="mt-4 border-t border-theme-border pt-4">
+  <div class="mt-4 rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90">
     <button
       @click="toggleExpand"
-      class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--theme-card-hover)] transition-colors"
+      class="w-full flex items-center justify-between p-4 sm:p-6 text-left hover:bg-[var(--theme-card-hover)] transition-colors"
     >
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        <span class="font-medium text-theme-text-primary">评论区</span>
-        <span v-if="total > 0" class="text-xs px-2 py-0.5 rounded-full bg-[var(--theme-primary)]/10 text-theme-text-accent">
-          {{ total }}
-        </span>
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-r from-[var(--theme-accent)] to-[var(--theme-accent-light)] flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">评论区</h2>
+          <p class="text-xs text-theme-text-secondary" v-if="total > 0">{{ total }} 条评论</p>
+          <p class="text-xs text-theme-text-secondary" v-else>暂无评论</p>
+        </div>
         <span v-if="showOriginalHint" class="text-xs text-theme-text-secondary">
           (来自原角色)
         </span>
       </div>
       <svg 
-        class="w-5 h-5 text-theme-text-secondary transition-transform duration-200" 
+        class="w-5 h-5 text-theme-text-secondary transition-transform duration-300 flex-shrink-0" 
         :class="{ 'rotate-180': isExpanded }"
         fill="none" 
         stroke="currentColor" 
@@ -27,7 +30,7 @@
       </svg>
     </button>
 
-    <div v-if="isExpanded" class="mt-3 space-y-3">
+    <div v-if="isExpanded" class="px-4 sm:px-6 pb-4 sm:pb-6">
       <div v-if="showOriginalHint" class="text-xs text-theme-text-secondary px-3 py-2 bg-[var(--theme-card-hover)]/50 rounded-lg">
         <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -77,16 +80,18 @@
           暂无评论，快来抢沙发吧~
         </div>
 
-        <div v-else class="space-y-3">
+        <div v-else class="space-y-3 mt-4">
           <div
             v-for="comment in comments"
             :key="comment.id"
-            class="p-3 rounded-lg bg-[var(--theme-card-hover)]/50 border border-theme-border"
+            class="p-3 rounded-lg bg-[var(--theme-card-hover)]/90 border border-theme-border"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="font-medium text-theme-text-primary text-sm">{{ getDisplayName(comment) }}</span>
+                  <span v-if="comment.isOwner" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-primary)]/10 text-theme-text-accent">我</span>
+                  <span v-if="comment.isCreator" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]">创建者</span>
                   <span class="text-xs text-theme-text-secondary">{{ formatTime(comment.createdAt) }}</span>
                 </div>
                 <p class="text-sm text-theme-text-primary break-words">{{ comment.content }}</p>
@@ -128,11 +133,12 @@ import { charactersApi } from '@/api'
 const props = defineProps<{
   characterId: string
   showOriginalHint?: boolean
+  initialCommentCount?: number
 }>()
 
 const isExpanded = ref(false)
 const comments = ref<Comment[]>([])
-const total = ref(0)
+const total = ref(props.initialCommentCount || 0)
 const currentPage = ref(1)
 const totalPages = ref(1)
 const isLoading = ref(false)
@@ -236,11 +242,17 @@ const formatTime = (dateStr: string) => {
 
 watch(() => props.characterId, () => {
   comments.value = []
-  total.value = 0
+  total.value = props.initialCommentCount || 0
   currentPage.value = 1
   totalPages.value = 1
   if (isExpanded.value) {
     loadComments()
+  }
+})
+
+watch(() => props.initialCommentCount, (newVal) => {
+  if (newVal !== undefined && comments.value.length === 0) {
+    total.value = newVal
   }
 })
 </script>

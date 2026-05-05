@@ -163,6 +163,7 @@ export interface Comment {
   content: string
   createdAt: string
   isOwner: boolean
+  isCreator: boolean
   anonymousId: string
 }
 

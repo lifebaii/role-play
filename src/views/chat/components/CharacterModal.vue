@@ -3,9 +3,9 @@
     <div class="chat-card rounded-2xl max-w-2xl w-full overflow-hidden flex flex-col shadow-2xl border border-theme-border relative h-[min(90vh,calc(var(--vh,1vh)*90))]" style="max-height: min(90vh, calc(var(--vh, 1vh) * 90));" @click.stop>
       <!-- 背景图片层 -->
       <div 
-        v-if="sourceUrl"
+        v-if="backgroundImageUrl"
         class="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-        :style="{ backgroundImage: `url(${sourceUrl})`, opacity: 1 }"
+        :style="{ backgroundImage: `url(${backgroundImageUrl})`, opacity: 1 }"
       ></div>
       
       <!-- 内容层 -->
@@ -97,7 +97,31 @@
         </div>
         
         <div class="p-3 sm:p-6">
+          <!-- 查看模式加载状态 -->
+          <div v-if="isViewOnlyMode && isLoadingViewData" class="space-y-4">
+            <div class="flex items-center gap-4">
+              <div class="w-20 h-20 rounded-xl bg-[var(--theme-card-hover)] animate-pulse"></div>
+              <div class="flex-1 space-y-2">
+                <div class="h-5 bg-[var(--theme-card-hover)] rounded animate-pulse w-1/3"></div>
+                <div class="h-4 bg-[var(--theme-card-hover)] rounded animate-pulse w-2/3"></div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="h-4 bg-[var(--theme-card-hover)] rounded animate-pulse"></div>
+              <div class="h-4 bg-[var(--theme-card-hover)] rounded animate-pulse w-5/6"></div>
+              <div class="h-4 bg-[var(--theme-card-hover)] rounded animate-pulse w-4/6"></div>
+            </div>
+            <div class="flex items-center justify-center py-4">
+              <svg class="w-6 h-6 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="ml-2 text-theme-text-secondary">加载角色数据...</span>
+            </div>
+          </div>
+          
           <CharacterForm
+            v-else
             ref="characterFormRef"
             :model-value="characterData"
             :character-id="editingCharacter?.role_play?.id || editingCharacter?.id"
@@ -114,9 +138,10 @@
           />
           
           <CommentSection
-            v-if="showCommentSection"
-            :character-id="editingCharacterMeta.originalId || editingCharacter?.role_play?.id"
+            v-if="showCommentSection && (editingCharacterMeta.originalId || editingCharacter?.role_play?.id || editingCharacter?.id)"
+            :character-id="editingCharacterMeta.originalId || editingCharacter?.role_play?.id || editingCharacter?.id"
             :show-original-hint="!!editingCharacterMeta.originalId"
+            :initial-comment-count="displayMeta.commentCount"
           />
         </div>
         
@@ -319,12 +344,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import CharacterForm from '@/components/CharacterForm.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 import type { Character } from '@/types'
 import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob } from '@/utils/localFriendStorage'
+import { characterGet } from '@/utils/db'
 import { useUserStore } from '@/stores/user'
 import { charactersApi } from '@/api'
 
@@ -342,8 +368,40 @@ interface MetaData {
 const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
 const localIsUpdatingShared = ref(false)
 const showMoreActions = ref(false)
+const backgroundBlobUrl = ref<string | null>(null)
 
 const isLoggedIn = computed(() => userStore.isLoggedIn())
+
+async function loadBackgroundImage() {
+  if (backgroundBlobUrl.value) {
+    URL.revokeObjectURL(backgroundBlobUrl.value)
+    backgroundBlobUrl.value = null
+  }
+  
+  if (props.isViewOnlyMode) return
+  
+  const characterId = props.editingCharacter?.role_play?.id || props.editingCharacter?.id
+  if (!characterId) return
+  
+  try {
+    const blob = await characterGet(characterId)
+    if (blob && blob.type.startsWith('image/')) {
+      backgroundBlobUrl.value = URL.createObjectURL(blob)
+    }
+  } catch (e) {
+    console.error('Failed to load background image:', e)
+  }
+}
+
+const backgroundImageUrl = computed(() => {
+  if (props.isViewOnlyMode && props.sourceUrl) {
+    return props.sourceUrl
+  }
+  if (!props.isViewOnlyMode && backgroundBlobUrl.value) {
+    return backgroundBlobUrl.value
+  }
+  return null
+})
 
 const props = defineProps<{
   visible: boolean
@@ -362,6 +420,7 @@ const props = defineProps<{
   isSavingCharacter: boolean
   isLoadingOriginal: boolean
   isLoadingSource: boolean
+  isLoadingViewData: boolean
   isLikingInEdit: boolean
   existsOnServer: boolean
   isOwnerOfCharacter: boolean
@@ -413,6 +472,7 @@ async function loadAvatar() {
 
 watch(() => props.editingCharacter, () => {
   loadAvatar()
+  loadBackgroundImage()
 }, { immediate: true })
 
 watch(() => props.thumbnailUrl, () => {
@@ -422,13 +482,21 @@ watch(() => props.thumbnailUrl, () => {
 watch(() => props.visible, (visible) => {
   if (visible && props.editingCharacter) {
     loadAvatar()
+    loadBackgroundImage()
   }
   showMoreActions.value = false
+})
+
+onUnmounted(() => {
+  if (backgroundBlobUrl.value) {
+    URL.revokeObjectURL(backgroundBlobUrl.value)
+  }
 })
 
 function handleImageSaved(characterId: string) {
   clearCharacterAvatarCache(characterId)
   loadAvatar()
+  loadBackgroundImage()
   emit('avatarUpdated', characterId)
 }
 
