@@ -300,6 +300,30 @@ export interface CharactersResponse {
   totalPages: number
 }
 
+export interface ImportResult {
+  success: boolean
+  imported: number
+  failed: number
+  characters: Character[]
+  failedFiles?: Array<{
+    filename: string
+    error: string
+  }>
+}
+
+export interface DeleteResult {
+  success: boolean
+  source: 'hf' | 'local'
+  warning?: string
+}
+
+export interface UpdateResult extends Character {
+  _updateMeta?: {
+    source: 'hf' | 'local'
+    warning?: string
+  }
+}
+
 export interface Comment {
   id: string
   content: string
@@ -313,13 +337,13 @@ export const charactersApi = {
     const response = await api.get<CharactersResponse>('/characters')
     return response.characters
   },
-  listAdmin: async () => {
-    const response = await adminApiClient.get<CharactersResponse>('/characters')
-    return response.characters
+  listAdmin: async (params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string }) => {
+    const response = await adminApiClient.get<CharactersResponse>('/characters', params)
+    return response
   },
   search: (params?: { search?: string; page?: number; pageSize?: number }) => 
     api.get<CharactersResponse>('/characters', params),
-  searchAdmin: (params?: { search?: string; page?: number; pageSize?: number }) => 
+  searchAdmin: (params?: { search?: string; page?: number; pageSize?: number; source?: 'admin' | 'user'; sortBy?: string }) => 
     adminApiClient.get<CharactersResponse>('/characters', params),
   getAll: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
     api.get<CharactersResponse>('/characters/all', params),
@@ -334,24 +358,46 @@ export const charactersApi = {
     adminApiClient.put<{ success: boolean; shared: boolean; character?: Character }>(`/characters/${id}/shared`, { shared }),
   toggleShared: (id: string, shared: boolean) => 
     adminApiClient.put<{ success: boolean; shared: boolean; character?: Character }>(`/characters/${id}/shared`, { shared }),
-  delete: (id: string) => adminApiClient.delete(`/characters/${id}`),
+  delete: (id: string) => adminApiClient.delete<DeleteResult>(`/characters/${id}`),
   import: (data: any) => adminApiClient.post('/characters/import', data),
-  importFiles: (files: File[]) => {
+  importFiles: (files: File[], id?: string): Promise<ImportResult> => {
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file_${index}`, file);
     });
     
+    if (id) {
+      formData.append('id', id);
+    }
+    
+    return api.post('/characters/import-files', formData);
+  },
+  importFilesAdmin: (files: File[], id?: string): Promise<ImportResult> => {
+    const formData = new FormData();
+    files.forEach((file, index) => {
+      formData.append(`file_${index}`, file);
+    });
+    
+    if (id) {
+      formData.append('id', id);
+    }
+    
     return adminApiClient.postForm('/characters/import-files', formData);
   },
   updateOrder: (ids: string[]) => adminApiClient.put('/characters/order', { ids }),
-  uploadCharacterImage: (id: string, file: File) => {
+  uploadCharacterImage: (id: string, file: File | Blob, characterData?: any) => {
     const formData = new FormData();
     formData.append('image', file);
+    if (characterData) {
+      formData.append('characterData', JSON.stringify(characterData));
+    }
     return adminApiClient.putForm<Character>(`/characters/${id}/image`, formData);
   },
-  getUserCharacters: (userId: string, params?: Record<string, string>) => 
-    api.get<{ characters: Character[]; total: number; page: number; totalPages: number; pageSize: number }>(`/characters/user`, { userId, ...params }),
+  updateCharacterFile: (id: string, file: Blob, filename: string) => {
+    const formData = new FormData();
+    formData.append('file', file, filename);
+    return adminApiClient.putForm<Character>(`/characters/${id}/file`, formData);
+  },
   getUserCharacter: (userId: string, charId: string) => api.get<Character>(`/characters/user/${userId}/${charId}`),
   createUserCharacter: (userId: string, character: Partial<Character>) => 
     api.post<Character>('/characters/user', { userId, character }),
@@ -361,21 +407,36 @@ export const charactersApi = {
     api.put<Character>(`/characters/user/${userId}/${charId}/data`, data),
   updateUserCharacterShared: (userId: string, charId: string, shared: boolean) => 
     api.put<{ success: boolean; shared: boolean }>(`/characters/user/${userId}/${charId}/shared`, { shared }),
-  uploadUserCharacter: (userId: string, charId: string, file: Blob, fileName: string) => {
-    const formData = new FormData();
-    formData.append('file', file, fileName);
-    return api.post<{ success: boolean; characterId: string }>(
-      `/characters/user/${userId}/${charId}/upload`,
-      formData
-    );
-  },
   deleteUserCharacter: (userId: string, charId: string) => api.delete(`/characters/user/${userId}/${charId}`),
   importUserCharacters: (userId: string, characters: any[]) => 
     api.post(`/characters/user/import`, { userId, characters }),
-  getSharedCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
+  getSharedCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string; own?: string; sortBy?: string }) => 
     api.get<CharactersResponse>('/characters/shared', params),
   
   toggleLike: (characterId: string) => api.post<{ liked: boolean; likeCount: number }>(`/characters/${characterId}/like`, {}),
+  
+  getCharacterMeta: (characterId: string) => api.get<{
+    id: string
+    name: string
+    file_type: string
+    shared: boolean
+    sourceUrl: string | null
+    thumbnailUrl: string | null
+    exists: boolean
+    isOwner: boolean
+    likeCount: number
+    commentCount: number
+    isLiked: boolean
+    originalId: string | null
+    originalUserId: string | null
+    originalMeta: {
+      originalId: string | null
+      shared: boolean
+      likeCount: number
+      commentCount: number
+      isLiked: boolean
+    } | null
+  }>(`/characters/${characterId}/meta`),
   
   getCharacterDetail: (characterId: string) => api.get<{
     characterMeta: {
@@ -407,7 +468,24 @@ export const charactersApi = {
     api.post<Comment>(`/characters/${characterId}/comments`, { content }),
   
   deleteComment: (characterId: string, commentId: string) => 
-    api.delete<{ success: boolean }>(`/characters/${characterId}/comments/${commentId}`)
+    api.delete<{ success: boolean }>(`/characters/${characterId}/comments/${commentId}`),
+  
+  getSource: (id: string) => adminApiClient.get<{
+    enabled: boolean
+    data: Character | null
+    fileType: string
+    rawBuffer?: string
+    message?: string
+  }>(`/characters/${id}/source`),
+  
+  getMeta: (id: string) => adminApiClient.get<{
+    id: string
+    name: string
+    file_type: string
+    shared: boolean
+    sourceUrl: string | null
+    thumbnailUrl: string | null
+  }>(`/characters/${id}/meta`)
 }
 
 export const chatApi = {

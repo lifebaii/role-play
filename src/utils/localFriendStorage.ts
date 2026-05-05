@@ -206,10 +206,15 @@ export async function getLocalFriends(): Promise<LocalFriend[]> {
 
 export interface LocalFriend {
   data?: any
-  role_play: {
+  role_play?: {
     id: string
   }
+  id?: string
   [key: string]: any
+}
+
+function getFriendId(friend: LocalFriend): string | undefined {
+  return friend.role_play?.id || friend.id
 }
 
 async function saveCharacterData(id: string, data: any): Promise<void> {
@@ -242,7 +247,7 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
   const checkId = character.role_play?.id || character.id
-  const existingIndex = friends.findIndex(f => f.role_play.id === checkId)
+  const existingIndex = friends.findIndex(f => getFriendId(f) === checkId)
 
   if (existingIndex !== -1) {
     return friends[existingIndex]
@@ -275,7 +280,7 @@ export async function addOnlineFriend(character: any, originalId: string): Promi
   const friends = await getLocalFriends()
 
   const serverId = character.role_play?.id || character.id
-  const existingIndex = friends.findIndex(f => f.role_play.id === serverId)
+  const existingIndex = friends.findIndex(f => getFriendId(f) === serverId)
 
   if (existingIndex !== -1) {
     return friends[existingIndex]
@@ -314,7 +319,7 @@ export async function addOnlineFriendFromBlob(
 ): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
-  const existingIndex = friends.findIndex(f => f.role_play.id === characterId)
+  const existingIndex = friends.findIndex(f => getFriendId(f) === characterId)
 
   if (existingIndex !== -1) {
     return friends[existingIndex]
@@ -467,13 +472,17 @@ export async function createLocalFriend(characterData: any, _shared: boolean = f
 }
 
 export async function saveLocalFriend(friend: LocalFriend): Promise<void> {
-  const id = friend.role_play.id
+  const id = friend.role_play?.id || friend.id
+
+  if (!id) {
+    throw new Error('Cannot save friend: missing id')
+  }
 
   const characterData = friend.data || friend
   await saveCharacterData(id, characterData)
 
   if (friendsCache) {
-    const index = friendsCache.findIndex(f => f.role_play.id === id)
+    const index = friendsCache.findIndex(f => (f.role_play?.id || f.id) === id)
     if (index >= 0) {
       friendsCache[index] = friend
     } else {
@@ -509,7 +518,7 @@ export async function updateLocalFriendData(friendId: string, data: any): Promis
   await saveCharacterData(friendId, mergedData)
 
   if (friendsCache) {
-    const index = friendsCache.findIndex(f => f.role_play.id === friendId)
+    const index = friendsCache.findIndex(f => getFriendId(f) === friendId)
     if (index >= 0) {
       friendsCache[index].data = mergedData
     }
@@ -535,7 +544,7 @@ export async function removeLocalFriend(friendId: string): Promise<boolean> {
   } catch {}
 
   if (friendsCache) {
-    const index = friendsCache.findIndex(f => f.role_play.id === friendId)
+    const index = friendsCache.findIndex(f => getFriendId(f) === friendId)
     if (index >= 0) {
       friendsCache.splice(index, 1)
     }
@@ -582,7 +591,7 @@ export async function clearLocalFriends(): Promise<void> {
 
 export async function isLocalFriend(friendId: string): Promise<boolean> {
   if (friendsCache) {
-    return friendsCache.some(f => f.role_play.id === friendId)
+    return friendsCache.some(f => getFriendId(f) === friendId)
   }
   const blob = await characterGet(friendId)
   return blob !== null
@@ -590,7 +599,7 @@ export async function isLocalFriend(friendId: string): Promise<boolean> {
 
 export async function getLocalFriend(friendId: string): Promise<LocalFriend | null> {
   if (friendsCache) {
-    return friendsCache.find(f => f.role_play.id === friendId) || null
+    return friendsCache.find(f => getFriendId(f) === friendId) || null
   }
 
   const blob = await characterGet(friendId)
@@ -835,9 +844,15 @@ export async function compressImageFile(file: File | Blob, maxWidth: number = 20
 }
 
 export async function getFriendAvatar(friend: LocalFriend): Promise<string | undefined> {
-  const cacheKey = friend.role_play?.id
+  const characterId = friend.role_play?.id || friend.id
+  const cacheKey = characterId
+
   if (cacheKey && blobUrlCache.has(cacheKey)) {
     return blobUrlCache.get(cacheKey)
+  }
+
+  if (!characterId) {
+    return undefined
   }
 
   let blob: Blob | undefined
@@ -846,11 +861,11 @@ export async function getFriendAvatar(friend: LocalFriend): Promise<string | und
     blob = await compressImageToBlob(friend.data.avatar)
   } else {
     try {
-      const charBlob = await characterGet(friend.role_play.id)
+      const charBlob = await characterGet(characterId)
       if (charBlob && isImageBlob(charBlob)) {
         blob = await compressImageFile(charBlob)
       } else {
-        const imgBlob = await getFriendImg(friend.role_play.id)
+        const imgBlob = await getFriendImg(characterId)
         if (imgBlob) {
           blob = await compressImageFile(imgBlob)
         }
@@ -913,7 +928,7 @@ export async function importFriendFromFile(file: File): Promise<LocalFriend> {
 
   friendsCache = null
   const friends = await getLocalFriends()
-  const newFriend = friends.find(f => f.role_play.id === newId)
+  const newFriend = friends.find(f => getFriendId(f) === newId)
 
   if (newFriend) {
     return newFriend
@@ -961,7 +976,7 @@ export async function exportCharacterFile(friendId: string): Promise<{ blob: Blo
 
   let friend: LocalFriend | null
   if (friendsCache) {
-    friend = friendsCache.find(f => f.role_play.id === friendId) || null
+    friend = friendsCache.find(f => getFriendId(f) === friendId) || null
   } else {
     friend = await parseCharacterFile(friendId, blob)
   }
@@ -981,6 +996,40 @@ export async function getCharacterSourceType(friendId: string): Promise<'image' 
   const blob = await characterGet(friendId)
   if (!blob) return 'json'
   return isImageBlob(blob) ? 'image' : 'json'
+}
+
+export async function updateLocalFriendId(oldId: string, newId: string): Promise<boolean> {
+  const blob = await characterGet(oldId)
+  if (!blob) {
+    console.warn(`[LocalFriend] Cannot update ID: friend ${oldId} not found`)
+    return false
+  }
+
+  console.log(`[LocalFriend] Updating friend ID from ${oldId} to ${newId}`)
+
+  await characterSet(newId, blob)
+
+  await characterDelete(oldId)
+
+  try {
+    await fileDelete(getFriendImgKey(oldId))
+  } catch {}
+
+  if (friendsCache) {
+    const index = friendsCache.findIndex(f => getFriendId(f) === oldId)
+    if (index >= 0) {
+      if (friendsCache[index].role_play) {
+        friendsCache[index].role_play!.id = newId
+      } else {
+        friendsCache[index].id = newId
+      }
+    }
+  } else {
+    friendsCache = null
+  }
+
+  console.log(`[LocalFriend] Friend ID updated successfully`)
+  return true
 }
 
 export async function getCharacterBlob(friendId: string): Promise<Blob | null> {
@@ -1048,7 +1097,7 @@ export async function saveCharacterImage(
     await characterSet(friendId, newFile)
     
     if (friendsCache) {
-      const index = friendsCache.findIndex(f => f.role_play.id === friendId)
+      const index = friendsCache.findIndex(f => getFriendId(f) === friendId)
       if (index >= 0) {
         friendsCache[index] = await parseCharacterFile(friendId, newFile) || friendsCache[index]
       }

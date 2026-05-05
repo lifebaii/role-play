@@ -55,13 +55,18 @@ function removeLocalCharacterId(id: string): void {
 }
 
 export interface LocalCharacter {
-  role_play: {
+  role_play?: {
     id: string
     createdAt: number
     userId: string
     shared: boolean
   }
+  id?: string
   [key: string]: any
+}
+
+function getCharacterId(character: LocalCharacter): string | undefined {
+  return character.role_play?.id || character.id
 }
 
 function getCharacterKey(id: string): string {
@@ -101,9 +106,14 @@ export async function getLocalCharacters(): Promise<LocalCharacter[]> {
 }
 
 export async function saveLocalCharacter(character: LocalCharacter): Promise<void> {
+  const id = getCharacterId(character)
+  if (!id) {
+    throw new Error('Cannot save character: missing id')
+  }
+  
   try {
-    console.log(`[LocalCharacter] Saving character data: ${character.role_play.id}`)
-    await dbSet(getCharacterKey(character.role_play.id), character)
+    console.log(`[LocalCharacter] Saving character data: ${id}`)
+    await dbSet(getCharacterKey(id), character)
   } catch (error) {
     console.error('Failed to save local character:', error)
     throw error

@@ -30,13 +30,14 @@
         :class="{ 'pointer-events-none opacity-75': actionCharacterId === getCharacterId(character) }"
         @click="$emit('select', character)"
       >
-        <div 
-          class="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg"
-          :class="getCharacterIsOfficial(character) ? 'bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)]' : 'bg-gradient-to-br from-[var(--theme-secondary)] to-[var(--theme-accent)]'"
-        >
-          <img v-if="getCharacterAvatar(character)" :src="getCharacterAvatar(character)" class="w-full h-full object-cover" @error="handleImageError($event)" />
-          <span v-else class="text-lg font-bold text-white">{{ getCharacterName(character).charAt(0) || '?' }}</span>
-        </div>
+        <AvatarImage
+          :src="getCharacterAvatar(character)"
+          :name="getCharacterName(character)"
+          size="md"
+          rounded="lg"
+          :gradient="getCharacterIsOfficial(character) ? 'primary' : 'secondary'"
+          class="flex-shrink-0 shadow-lg"
+        />
         <div class="flex-1 min-w-0">
           <div class="font-medium text-theme-text-primary truncate">{{ getCharacterName(character) }}</div>
           <div v-if="showTags || showLikeCount" class="flex gap-1 mt-1 items-center overflow-x-auto scrollbar-hide">
@@ -110,6 +111,7 @@
 
 <script setup lang="ts">
 import type { Character } from '@/types'
+import AvatarImage from './AvatarImage.vue'
 
 withDefaults(defineProps<{
   characters: Character[]
@@ -152,6 +154,9 @@ function getCharacterName(character: Character): string {
 }
 
 function getCharacterAvatar(character: Character): string | undefined {
+  if (character.thumbnailUrl) {
+    return character.thumbnailUrl
+  }
   if (character.role_play?.id) {
     return `/api/characters/${character.role_play.id}/avatar`
   }
@@ -179,10 +184,5 @@ function getCharacterIsFriend(character: Character): boolean {
 
 function getCharacterIsOfficial(character: Character): boolean {
   return character.isOfficial !== false
-}
-
-function handleImageError(event: Event) {
-  const target = event.target as HTMLImageElement
-  target.style.display = 'none'
 }
 </script>

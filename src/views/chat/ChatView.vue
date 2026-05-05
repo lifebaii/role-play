@@ -22,7 +22,7 @@
       :avatar-update-trigger="avatarUpdateTrigger"
       @open-theme-selector="showThemeSelector = true"
       @open-create-character="openCreateCharacterModal"
-      @open-friend-selector="showFriendSelector = true"
+      @open-friend-selector="handleOpenFriendSelector"
       @open-user-settings="handleOpenUserSettings"
       @open-user-data-settings="showUserDataSettings = true"
       @edit-character="editUserCharacter"
@@ -66,16 +66,15 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
           </button>
-          <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform" @click="openCharacterInfoFromCurrent">
-            <img 
-              v-if="getCurrentCharacterAvatar()" 
-              :src="getCurrentCharacterAvatar()" 
-              :alt="chatStore.currentCharacter?.name"
-              class="w-full h-full object-cover"
-              @error="handleAvatarError"
-            />
-            <span v-else class="text-lg sm:text-xl font-bold text-white">{{ chatStore.currentCharacter?.name?.charAt(0) || '?' }}</span>
-          </div>
+          <AvatarImage
+            :src="currentAvatarUrl"
+            :name="chatStore.currentCharacter?.name || '?'"
+            size="nav"
+            rounded="lg"
+            gradient="primary"
+            class="flex-shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform"
+            @click="openCharacterInfoFromCurrent"
+          />
           <div class="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
             <div v-if="chatStore.isUpdatingInBackground" class="w-4 h-4 flex-shrink-0">
               <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
@@ -439,6 +438,7 @@
       :is-loading-meta="isLoadingMeta"
       :is-saving-character="isSavingCharacter"
       :is-loading-original="isLoadingOriginal"
+      :is-loading-source="isLoadingSource"
       :is-liking-in-edit="isLikingInEdit"
       :exists-on-server="existsOnServer"
       :is-owner-of-character="isOwnerOfCharacter"
@@ -447,6 +447,8 @@
       :is-uploading-to-server="isUploadingToServer"
       :is-updating-to-server="isUpdatingToServer"
       :is-updating-from-server="isUpdatingFromServer"
+      :thumbnail-url="editingCharacterMeta.thumbnailUrl"
+      :source-url="editingCharacterMeta.sourceUrl"
       @save="saveCharacter"
       @delete="handleDeleteFromEdit"
       @load-original="handleLoadOriginalCharacterData"
@@ -567,6 +569,7 @@ import CustomModelConfigModal from './components/CustomModelConfigModal.vue'
 import ChatSyncModal from './components/ChatSyncModal.vue'
 import FriendSelector from '@/components/FriendSelector.vue'
 import LoginModal from '@/components/LoginModal.vue'
+import AvatarImage from '@/components/AvatarImage.vue'
 
 import { useCharacter } from '@/composables/useCharacter'
 import { useCustomModel } from '@/composables/useCustomModel'
@@ -730,6 +733,7 @@ const {
   likedCharacterIds,
   isLikingInEdit,
   isLoadingOriginal,
+  isLoadingSource,
   existsOnServer,
   isOwnerOfCharacter,
   showCommentSection,
@@ -1066,6 +1070,14 @@ function handleOpenUserSettings() {
   }
 }
 
+function handleOpenFriendSelector() {
+  if (userStore.isAnonymous) {
+    userStore.requireLogin()
+  } else {
+    showFriendSelector.value = true
+  }
+}
+
 async function sendSuggestion(suggestion: string) {
   if (!chatStore.userName || chatStore.userName === '游客') {
     editingUserName.value = ''
@@ -1122,7 +1134,6 @@ async function handleRemoveFriend() {
   }
 }
 
-const avatarError = ref(false)
 const currentAvatarUrl = ref<string | undefined>(undefined)
 const avatarUpdateTrigger = ref<string | undefined>(undefined)
 
@@ -1140,22 +1151,12 @@ async function loadCurrentCharacterAvatar() {
   }
 }
 
-function getCurrentCharacterAvatar() {
-  if (!chatStore.currentCharacter || avatarError.value) return null
-  return currentAvatarUrl.value
-}
-
-function handleAvatarError() {
-  avatarError.value = true
-}
-
 function handleAvatarUpdated(characterId: string) {
   clearCharacterAvatarCache(characterId)
   avatarUpdateTrigger.value = characterId
   
   const currentId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
   if (currentId === characterId) {
-    avatarError.value = false
     loadCurrentCharacterAvatar()
   }
 }
@@ -1258,7 +1259,6 @@ watch(() => chatStore.error, (newError) => {
 })
 
 watch(() => chatStore.currentCharacter?.id, () => {
-  avatarError.value = false
   loadCurrentCharacterAvatar()
   loadBackground()
 })
@@ -1300,7 +1300,6 @@ onMounted(async () => {
     }
   }
   
-  // 加载当前角色的头像
   loadCurrentCharacterAvatar()
 })
 

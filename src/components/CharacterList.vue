@@ -1,7 +1,16 @@
 <template>
-  <div class="h-full bg-[var(--theme-bg-start)] py-6 sm:py-8 px-4">
+  <div class="h-full bg-[var(--theme-bg-start)] py-6 sm:py-8 px-4 relative">
+    <div
+      v-if="loading"
+      class="absolute inset-0 bg-[var(--theme-bg-start)]/80 backdrop-blur-sm z-50 flex items-center justify-center"
+    >
+      <div class="flex flex-col items-center gap-4">
+        <div class="w-12 h-12 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-theme-text-primary font-medium">处理中...</span>
+      </div>
+    </div>
     <div class="max-w-6xl mx-auto">
-
+      <slot name="header"></slot>
       <div class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border p-4 sm:p-6 mb-6">
         <div class="flex flex-col sm:flex-row gap-4">
           <div class="flex-1 relative">
@@ -9,10 +18,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
-              v-model="searchQuery"
+              v-model="localSearchQuery"
               type="text"
               placeholder="搜索角色名称或描述..."
               class="w-full pl-12 pr-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200"
+              @keyup.enter="handleSearchSubmit"
             />
           </div>
           <div class="flex gap-3">
@@ -44,12 +54,13 @@
         <div class="flex items-center justify-between mt-4 pt-4 border-t border-theme-border">
           <div class="flex items-center gap-4">
             <span class="text-sm text-theme-text-secondary">
-              共 <span class="font-bold gradient-text">{{ filteredCharacters.length }}</span> 个角色
+              共 <span class="font-bold gradient-text">{{ total }}</span> 个角色
             </span>
             <div class="flex items-center gap-2">
               <select
-                v-model="sortBy"
+                v-model="localSortBy"
                 class="px-3 py-1.5 chat-input-field border border-theme-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+                @change="handleSortChange"
               >
                 <option value="updatedAt">最新更新</option>
                 <option value="likeCount">点赞数</option>
@@ -91,7 +102,7 @@
         </div>
       </div>
 
-      <div v-if="filteredCharacters.length === 0" class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border p-12 text-center">
+      <div v-if="characters.length === 0" class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border p-12 text-center">
         <div class="w-20 h-20 rounded-full bg-[var(--theme-card-hover)] flex items-center justify-center mx-auto mb-4">
           <svg class="w-10 h-10 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -120,7 +131,7 @@
         ]"
       >
         <div
-          v-for="(character, index) in filteredCharacters"
+          v-for="(character, index) in characters"
           :key="getCharacterId(character)"
           :class="[
             'group chat-card rounded-xl border border-theme-border overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-[var(--theme-primary)]/10 hover:border-[var(--theme-primary)]/30 cursor-pointer',
@@ -136,19 +147,14 @@
         >
           <div class="flex gap-4 p-4 sm:p-6">
             <div class="relative">
-              <div
-                class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-[var(--theme-card-bg)] shadow-lg"
-                :class="getCharacterShared(character) ? 'bg-gradient-to-br from-[var(--theme-secondary)] to-[var(--theme-accent)]' : 'bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)]'"
-              >
-                <img
-                  v-if="getCharacterAvatar(character)"
-                  :src="getCharacterAvatar(character)"
-                  :alt="getCharacterName(character)"
-                  class="w-full h-full object-cover"
-                  @error="handleImageError($event)"
-                />
-                <span v-else class="text-2xl sm:text-3xl font-bold text-white">{{ getCharacterName(character).charAt(0) || '?' }}</span>
-              </div>
+              <AvatarImage
+                :src="getCharacterAvatar(character)"
+                :name="getCharacterName(character)"
+                size="lg"
+                rounded="lg"
+                :gradient="getCharacterShared(character) ? 'secondary' : 'primary'"
+                class="border-2 border-[var(--theme-card-bg)] shadow-lg flex-shrink-0"
+              />
               <div
                 v-if="showDragHandle"
                 class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--theme-card-hover)] flex items-center justify-center cursor-move text-theme-text-secondary hover:text-[var(--theme-primary)] transition-colors"
@@ -238,12 +244,55 @@
           </div>
         </div>
       </div>
+
+      <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-6">
+        <button
+          @click="$emit('pageChange', page - 1)"
+          :disabled="page <= 1"
+          :class="[
+            'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+            page <= 1
+              ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
+              : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+          ]"
+        >
+          上一页
+        </button>
+        <div class="flex items-center gap-1">
+          <button
+            v-for="p in displayedPages"
+            :key="p"
+            @click="$emit('pageChange', p)"
+            :class="[
+              'w-10 h-10 rounded-lg text-sm font-medium transition-all',
+              p === page
+                ? 'bg-[var(--theme-primary)] text-white'
+                : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+            ]"
+          >
+            {{ p }}
+          </button>
+        </div>
+        <button
+          @click="$emit('pageChange', page + 1)"
+          :disabled="page >= totalPages"
+          :class="[
+            'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+            page >= totalPages
+              ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
+              : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+          ]"
+        >
+          下一页
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import AvatarImage from './AvatarImage.vue'
 
 interface Character {
   id?: string
@@ -261,6 +310,8 @@ interface Character {
   commentCount?: number
   spec?: string
   spec_version?: string
+  thumbnailUrl?: string
+  sourceUrl?: string
   data?: {
     name?: string
     description?: string
@@ -291,15 +342,14 @@ function getCharacterDescription(character: Character): string | undefined {
 }
 
 function getCharacterAvatar(character: Character): string | undefined {
+  if (character.thumbnailUrl) {
+    return character.thumbnailUrl
+  }
   return character.data?.avatar || character.avatar
 }
 
 function getCharacterShared(character: Character): boolean {
   return character.role_play?.shared || character.shared || false
-}
-
-function getCharacterCreatedAt(character: Character): number | undefined {
-  return character.role_play?.createdAt || character.createdAt
 }
 
 function getCharacterBook(character: Character): any {
@@ -315,6 +365,11 @@ const props = defineProps<{
   showImport?: boolean
   showDragHandle?: boolean
   showShareToggle?: boolean
+  loading?: boolean
+  total?: number
+  page?: number
+  pageSize?: number
+  totalPages?: number
 }>()
 
 const emit = defineEmits<{
@@ -325,54 +380,50 @@ const emit = defineEmits<{
   (e: 'import', event: Event): void
   (e: 'reorder', characters: Character[]): void
   (e: 'toggleShare', character: Character): void
+  (e: 'pageChange', page: number): void
+  (e: 'search', query: string): void
+  (e: 'sortChange', sortBy: string): void
 }>()
 
 const dragIndex = ref<number | null>(null)
-const searchQuery = ref('')
-const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'>('updatedAt')
+const localSearchQuery = ref('')
+const localSortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'>('updatedAt')
 const viewMode = ref<'grid' | 'list'>('grid')
 
-function getCharacterUpdatedAt(character: Character): number | undefined {
-  return character.role_play?.updatedAt || character.updatedAt
-}
+const total = computed(() => props.total ?? props.characters.length)
+const page = computed(() => props.page ?? 1)
+const totalPages = computed(() => props.totalPages ?? 1)
 
-function getCharacterLikeCount(character: Character): number {
-  return character.likeCount || 0
-}
-
-function getCharacterCommentCount(character: Character): number {
-  return character.commentCount || 0
-}
-
-const filteredCharacters = computed(() => {
-  let result = [...props.characters]
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(char => {
-      const name = getCharacterName(char).toLowerCase()
-      const description = (getCharacterDescription(char) || '').toLowerCase()
-      return name.includes(query) || description.includes(query)
-    })
-  }
-
-  result.sort((a, b) => {
-    switch (sortBy.value) {
-      case 'updatedAt':
-        return (getCharacterUpdatedAt(b) || 0) - (getCharacterUpdatedAt(a) || 0)
-      case 'likeCount':
-        return getCharacterLikeCount(b) - getCharacterLikeCount(a)
-      case 'commentCount':
-        return getCharacterCommentCount(b) - getCharacterCommentCount(a)
-      case 'createdAt':
-        return (getCharacterCreatedAt(b) || 0) - (getCharacterCreatedAt(a) || 0)
-      default:
-        return 0
+const displayedPages = computed(() => {
+  const pages: number[] = []
+  const current = page.value
+  const total = totalPages.value
+  
+  let start = Math.max(1, current - 2)
+  let end = Math.min(total, current + 2)
+  
+  if (end - start < 4) {
+    if (start === 1) {
+      end = Math.min(total, start + 4)
+    } else if (end === total) {
+      start = Math.max(1, end - 4)
     }
-  })
-
-  return result
+  }
+  
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+  
+  return pages
 })
+
+function handleSearchSubmit() {
+  emit('search', localSearchQuery.value)
+}
+
+function handleSortChange() {
+  emit('sortChange', localSortBy.value)
+}
 
 function handleDragStart(event: DragEvent, index: number) {
   dragIndex.value = index
@@ -399,11 +450,6 @@ function handleDrop(event: DragEvent, targetIndex: number) {
 
 function handleDragEnd() {
   dragIndex.value = null
-}
-
-function handleImageError(event: Event) {
-  const target = event.target as HTMLImageElement
-  target.style.display = 'none'
 }
 </script>
 

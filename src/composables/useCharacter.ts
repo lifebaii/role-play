@@ -2,8 +2,9 @@ import { ref, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
-import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend } from '@/utils/localFriendStorage'
+import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend, updateLocalFriendId, getCharacterBlob } from '@/utils/localFriendStorage'
 import { charactersApi } from '@/api'
+import { readPngChunks, decodeBase64Utf8, normalizeCharacterData } from '@/utils/characterImport'
 
 export function useCharacter() {
   const chatStore = useChatStore()
@@ -19,6 +20,7 @@ export function useCharacter() {
   const isLiking = ref(false)
   const isLikingInEdit = ref(false)
   const isLoadingOriginal = ref(false)
+  const isLoadingSource = ref(false)
   
   const editingCharacterMeta = ref({
     originalId: null as string | null,
@@ -27,6 +29,8 @@ export function useCharacter() {
     commentCount: 0,
     isLiked: false,
     originalUserId: null as string | null,
+    thumbnailUrl: null as string | null,
+    sourceUrl: null as string | null,
     originalMeta: null as {
       originalId: string | null
       shared: boolean
@@ -124,6 +128,9 @@ export function useCharacter() {
       likeCount: 0,
       commentCount: 0,
       isLiked: false,
+      originalUserId: null,
+      thumbnailUrl: null,
+      sourceUrl: null,
       originalMeta: null
     }
     newCharacterData.value = {
@@ -202,173 +209,216 @@ export function useCharacter() {
   async function editUserCharacter(character: Character) {
     if (!character.id) return
     
+    const charId = character.role_play?.id || character.id
+    
+    // 先设置基本数据，立即显示
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: null,
-      shared: false,
+      originalId: character.role_play?.originalId || null,
+      shared: character.role_play?.shared || false,
       likeCount: 0,
       commentCount: 0,
       isLiked: false,
       originalUserId: null,
+      thumbnailUrl: null,
+      sourceUrl: null,
       originalMeta: null
     }
     isViewOnlyMode.value = false
-    isLoadingCharacterDetail.value = true
-    isLoadingMeta.value = true
-    isOnlineFriend.value = false
+    isLoadingCharacterDetail.value = false  // 立即显示数据
+    isLoadingMeta.value = true               // 元数据加载中
+    isOnlineFriend.value = !!character.role_play?.originalId
     existsOnServer.value = false
     isOwnerOfCharacter.value = false
     showCreateCharacterModal.value = true
     
-    try {
-      let fullCharacter: Character | null = null
-      
-      const charId = character.role_play?.id || character.id
-      
-      if (await isLocalFriend(charId)) {
-        fullCharacter = await getLocalFriend(charId)
-        
-        if (userStore.isLoggedIn()) {
-          try {
-            const detail = await charactersApi.getCharacterDetail(charId)
-            if (detail) {
-              editingCharacterMeta.value.shared = detail.characterMeta.shared || false
-              editingCharacterMeta.value.likeCount = detail.characterMeta.likeCount || 0
-              editingCharacterMeta.value.commentCount = detail.characterMeta.commentCount || 0
-              editingCharacterMeta.value.isLiked = detail.characterMeta.isLiked || false
-              editingCharacterMeta.value.originalUserId = detail.characterMeta.originalUserId || null
+    // 立即设置表单数据
+    const charData = character.data || character
+    newCharacterData.value = {
+      name: charData.name || '',
+      description: charData.description || '',
+      avatar: charData.avatar || '',
+      first_mes: charData.first_mes || '',
+      personality: charData.personality || '',
+      scenario: charData.scenario || '',
+      system_prompt: charData.system_prompt || '',
+      creator_notes: charData.creator_notes || '',
+      temperature: charData.temperature || 1,
+      character_book: { entries: charData.character_book?.entries || [] },
+      extensions: charData.extensions || {},
+      regex_scripts: charData.extensions?.regex_scripts || [],
+      tags: charData.tags || []
+    }
+    
+    // 异步获取元数据
+    if (userStore.isLoggedIn()) {
+      try {
+        const meta = await charactersApi.getCharacterMeta(charId)
+        if (meta) {
+          editingCharacterMeta.value.shared = meta.shared || false
+          editingCharacterMeta.value.likeCount = meta.likeCount || 0
+          editingCharacterMeta.value.commentCount = meta.commentCount || 0
+          editingCharacterMeta.value.isLiked = meta.isLiked || false
+          editingCharacterMeta.value.originalUserId = meta.originalUserId || null
+          editingCharacterMeta.value.originalId = meta.originalId || null
+          editingCharacterMeta.value.thumbnailUrl = meta.thumbnailUrl || null
+          editingCharacterMeta.value.sourceUrl = meta.sourceUrl || null
+          
+          existsOnServer.value = meta.exists
+          isOwnerOfCharacter.value = meta.isOwner
+          
+          if (meta.originalId) {
+            isOnlineFriend.value = true
+            if (meta.originalMeta) {
+              editingCharacterMeta.value.originalMeta = meta.originalMeta
+            }
+          }
+          
+          // 如果有 sourceUrl，加载原文件
+          if (meta.sourceUrl) {
+            isLoadingSource.value = true
+            try {
+              const sourceData = await loadCharacterFromSource(
+                meta.sourceUrl,
+                meta.file_type as 'json' | 'png' | null
+              )
               
-              existsOnServer.value = detail.exists
-              isOwnerOfCharacter.value = detail.isOwner
-              
-              if (fullCharacter?.role_play?.originalId || detail.characterMeta.originalId) {
-                isOnlineFriend.value = true
-                editingCharacterMeta.value.originalId = fullCharacter?.role_play?.originalId || detail.characterMeta.originalId
-                if (detail.characterMeta.originalMeta) {
-                  editingCharacterMeta.value.originalMeta = detail.characterMeta.originalMeta
+              if (sourceData) {
+                const charData = sourceData.data || sourceData
+                newCharacterData.value = {
+                  name: charData.name || '',
+                  description: charData.description || '',
+                  avatar: charData.avatar || '',
+                  first_mes: charData.first_mes || charData.greeting || '',
+                  personality: charData.personality || '',
+                  scenario: charData.scenario || '',
+                  system_prompt: charData.system_prompt || '',
+                  creator_notes: charData.creator_notes || '',
+                  temperature: charData.temperature ?? 1,
+                  character_book: { entries: charData.character_book?.entries || [] },
+                  extensions: charData.extensions || {},
+                  regex_scripts: charData.extensions?.regex_scripts || [],
+                  tags: charData.tags || []
                 }
               }
+            } finally {
+              isLoadingSource.value = false
             }
-          } catch (e) {
-            console.log('[Character] Failed to get detail, character may not exist on server')
-            existsOnServer.value = false
-            isOwnerOfCharacter.value = false
           }
         }
+      } catch (e) {
+        console.log('[Character] Failed to get meta, character may not exist on server')
+        existsOnServer.value = false
+        isOwnerOfCharacter.value = false
+      } finally {
+        isLoadingMeta.value = false
       }
-      
+    } else {
       isLoadingMeta.value = false
-      
-      if (fullCharacter) {
-        editingCharacter.value = fullCharacter
-        const charData = fullCharacter.data || fullCharacter
-        newCharacterData.value = {
-          name: charData.name || '',
-          description: charData.description || '',
-          avatar: charData.avatar || '',
-          first_mes: charData.first_mes || '',
-          personality: charData.personality || '',
-          scenario: charData.scenario || '',
-          system_prompt: charData.system_prompt || '',
-          creator_notes: charData.creator_notes || '',
-          temperature: charData.temperature || 1,
-          character_book: { entries: charData.character_book?.entries || [] },
-          extensions: charData.extensions || {},
-          regex_scripts: charData.extensions?.regex_scripts || [],
-          tags: charData.tags || []
-        }
-        if (fullCharacter.role_play?.shared !== undefined) {
-          editingCharacterMeta.value.shared = fullCharacter.role_play.shared
-        }
-      }
-      
-      isLoadingCharacterDetail.value = false
-    } catch (error) {
-      console.error('获取角色详情失败:', error)
-      closeCreateCharacterModal()
-      throw new Error('获取角色详情失败，请重试')
     }
   }
   
   async function handleViewCharacter(character: any) {
     if (!character.id) return
     
+    const charId = character.role_play?.id || character.id
+    
+    // 先设置基本数据，立即显示
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: null,
-      shared: false,
+      originalId: character.role_play?.originalId || null,
+      shared: character.role_play?.shared || false,
       likeCount: 0,
       commentCount: 0,
       isLiked: false,
+      originalUserId: null,
+      thumbnailUrl: null,
+      sourceUrl: null,
       originalMeta: null
     }
     isViewOnlyMode.value = true
-    isLoadingCharacterDetail.value = true
-    isLoadingMeta.value = true
-    isOnlineFriend.value = false
+    isLoadingCharacterDetail.value = false  // 立即显示数据
+    isLoadingMeta.value = true               // 元数据加载中
+    isOnlineFriend.value = !!character.role_play?.originalId
     showCreateCharacterModal.value = true
     
-    try {
-      let fullCharacter: any
-      
-      const charId = character.role_play?.id || character.id
-      
-      if (await isLocalFriend(charId)) {
-        fullCharacter = await getLocalFriend(charId)
-        
-        if (fullCharacter?.role_play?.originalId) {
-          try {
-            const meta = await charactersApi.getMeta(charId)
-            if (meta) {
-              isOnlineFriend.value = true
-              editingCharacterMeta.value.originalId = fullCharacter.role_play.originalId
-              editingCharacterMeta.value.shared = meta.shared || false
-              editingCharacterMeta.value.likeCount = meta.likeCount || 0
-              editingCharacterMeta.value.commentCount = meta.commentCount || 0
-              editingCharacterMeta.value.isLiked = meta.isLiked || false
-              if (meta.originalMeta) {
-                editingCharacterMeta.value.originalMeta = meta.originalMeta
-              }
+    // 立即设置表单数据
+    const charData = character.data || character
+    newCharacterData.value = {
+      name: charData.name || '',
+      description: charData.description || '',
+      avatar: charData.avatar || '',
+      first_mes: charData.first_mes || '',
+      personality: charData.personality || '',
+      scenario: charData.scenario || '',
+      system_prompt: charData.system_prompt || '',
+      creator_notes: charData.creator_notes || '',
+      temperature: charData.temperature || 1,
+      character_book: { entries: charData.character_book?.entries || [] },
+      extensions: charData.extensions || {},
+      regex_scripts: charData.extensions?.regex_scripts || [],
+      tags: charData.tags || []
+    }
+    
+    // 异步获取元数据
+    if (userStore.isLoggedIn()) {
+      try {
+        const meta = await charactersApi.getCharacterMeta(charId)
+        if (meta) {
+          editingCharacterMeta.value.shared = meta.shared || false
+          editingCharacterMeta.value.likeCount = meta.likeCount || 0
+          editingCharacterMeta.value.commentCount = meta.commentCount || 0
+          editingCharacterMeta.value.isLiked = meta.isLiked || false
+          editingCharacterMeta.value.originalId = meta.originalId || null
+          editingCharacterMeta.value.thumbnailUrl = meta.thumbnailUrl || null
+          editingCharacterMeta.value.sourceUrl = meta.sourceUrl || null
+          
+          if (meta.originalId) {
+            isOnlineFriend.value = true
+            if (meta.originalMeta) {
+              editingCharacterMeta.value.originalMeta = meta.originalMeta
             }
-          } catch (e) {
-            console.log('[Character] Failed to get meta, character may not exist on server')
+          }
+          
+          // 如果有 sourceUrl，加载原文件
+          if (meta.sourceUrl) {
+            isLoadingSource.value = true
+            try {
+              const sourceData = await loadCharacterFromSource(
+                meta.sourceUrl,
+                meta.file_type as 'json' | 'png' | null
+              )
+              
+              if (sourceData) {
+                const charData = sourceData.data || sourceData
+                newCharacterData.value = {
+                  name: charData.name || '',
+                  description: charData.description || '',
+                  avatar: charData.avatar || '',
+                  first_mes: charData.first_mes || charData.greeting || '',
+                  personality: charData.personality || '',
+                  scenario: charData.scenario || '',
+                  system_prompt: charData.system_prompt || '',
+                  creator_notes: charData.creator_notes || '',
+                  temperature: charData.temperature ?? 1,
+                  character_book: { entries: charData.character_book?.entries || [] },
+                  extensions: charData.extensions || {},
+                  regex_scripts: charData.extensions?.regex_scripts || [],
+                  tags: charData.tags || []
+                }
+              }
+            } finally {
+              isLoadingSource.value = false
+            }
           }
         }
-        
-        isLoadingMeta.value = false
-      } else {
-        fullCharacter = character
+      } catch (e) {
+        console.log('[Character] Failed to get meta, character may not exist on server')
+      } finally {
         isLoadingMeta.value = false
       }
-      
-      if (fullCharacter) {
-        editingCharacter.value = fullCharacter
-        const charData = fullCharacter.data || fullCharacter
-        newCharacterData.value = {
-          name: charData.name || '',
-          description: charData.description || '',
-          avatar: charData.avatar || '',
-          first_mes: charData.first_mes || '',
-          personality: charData.personality || '',
-          scenario: charData.scenario || '',
-          system_prompt: charData.system_prompt || '',
-          creator_notes: charData.creator_notes || '',
-          temperature: charData.temperature || 1,
-          character_book: { entries: charData.character_book?.entries || [] },
-          extensions: charData.extensions || {},
-          regex_scripts: charData.extensions?.regex_scripts || [],
-          tags: charData.tags || []
-        }
-        if (fullCharacter.role_play?.shared !== undefined) {
-          editingCharacterMeta.value.shared = fullCharacter.role_play.shared
-        }
-      }
-      
-      isLoadingCharacterDetail.value = false
-    } catch (error) {
-      console.error('获取角色详情失败:', error)
-      closeCreateCharacterModal()
-      throw new Error('获取角色详情失败，请重试')
+    } else {
+      isLoadingMeta.value = false
     }
   }
   
@@ -513,6 +563,79 @@ export function useCharacter() {
     }
   }
   
+  async function loadCharacterFromSource(
+    sourceUrl: string,
+    fileType: 'json' | 'png' | null
+  ): Promise<any | null> {
+    try {
+      const response = await fetch(sourceUrl)
+      
+      if (!response.ok) {
+        throw new Error(`下载失败: ${response.status}`)
+      }
+      
+      const contentType = response.headers.get('Content-Type') || ''
+      const url = sourceUrl.toLowerCase()
+      
+      if (contentType.includes('image/') || url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
+        const buffer = await response.arrayBuffer()
+        const chunks = await readPngChunks(buffer)
+        
+        let rawDataStr = chunks['chara'] || chunks['character'] || ''
+        
+        if (!rawDataStr) {
+          for (const key of Object.keys(chunks)) {
+            try {
+              const parsed = JSON.parse(chunks[key])
+              if (parsed.spec || parsed.data) {
+                rawDataStr = chunks[key]
+                break
+              }
+            } catch {
+              continue
+            }
+          }
+        }
+        
+        if (rawDataStr) {
+          try {
+            const charData = JSON.parse(decodeBase64Utf8(rawDataStr))
+            const normalized = normalizeCharacterData(charData)
+            if (normalized && !Array.isArray(normalized)) {
+              return normalized
+            }
+          } catch {
+            return null
+          }
+        }
+      } else {
+        const text = await response.text()
+        let data
+        
+        if (text.trim().startsWith('{') && text.includes('\n')) {
+          const lines = text.trim().split('\n')
+          try {
+            data = JSON.parse(lines[0])
+          } catch {
+            data = JSON.parse(text)
+          }
+        } else {
+          data = JSON.parse(text)
+        }
+        
+        const normalized = normalizeCharacterData(data)
+        if (normalized && !Array.isArray(normalized)) {
+          return normalized
+        }
+      }
+      
+      return null
+    } catch (e) {
+      console.error('Failed to load from source:', e)
+      return null
+    }
+  }
+  
   async function loadOriginalCharacterData() {
     if (!editingCharacterMeta.value.originalId) return
     
@@ -607,8 +730,26 @@ export function useCharacter() {
       const characterName = data.name || editingCharacter.value?.data?.name || editingCharacter.value?.name || 'character'
       const isImage = blob.type.startsWith('image/')
       const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
+      const file = new File([blob], fileName, { type: blob.type })
       
-      await charactersApi.uploadUserCharacter(userId, charId, blob, fileName)
+      const result = await charactersApi.importFiles([file])
+      
+      if (!result.success || result.imported === 0) {
+        throw new Error(result.failedFiles?.[0]?.error || '上传失败')
+      }
+      
+      const newCharId = result.characters?.[0]?.role_play?.id || result.characters?.[0]?.id
+      
+      if (newCharId && newCharId !== charId) {
+        await updateLocalFriendId(charId, newCharId)
+        await userStore.loadLocalFriends()
+        
+        if (editingCharacter.value?.role_play) {
+          editingCharacter.value.role_play.id = newCharId
+        } else if (editingCharacter.value) {
+          editingCharacter.value.id = newCharId
+        }
+      }
       
       existsOnServer.value = true
       isOwnerOfCharacter.value = true
@@ -728,6 +869,7 @@ export function useCharacter() {
     isLiking,
     isLikingInEdit,
     isLoadingOriginal,
+    isLoadingSource,
     friendCharacters,
     isCurrentCharacterFriend,
     isCurrentCharacterUserOwned,

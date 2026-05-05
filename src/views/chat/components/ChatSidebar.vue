@@ -74,12 +74,15 @@
             @click="selectCharacter(character)"
           >
             <div class="flex items-center gap-3">
-              <div class="relative w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg"
-                   :class="character.isUserCreated 
-                     ? 'bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)]' 
-                     : 'bg-gradient-to-br from-[var(--theme-secondary)] to-[var(--theme-accent)]'">
-                <img v-if="getCharacterAvatar(character)" :src="getCharacterAvatar(character)" class="w-full h-full object-cover" />
-                <span v-else class="text-xl font-bold text-white">{{ getCharacterName(character).charAt(0) }}</span>
+              <div class="relative flex-shrink-0">
+                <AvatarImage
+                  :src="getCharacterAvatar(character)"
+                  :name="getCharacterName(character)"
+                  size="md"
+                  rounded="lg"
+                  :gradient="character.isUserCreated ? 'primary' : 'secondary'"
+                  class="shadow-lg"
+                />
                 <span
                     v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)"
                     class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-[var(--theme-success-light)] to-[var(--theme-success)] rounded-full border-2 border-[var(--theme-card-bg)] animate-ping"
@@ -211,6 +214,7 @@ import type { Character } from '@/types'
 import { getAvatarUrl, preloadAvatars, getCharacterDisplayName, getCharacterDisplayDescription, useAvatar } from '@/composables/useAvatar'
 import { clearCharacterAvatarCache, getFriendAvatar } from '@/utils/localFriendStorage'
 import { eventBus } from '@/utils/eventBus'
+import AvatarImage from '@/components/AvatarImage.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -275,6 +279,9 @@ watch(() => props.avatarUpdateTrigger, (characterId) => {
 })
 
 function getCharacterAvatar(character: any): string | undefined {
+  if (character.thumbnailUrl) {
+    return character.thumbnailUrl
+  }
   const key = character.role_play?.id || character.id
   if (key && avatarMap.value.has(key)) {
     return avatarMap.value.get(key)

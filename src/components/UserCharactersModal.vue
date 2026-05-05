@@ -178,19 +178,29 @@ const fetchCharacters = async () => {
     
     const params: Record<string, string> = {
       page: currentPage.value.toString(),
-      pageSize: pageSize.toString()
+      pageSize: pageSize.toString(),
+      own: 'true',
+      userId
     }
     if (searchQuery.value.trim()) {
       params.search = searchQuery.value.trim()
     }
     
-    const response = await charactersApi.getUserCharacters(userId, params)
+    const response = await charactersApi.getSharedCharacters(params)
     
-    characters.value = (response.characters || []).map((char: any) => {
+    characters.value = (response.characters || []).map((item: any) => {
+      const char = item.character || {}
+      const metaData = item.data || {}
       const characterId = char.role_play?.id || char.id
       return {
         ...char,
-        isFriend: localFriendIds.value.has(characterId)
+        likeCount: metaData.likeCount || 0,
+        liked: metaData.liked || false,
+        isOfficial: metaData.isOfficial || false,
+        isFriend: localFriendIds.value.has(characterId),
+        shared: metaData.shared || false,
+        thumbnailUrl: metaData.thumbnailUrl || null,
+        sourceUrl: metaData.sourceUrl || null
       }
     })
     total.value = response.total || 0

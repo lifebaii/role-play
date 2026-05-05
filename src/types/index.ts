@@ -85,6 +85,8 @@ export interface Character {
   liked?: boolean
   isFriend?: boolean
   isOfficial?: boolean
+  thumbnailUrl?: string
+  sourceUrl?: string
 }
 
 export interface WorldInfo {

@@ -1,21 +1,28 @@
 <template>
   <div v-if="visible" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click.self="$emit('update:visible', false)" @click="showMoreActions = false">
-    <div class="chat-card rounded-2xl max-w-2xl w-full overflow-hidden flex flex-col shadow-2xl border border-theme-border" style="max-height: min(90vh, calc(var(--vh, 1vh) * 90));" @click.stop>
-      <div class="flex-1 overflow-y-auto overscroll-contain" data-scrollable="true" style="-webkit-overflow-scrolling: touch;">
+    <div class="chat-card rounded-2xl max-w-2xl w-full overflow-hidden flex flex-col shadow-2xl border border-theme-border relative h-[min(90vh,calc(var(--vh,1vh)*90))]" style="max-height: min(90vh, calc(var(--vh, 1vh) * 90));" @click.stop>
+      <!-- 背景图片层 -->
+      <div 
+        v-if="sourceUrl"
+        class="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
+        :style="{ backgroundImage: `url(${sourceUrl})`, opacity: 1 }"
+      ></div>
+      
+      <!-- 内容层 -->
+      <div class="relative z-10 flex flex-col h-full">
+        <div class="flex-1 overflow-y-auto overscroll-contain" data-scrollable="true" style="-webkit-overflow-scrolling: touch;">
         <div class="sticky top-0 z-10 p-3 sm:p-6 border-b border-theme-border/50 flex items-center justify-between bg-[var(--theme-card)]/80 backdrop-blur-xl">
           <div class="flex items-center gap-2 sm:gap-3">
             <h2 class="text-base sm:text-xl font-bold gradient-text flex items-center gap-2">
               <template v-if="editingCharacter">
-                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] flex items-center justify-center overflow-hidden flex-shrink-0 shadow-md">
-                  <img 
-                    v-if="avatarUrl && !avatarError" 
-                    :src="avatarUrl" 
-                    :alt="characterData?.name || '角色'"
-                    class="w-full h-full object-cover"
-                    @error="handleAvatarError"
-                  />
-                  <span v-else class="text-xs sm:text-sm font-bold text-white">{{ characterData?.name?.charAt(0) || '?' }}</span>
-                </div>
+                <AvatarImage
+                  :src="avatarUrl"
+                  :name="characterData?.name || '?'"
+                  size="sm"
+                  rounded="md"
+                  gradient="primary"
+                  class="flex-shrink-0 shadow-md"
+                />
               </template>
               <template v-else>
                 <span class="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] rounded-md sm:rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">+</span>
@@ -32,6 +39,16 @@
               <svg v-if="editingCharacterMeta.originalId" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
               <svg v-else-if="editingCharacterMeta.shared" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
               {{ characterTypeLabel }}
+            </span>
+            <span
+              v-if="isLoadingSource"
+              class="text-xs px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-medium inline-flex items-center gap-1 bg-[var(--theme-primary)]/10 text-theme-text-accent border border-[var(--theme-primary)]/20"
+            >
+              <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              加载源文件...
             </span>
           </div>
           <div class="flex items-center gap-1 sm:gap-2">
@@ -295,6 +312,7 @@
             </button>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -304,6 +322,7 @@
 import { computed, ref, watch } from 'vue'
 import CharacterForm from '@/components/CharacterForm.vue'
 import CommentSection from '@/components/CommentSection.vue'
+import AvatarImage from '@/components/AvatarImage.vue'
 import type { Character } from '@/types'
 import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob } from '@/utils/localFriendStorage'
 import { useUserStore } from '@/stores/user'
@@ -342,6 +361,7 @@ const props = defineProps<{
   isLoadingMeta: boolean
   isSavingCharacter: boolean
   isLoadingOriginal: boolean
+  isLoadingSource: boolean
   isLikingInEdit: boolean
   existsOnServer: boolean
   isOwnerOfCharacter: boolean
@@ -350,6 +370,8 @@ const props = defineProps<{
   isUploadingToServer: boolean
   isUpdatingToServer: boolean
   isUpdatingFromServer: boolean
+  thumbnailUrl: string | null
+  sourceUrl: string | null
 }>()
 
 const isUpdatingShared = computed(() => localIsUpdatingShared.value)
@@ -368,14 +390,18 @@ const emit = defineEmits<{
 }>()
 
 const avatarUrl = ref<string | undefined>(undefined)
-const avatarError = ref(false)
 
 async function loadAvatar() {
   if (!props.editingCharacter) {
     avatarUrl.value = undefined
     return
   }
-  avatarError.value = false
+  
+  if (props.thumbnailUrl) {
+    avatarUrl.value = props.thumbnailUrl
+    return
+  }
+  
   try {
     const url = await getFriendAvatar(props.editingCharacter as any)
     avatarUrl.value = url
@@ -389,21 +415,19 @@ watch(() => props.editingCharacter, () => {
   loadAvatar()
 }, { immediate: true })
 
+watch(() => props.thumbnailUrl, () => {
+  loadAvatar()
+})
+
 watch(() => props.visible, (visible) => {
   if (visible && props.editingCharacter) {
-    avatarError.value = false
     loadAvatar()
   }
   showMoreActions.value = false
 })
 
-function handleAvatarError() {
-  avatarError.value = true
-}
-
 function handleImageSaved(characterId: string) {
   clearCharacterAvatarCache(characterId)
-  avatarError.value = false
   loadAvatar()
   emit('avatarUpdated', characterId)
 }
@@ -503,8 +527,12 @@ async function handleToggleShared() {
       const characterName = props.editingCharacter?.data?.name || props.editingCharacter?.name || 'character'
       const isImage = blob.type.startsWith('image/')
       const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
+      const file = new File([blob], fileName, { type: blob.type })
       
-      await charactersApi.uploadUserCharacter(userId, characterId, blob, fileName)
+      const result = await charactersApi.importFiles([file])
+      if (!result.success || result.imported === 0) {
+        throw new Error(result.failedFiles?.[0]?.error || '上传失败')
+      }
     } else {
       await charactersApi.updateUserCharacterShared(userId, characterId, false)
     }

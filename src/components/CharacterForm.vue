@@ -1,7 +1,7 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
     <div 
-      class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
     >
       <button
         type="button"
@@ -115,7 +115,7 @@
     </div>
 
     <div 
-      class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
     >
       <button
         type="button"
@@ -219,7 +219,7 @@
     </div>
 
     <div 
-      class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
     >
       <button
         type="button"
@@ -331,7 +331,7 @@
     </div>
 
     <div 
-      class="chat-card rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden"
+      class="rounded-2xl shadow-lg shadow-[var(--theme-primary)]/5 border border-theme-border overflow-hidden bg-white/90 dark:bg-gray-900/90"
     >
       <button
         type="button"

@@ -233,7 +233,9 @@ const fetchCharacters = async () => {
         liked: metaData.liked || false,
         isOfficial: metaData.isOfficial || false,
         isFriend: metaData.isFriend || false,
-        shared: metaData.shared || false
+        shared: metaData.shared || false,
+        thumbnailUrl: metaData.thumbnailUrl || null,
+        sourceUrl: metaData.sourceUrl || null
       }
     })
     total.value = response.total

@@ -43,6 +43,7 @@ export const useUserStore = defineStore('user', () => {
   const handleUserLogout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem('role_play_unique_models');
   };
 
   const initEventListeners = () => {
@@ -166,6 +167,7 @@ export const useUserStore = defineStore('user', () => {
     setToken(null);
     setUser(null);
     signinMessage.value = '';
+    localStorage.removeItem('role_play_unique_models');
   };
 
   const requireLogin = () => {

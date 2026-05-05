@@ -133,7 +133,17 @@ export const useChatStore = defineStore('chat', () => {
   const userName = computed(() => userStore.effectiveUserName)
   const lastCharacterId = ref(localStorage.getItem('role_play_last_character_id') || '')
   const uniqueModels = ref<{ id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[]>([])
-  const globalDefaultModel = ref('')
+  
+try {
+  const cachedModels = localStorage.getItem('role_play_unique_models')
+  if (cachedModels) {
+    uniqueModels.value = JSON.parse(cachedModels)
+  }
+} catch {
+  uniqueModels.value = []
+}
+
+const globalDefaultModel = ref('')
   const selectedModel = ref(localStorage.getItem('role_play_selected_model') || '')
   const lastSelectedModel = ref('')
   
@@ -326,16 +336,22 @@ export const useChatStore = defineStore('chat', () => {
     })
   }
 
-  async function loadModels() {
+  async function loadModels(forceRefresh = false) {
     if (userStore.isAnonymous) {
       uniqueModels.value = []
       globalDefaultModel.value = ''
       return
     }
     
+    if (!forceRefresh && uniqueModels.value.length > 0) {
+      return
+    }
+    
     try {
       const result = await modelsApi.listUnique()
       uniqueModels.value = result.models || []
+      
+      localStorage.setItem('role_play_unique_models', JSON.stringify(result.models))
       
       const defaultModel = result.models?.find((m: any) => m.is_default)
       globalDefaultModel.value = defaultModel?.id || ''
@@ -356,8 +372,6 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (e: any) {
       console.error('Failed to load models:', e)
-      uniqueModels.value = []
-      globalDefaultModel.value = ''
     }
   }
 

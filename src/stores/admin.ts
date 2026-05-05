@@ -33,6 +33,10 @@ export const useAdminStore = defineStore('admin', () => {
   const models = ref<Model[]>([])
   const globalDefaultModel = ref<string>('')
   const characters = ref<Character[]>([])
+  const charactersTotal = ref(0)
+  const charactersPage = ref(1)
+  const charactersPageSize = ref(10)
+  const charactersTotalPages = ref(1)
   const settings = ref<AdminSettings>({
     registrationEnabled: true,
     defaultQuota: 100,
@@ -164,13 +168,20 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function loadCharacters(): Promise<void> {
+  async function loadCharacters(params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string }): Promise<void> {
     try {
-      const result = await charactersApi.listAdmin()
-      characters.value = result
+      const result = await charactersApi.listAdmin(params)
+      characters.value = result.characters || []
+      charactersTotal.value = result.total || 0
+      charactersPage.value = result.page || 1
+      charactersPageSize.value = result.pageSize || 10
+      charactersTotalPages.value = result.totalPages || 1
     } catch (error) {
       console.error('Failed to load characters:', error)
       characters.value = []
+      charactersTotal.value = 0
+      charactersPage.value = 1
+      charactersTotalPages.value = 1
     }
   }
 
@@ -213,11 +224,15 @@ export const useAdminStore = defineStore('admin', () => {
       
       const response = await charactersApi.toggleShared(id, newShared)
       
-      // 更新本地列表中的角色数据
-      if (response?.character) {
+      if (response?.success) {
         const index = characters.value.findIndex(c => getCharacterId(c) === id)
         if (index !== -1) {
-          characters.value[index] = response.character
+          const char = characters.value[index]
+          if (char.role_play) {
+            char.role_play.shared = response.shared
+          } else {
+            char.shared = response.shared
+          }
         }
       }
     } catch (error) {
@@ -225,12 +240,14 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function deleteCharacter(id: string): Promise<void> {
+  async function deleteCharacter(id: string): Promise<any> {
     try {
-      await charactersApi.delete(id)
+      const result = await charactersApi.delete(id)
       await loadCharacters()
+      return result
     } catch (error) {
       console.error('Failed to delete character:', error)
+      throw error
     }
   }
 
@@ -302,6 +319,10 @@ export const useAdminStore = defineStore('admin', () => {
     models,
     globalDefaultModel,
     characters,
+    charactersTotal,
+    charactersPage,
+    charactersPageSize,
+    charactersTotalPages,
     settings,
     saveButtonVisible,
     saveButtonLoading,
