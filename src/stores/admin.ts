@@ -130,7 +130,7 @@ export const useAdminStore = defineStore('admin', () => {
 
   async function loadUniqueModels(): Promise<{ id: string; name: string; is_default: boolean; providers: { id: string; name: string }[] }[]> {
     try {
-      const result = await modelsApi.listUnique()
+      const result = await modelsApi.listUniqueAdmin()
       return result.models || []
     } catch (error) {
       console.error('Failed to load unique models:', error)
