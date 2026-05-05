@@ -66,7 +66,8 @@ const handleClose = () => {
 
 const redirectToGitHub = () => {
   isLoading.value = true
-  window.location.href = '/api/auth/github'
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+  window.location.href = apiBaseUrl ? `${apiBaseUrl}/auth/github` : '/api/auth/github'
 }
 
 watch(() => props.visible, (newVal) => {
