@@ -229,7 +229,11 @@ export const useUserStore = defineStore('user', () => {
       let contentType: string;
       
       if (sourceUrl) {
-        const response = await fetch(sourceUrl);
+        // 添加时间戳禁用缓存
+        const url = new URL(sourceUrl, window.location.origin)
+        url.searchParams.set('t', Date.now().toString())
+        
+        const response = await fetch(url.toString(), { cache: 'no-store' });
         if (!response.ok) {
           throw new Error('获取角色数据失败');
         }
@@ -273,6 +277,15 @@ export const useUserStore = defineStore('user', () => {
   const removeFriend = async (characterId: string) => {
     await removeLocalFriend(characterId);
     friendCharacters.value = friendCharacters.value.filter(f => f.role_play?.id !== characterId);
+    
+    if (isLoggedIn()) {
+      try {
+        await charactersApi.deleteUserCharacter(characterId);
+      } catch (error) {
+        console.error('[UserStore] Failed to delete character from server:', error);
+      }
+    }
+    
     return { user: user.value };
   };
 

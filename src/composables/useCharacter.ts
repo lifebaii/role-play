@@ -3,17 +3,17 @@ import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useDialog } from '@/composables/useDialog'
 import type { Character } from '@/types'
-import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend, updateLocalFriendId, getCharacterBlob, sortFriendsByMeta } from '@/utils/localFriendStorage'
+import { isLocalFriend, getLocalFriend, importRawFile, createLocalFriend, updateLocalFriendData, updateLocalFriendShared, removeLocalFriend, updateLocalFriendId, getCharacterBlob, sortFriendsByMeta, updateFriendMetaShared, convertToLocalFriend, getFriendMetaById, convertToLocalFriendWithNewId } from '@/utils/localFriendStorage';
 import { charactersApi } from '@/api'
 import { readPngChunks, decodeBase64Utf8, normalizeCharacterData } from '@/utils/characterImport'
+import { debugPrintFile, debugPrintBlob } from '@/utils/debugCharacterFile'
 
 export function useCharacter() {
   const chatStore = useChatStore()
   const userStore = useUserStore()
-  const { showDangerConfirm } = useDialog()
+  const { showDangerConfirm, showConfirm, showAlert, showMultiButtonConfirm } = useDialog()
   
   const showCreateCharacterModal = ref(false)
-  const showDeleteCharacterConfirm = ref(false)
   const isLoadingCharacterDetail = ref(false)
   const isSavingCharacter = ref(false)
   const isImportingCharacter = ref(false)
@@ -26,29 +26,17 @@ export function useCharacter() {
   const isLoadingViewData = ref(false)
   
   const editingCharacterMeta = ref({
-    originalId: null as string | null,
     shared: false,
     likeCount: 0,
     commentCount: 0,
     isLiked: false,
     originalUserId: null as string | null,
     thumbnailUrl: null as string | null,
-    sourceUrl: null as string | null,
-    originalMeta: null as {
-      originalId: string | null
-      shared: boolean
-      likeCount: number
-      commentCount: number
-      isLiked: boolean
-    } | null
+    sourceUrl: null as string | null
   })
   
   const displayMeta = computed(() => {
-    if (editingCharacterMeta.value.originalMeta) {
-      return editingCharacterMeta.value.originalMeta
-    }
     return {
-      originalId: editingCharacterMeta.value.originalId,
       shared: editingCharacterMeta.value.shared,
       likeCount: editingCharacterMeta.value.likeCount,
       commentCount: editingCharacterMeta.value.commentCount,
@@ -64,7 +52,6 @@ export function useCharacter() {
   
   const showCommentSection = computed(() => {
     if (!userStore.isLoggedIn()) return false
-    if (editingCharacterMeta.value.originalId) return true
     if (editingCharacterMeta.value.shared) return true
     return false
   })
@@ -113,15 +100,13 @@ export function useCharacter() {
     editingCharacter.value = null
     isViewOnlyMode.value = false
     editingCharacterMeta.value = {
-      originalId: null,
       shared: false,
       likeCount: 0,
       commentCount: 0,
       isLiked: false,
       originalUserId: null,
       thumbnailUrl: null,
-      sourceUrl: null,
-      originalMeta: null
+      sourceUrl: null
     }
     newCharacterData.value = {
       name: '',
@@ -144,8 +129,8 @@ export function useCharacter() {
     showCreateCharacterModal.value = false
   }
   
-  async function saveCharacter(data: any) {
-    if (!data.name.trim()) return
+  async function saveCharacter(data: any): Promise<{ success: boolean, message?: string }> {
+    if (!data.name.trim()) return { success: false, message: '角色名称不能为空' }
     
     isSavingCharacter.value = true
     try {
@@ -186,9 +171,10 @@ export function useCharacter() {
       } else {
         const newFriend = await createLocalFriend(characterData, editingCharacterMeta.value.shared)
         await userStore.loadLocalFriends()
+        closeCreateCharacterModal()
       }
       
-      closeCreateCharacterModal()
+      return { success: true, message: '保存成功' }
     } catch (error: any) {
       throw new Error('保存角色失败: ' + error.message)
     } finally {
@@ -196,29 +182,34 @@ export function useCharacter() {
     }
   }
   
+  function getApiCharacterId(): string | null {
+    return editingCharacter.value?.role_play?.id || editingCharacter.value?.id || null
+  }
+
   async function editUserCharacter(character: Character) {
     if (!character.id) return
     
     const charId = character.role_play?.id || character.id
     
+    // 从 friend_meta 中获取 shared 状态
+    const friendMeta = getFriendMetaById(charId)
+    
     // 编辑模式：数据来自本地，立即显示
     // 元数据仅用于控制UI（图标、按钮状态）
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: character.role_play?.originalId || character.originalId || null,
-      shared: character.role_play?.shared || character.shared || false,
+      shared: character.role_play?.shared || character.shared || friendMeta?.shared || false,
       likeCount: character.likeCount || 0,
       commentCount: character.commentCount || 0,
       isLiked: character.liked || false,
       originalUserId: null,
       thumbnailUrl: character.thumbnailUrl || null,
-      sourceUrl: character.sourceUrl || null,
-      originalMeta: null
+      sourceUrl: character.sourceUrl || null
     }
     isViewOnlyMode.value = false
     isLoadingCharacterDetail.value = false
     isLoadingMeta.value = true
-    isOnlineFriend.value = !!(character.role_play?.originalId || character.originalId)
+    isOnlineFriend.value = !!friendMeta && friendMeta.addType === 'add'
     existsOnServer.value = false
     isOwnerOfCharacter.value = false
     showCreateCharacterModal.value = true
@@ -244,24 +235,54 @@ export function useCharacter() {
     // 异步获取元数据（仅用于UI控制）
     if (userStore.isLoggedIn()) {
       try {
-        const meta = await charactersApi.getCharacterMeta(charId)
+        const metaId = getApiCharacterId()
+        if (!metaId) {
+          console.log('[Character] No API character ID available')
+          existsOnServer.value = false
+          isOwnerOfCharacter.value = false
+          return
+        }
+        const meta = await charactersApi.getCharacterMeta(metaId)
         if (meta) {
           editingCharacterMeta.value.shared = meta.shared || false
           editingCharacterMeta.value.likeCount = meta.likeCount || 0
           editingCharacterMeta.value.commentCount = meta.commentCount || 0
           editingCharacterMeta.value.isLiked = meta.isLiked || false
           editingCharacterMeta.value.originalUserId = meta.originalUserId || null
-          editingCharacterMeta.value.originalId = meta.originalId || null
           editingCharacterMeta.value.thumbnailUrl = meta.thumbnailUrl || null
           editingCharacterMeta.value.sourceUrl = meta.sourceUrl || null
+          
+          // 更新 friend_meta 中的 shared 状态
+          updateFriendMetaShared(charId, meta.shared || false)
           
           existsOnServer.value = meta.exists
           isOwnerOfCharacter.value = meta.isOwner
           
-          if (meta.originalId) {
-            isOnlineFriend.value = true
-            if (meta.originalMeta) {
-              editingCharacterMeta.value.originalMeta = meta.originalMeta
+          if (!meta.exists && isOnlineFriend.value) {
+            console.log('[Character] Character deleted by owner, asking user for confirmation')
+            
+            const confirmed = await showConfirm(
+              '该角色已被原作者删除。是否将其转为本地私密角色？\n\n转换后将生成新的角色ID，聊天记录也会一并迁移。',
+              '角色已删除'
+            )
+            
+            if (confirmed) {
+              const newId = await convertToLocalFriendWithNewId(charId)
+              if (newId) {
+                isOnlineFriend.value = false
+                existsOnServer.value = false
+                
+                await showAlert('角色已转为本地私密角色。', '提示')
+                
+                const updatedCharacter = await getLocalFriend(newId)
+                if (updatedCharacter) {
+                  await editUserCharacter(updatedCharacter)
+                } else {
+                  closeCreateCharacterModal()
+                }
+              }
+            } else {
+              closeCreateCharacterModal()
             }
           }
         }
@@ -282,23 +303,24 @@ export function useCharacter() {
     
     const charId = character.role_play?.id || character.id
     
+    // 从 friend_meta 中获取 shared 状态
+    const friendMeta = getFriendMetaById(charId)
+    
     editingCharacter.value = character
     editingCharacterMeta.value = {
-      originalId: character.role_play?.originalId || character.originalId || null,
-      shared: character.role_play?.shared || character.shared || false,
+      shared: character.role_play?.shared || character.shared || friendMeta?.shared || false,
       likeCount: character.likeCount || 0,
       commentCount: character.commentCount || 0,
       isLiked: character.liked || false,
       originalUserId: null,
       thumbnailUrl: character.thumbnailUrl || null,
-      sourceUrl: character.sourceUrl || null,
-      originalMeta: null
+      sourceUrl: character.sourceUrl || null
     }
     isViewOnlyMode.value = true
     isLoadingCharacterDetail.value = false
     isLoadingMeta.value = true
     isLoadingViewData.value = true
-    isOnlineFriend.value = !!(character.role_play?.originalId || character.originalId)
+    isOnlineFriend.value = !!friendMeta && friendMeta.addType === 'add'
     showCreateCharacterModal.value = true
     
     const charData = character.data || character
@@ -341,22 +363,22 @@ export function useCharacter() {
     
     if (userStore.isLoggedIn()) {
       try {
-        const meta = await charactersApi.getCharacterMeta(charId)
+        const metaId = getApiCharacterId()
+        if (!metaId) {
+          console.log('[Character] No API character ID available')
+          return
+        }
+        const meta = await charactersApi.getCharacterMeta(metaId)
         if (meta) {
           editingCharacterMeta.value.shared = meta.shared || false
           editingCharacterMeta.value.likeCount = meta.likeCount || 0
           editingCharacterMeta.value.commentCount = meta.commentCount || 0
           editingCharacterMeta.value.isLiked = meta.isLiked || false
-          editingCharacterMeta.value.originalId = meta.originalId || null
           editingCharacterMeta.value.thumbnailUrl = meta.thumbnailUrl || null
           editingCharacterMeta.value.sourceUrl = meta.sourceUrl || null
           
-          if (meta.originalId) {
-            isOnlineFriend.value = true
-            if (meta.originalMeta) {
-              editingCharacterMeta.value.originalMeta = meta.originalMeta
-            }
-          }
+          // 更新 friend_meta 中的 shared 状态
+          updateFriendMetaShared(charId, meta.shared || false)
           
           if (meta.sourceUrl) {
             isLoadingSource.value = true
@@ -458,12 +480,53 @@ export function useCharacter() {
     }
     
     try {
-      if (await isLocalFriend(charId)) {
-        await removeLocalFriend(charId)
-        await userStore.loadLocalFriends()
-      } else if (userStore.user?.id) {
-        await chatStore.deleteUserCharacter(userStore.user.id, editingCharacter.value?.id || charId)
-        userStore.loadFriends()
+      // 如果角色在服务器上存在且用户是所有者，显示多按钮确认
+      if (existsOnServer.value && isOwnerOfCharacter.value) {
+        const result = await showMultiButtonConfirm(
+          '确定要删除这个角色吗？删除后聊天记录也会一并删除。',
+          '删除角色',
+          [
+            { text: '取消', value: 'cancel' },
+            { text: '删除(本地)', value: 'local' },
+            { text: '删除(本地+服务器)', value: 'both', variant: 'danger' }
+          ],
+          'danger'
+        )
+        
+        if (result === 'cancel' || !result) {
+          return
+        }
+        
+        // 如果需要删除服务器上的角色，先删除服务器的
+        // 删除服务器角色时，使用根级别的 id（服务器 ID），而不是 role_play.id（本地 ID）
+        if (result === 'both' && userStore.user?.id) {
+          const serverCharId = editingCharacter.value?.id || charId
+          await charactersApi.deleteUserCharacter(serverCharId)
+        }
+        
+        // 删除本地角色
+        if (await isLocalFriend(charId)) {
+          await removeLocalFriend(charId)
+          await userStore.loadLocalFriends()
+        } else if (userStore.user?.id) {
+          await chatStore.deleteUserCharacter(userStore.user.id, editingCharacter.value?.id || charId)
+          userStore.loadFriends()
+        }
+      } else {
+        // 普通删除确认
+        const confirmed = await showDangerConfirm('确定要删除这个角色吗？删除后聊天记录也会一并删除。')
+        if (!confirmed) {
+          return
+        }
+        
+        // 删除本地角色
+        if (await isLocalFriend(charId)) {
+          await removeLocalFriend(charId)
+          await userStore.loadLocalFriends()
+        } else if (userStore.user?.id) {
+          await chatStore.deleteUserCharacter(userStore.user.id, editingCharacter.value?.id || charId)
+          userStore.loadFriends()
+        }
       }
       
       const currentId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
@@ -471,32 +534,6 @@ export function useCharacter() {
         chatStore.setCurrentCharacter(null)
       }
       closeCreateCharacterModal()
-    } catch (error) {
-      console.error('Failed to delete character:', error)
-      throw new Error('删除角色失败')
-    }
-  }
-  
-  function confirmDeleteCharacter() {
-    showDeleteCharacterConfirm.value = true
-  }
-  
-  async function handleDeleteCharacter() {
-    if (!chatStore.currentCharacter) return
-    
-    try {
-      const characterId = chatStore.currentCharacter.role_play?.id || chatStore.currentCharacter.id
-      
-      if (await isLocalFriend(characterId)) {
-        await removeLocalFriend(characterId)
-        await userStore.loadLocalFriends()
-      } else if (userStore.user?.id) {
-        await chatStore.deleteUserCharacter(userStore.user.id, chatStore.currentCharacter.id)
-        userStore.loadFriends()
-      }
-      
-      chatStore.setCurrentCharacter(null)
-      showDeleteCharacterConfirm.value = false
     } catch (error) {
       console.error('Failed to delete character:', error)
       throw new Error('删除角色失败')
@@ -532,8 +569,8 @@ export function useCharacter() {
   }
   
   async function handleToggleLikeInEdit() {
-    const likeCharId = editingCharacterMeta.value.originalId || (editingCharacterMeta.value.shared ? (editingCharacter.value?.role_play?.id || editingCharacter.value?.id) : null)
-    console.log('[handleToggleLikeInEdit] likeCharId:', likeCharId, 'originalId:', editingCharacterMeta.value.originalId, 'shared:', editingCharacterMeta.value.shared, 'editingCharacter.id:', editingCharacter.value?.id, 'editingCharacter.role_play?.id:', editingCharacter.value?.role_play?.id)
+    const likeCharId = getApiCharacterId()
+    console.log('[handleToggleLikeInEdit] likeCharId:', likeCharId, 'shared:', editingCharacterMeta.value.shared, 'editingCharacter.id:', editingCharacter.value?.id, 'editingCharacter.role_play?.id:', editingCharacter.value?.role_play?.id)
     if (!likeCharId) {
       console.log('[handleToggleLikeInEdit] No likeCharId, returning early')
       return
@@ -545,13 +582,8 @@ export function useCharacter() {
       const result = await charactersApi.toggleLike(likeCharId)
       console.log('[handleToggleLikeInEdit] API result:', result)
       
-      if (editingCharacterMeta.value.originalMeta) {
-        editingCharacterMeta.value.originalMeta.likeCount = result.likeCount
-        editingCharacterMeta.value.originalMeta.isLiked = result.liked
-      } else {
-        editingCharacterMeta.value.likeCount = result.likeCount
-        editingCharacterMeta.value.isLiked = result.liked
-      }
+      editingCharacterMeta.value.likeCount = result.likeCount
+      editingCharacterMeta.value.isLiked = result.liked
       
       if (result.liked) {
         if (!likedCharacterIds.value.includes(likeCharId)) {
@@ -572,16 +604,28 @@ export function useCharacter() {
     fileType: 'json' | 'png' | null
   ): Promise<any | null> {
     try {
-      const response = await fetch(sourceUrl)
+      // 添加时间戳禁用缓存
+      const url = new URL(sourceUrl, window.location.origin)
+      url.searchParams.set('t', Date.now().toString())
+      
+      const response = await fetch(url.toString(), { cache: 'no-store' })
       
       if (!response.ok) {
         throw new Error(`下载失败: ${response.status}`)
       }
       
       const contentType = response.headers.get('Content-Type') || ''
-      const url = sourceUrl.toLowerCase()
+      const urlStr = sourceUrl.toLowerCase()
       
-      if (contentType.includes('image/') || url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg')) {
+      // 克隆响应以避免读取两次
+      const responseForDebug = response.clone()
+      const blob = await responseForDebug.blob()
+      const fileName = urlStr.split('/').pop() || 'character'
+      
+      // 添加调试打印
+      await debugPrintBlob(blob, fileName, '从服务器下载角色')
+      
+      if (contentType.includes('image/') || urlStr.endsWith('.png') || urlStr.endsWith('.jpg') || urlStr.endsWith('.jpeg')) {
         const buffer = await response.arrayBuffer()
         const chunks = await readPngChunks(buffer)
         
@@ -641,11 +685,12 @@ export function useCharacter() {
   }
   
   async function loadOriginalCharacterData() {
-    if (!editingCharacterMeta.value.originalId) return
+    const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
+    if (!charId) return
     
     isLoadingOriginal.value = true
     try {
-      const originalCharacter = await getLocalFriend(editingCharacterMeta.value.originalId)
+      const originalCharacter = await getLocalFriend(charId)
       
       if (originalCharacter) {
         newCharacterData.value = {
@@ -682,6 +727,10 @@ export function useCharacter() {
     const files = (event.target as HTMLInputElement).files
     if (!files || files.length === 0) return
 
+    for (const file of Array.from(files)) {
+      await debugPrintFile(file, '用户导入角色')
+    }
+    
     console.log(`[Import] Starting import, files count: ${files.length}`)
     isImportingCharacter.value = true
 
@@ -712,92 +761,39 @@ export function useCharacter() {
     }
   }
   
-  const isUploadingToServer = ref(false)
   const isUpdatingToServer = ref(false)
   const isUpdatingFromServer = ref(false)
   
-  async function uploadToServer(data: any): Promise<boolean> {
+  async function updateToServer(data: any): Promise<boolean> {
     const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
     const userId = userStore.user?.id
-    
+
     if (!charId || !userId) {
       throw new Error('无法获取角色或用户信息')
     }
-    
-    isUploadingToServer.value = true
+
+    isUpdatingToServer.value = true
     try {
+      // 获取角色 blob
       const blob = await getCharacterBlob(charId)
       if (!blob) {
         throw new Error('无法获取角色数据')
       }
-      
+
       const characterName = data.name || editingCharacter.value?.data?.name || editingCharacter.value?.name || 'character'
       const isImage = blob.type.startsWith('image/')
       const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
       const file = new File([blob], fileName, { type: blob.type })
       
-      const result = await charactersApi.importFiles([file])
-      
+      await debugPrintFile(file, '更新到服务器')
+
+      // 使用 import-files 接口上传
+      const result = await charactersApi.importFiles([file], charId, true)
+
       if (!result.success || result.imported === 0) {
         throw new Error(result.failedFiles?.[0]?.error || '上传失败')
       }
-      
-      const newCharId = result.characters?.[0]?.role_play?.id || result.characters?.[0]?.id
-      
-      if (newCharId && newCharId !== charId) {
-        await updateLocalFriendId(charId, newCharId)
-        await userStore.loadLocalFriends()
-        
-        if (editingCharacter.value?.role_play) {
-          editingCharacter.value.role_play.id = newCharId
-        } else if (editingCharacter.value) {
-          editingCharacter.value.id = newCharId
-        }
-      }
-      
-      existsOnServer.value = true
-      isOwnerOfCharacter.value = true
-      editingCharacterMeta.value.shared = true
-      
-      return true
-    } catch (error: any) {
-      console.error('[UploadToServer] Failed:', error)
-      throw new Error('上传到服务器失败: ' + error.message)
-    } finally {
-      isUploadingToServer.value = false
-    }
-  }
-  
-  async function updateToServer(data: any): Promise<boolean> {
-    const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
-    const userId = userStore.user?.id
-    
-    if (!charId || !userId) {
-      throw new Error('无法获取角色或用户信息')
-    }
-    
-    isUpdatingToServer.value = true
-    try {
-      const characterData = {
-        name: data.name,
-        description: data.description,
-        avatar: data.avatar,
-        first_mes: data.first_mes,
-        personality: data.personality,
-        scenario: data.scenario,
-        system_prompt: data.system_prompt,
-        creator_notes: data.creator_notes,
-        temperature: data.temperature,
-        character_book: data.character_book,
-        extensions: {
-          ...data.extensions,
-          regex_scripts: data.regex_scripts
-        },
-        tags: data.tags
-      }
-      
-      await charactersApi.updateUserCharacterData(userId, charId, characterData)
-      
+
       return true
     } catch (error: any) {
       console.error('[UpdateToServer] Failed:', error)
@@ -807,25 +803,53 @@ export function useCharacter() {
     }
   }
   
-  async function updateFromServer(): Promise<boolean> {
+  async function updateFromServer(): Promise<{ success: boolean, message?: string }> {
     const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
-    const originalId = editingCharacterMeta.value.originalId
-    
+    const sourceUrl = editingCharacterMeta.value.sourceUrl
+
     if (!charId) {
       throw new Error('无法获取角色信息')
     }
-    
+
     isUpdatingFromServer.value = true
     try {
-      const targetId = originalId || charId
-      const result = await charactersApi.getCharacterDetail(targetId)
-      
+      // 如果有 sourceUrl，优先从 sourceUrl 下载
+      if (sourceUrl) {
+        const sourceData = await loadCharacterFromSource(
+          sourceUrl,
+          null // fileType 自动检测
+        )
+
+        if (sourceData) {
+          const sourceCharData = sourceData.data || sourceData
+          newCharacterData.value = {
+            name: sourceCharData.name || '',
+            description: sourceCharData.description || '',
+            avatar: sourceCharData.avatar || '',
+            first_mes: sourceCharData.first_mes || sourceCharData.greeting || '',
+            personality: sourceCharData.personality || '',
+            scenario: sourceCharData.scenario || '',
+            system_prompt: sourceCharData.system_prompt || '',
+            creator_notes: sourceCharData.creator_notes || '',
+            temperature: sourceCharData.temperature ?? 1,
+            character_book: { entries: sourceCharData.character_book?.entries || [] },
+            extensions: sourceCharData.extensions || {},
+            regex_scripts: sourceCharData.extensions?.regex_scripts || [],
+            tags: sourceCharData.tags || []
+          }
+          return { success: true, message: '角色数据已下载，请点击保存按钮保存' }
+        }
+      }
+
+      // 如果没有 sourceUrl 或加载失败，回退到原来的方式
+      const result = await charactersApi.getCharacterDetail(charId)
+
       if (!result.character) {
         throw new Error('服务器上未找到角色数据')
       }
-      
+
       const serverData = result.character.data || result.character
-      
+
       newCharacterData.value = {
         name: serverData.name || '',
         description: serverData.description || '',
@@ -841,10 +865,10 @@ export function useCharacter() {
         regex_scripts: serverData.extensions?.regex_scripts || [],
         tags: serverData.tags || []
       }
-      
+
       editingCharacterMeta.value.shared = result.characterMeta.shared
-      
-      return true
+
+      return { success: true, message: '角色数据已下载，请点击保存按钮保存' }
     } catch (error: any) {
       console.error('[UpdateFromServer] Failed:', error)
       throw new Error('从服务器更新失败: ' + error.message)
@@ -855,7 +879,6 @@ export function useCharacter() {
   
   return {
     showCreateCharacterModal,
-    showDeleteCharacterConfirm,
     isLoadingCharacterDetail,
     isSavingCharacter,
     isImportingCharacter,
@@ -879,7 +902,6 @@ export function useCharacter() {
     isCurrentCharacterFriend,
     isCurrentCharacterUserOwned,
     isCurrentCharacterLocal,
-    isUploadingToServer,
     isUpdatingToServer,
     isUpdatingFromServer,
     selectCharacter,
@@ -890,14 +912,11 @@ export function useCharacter() {
     handleViewCharacter,
     deleteUserCharacter,
     handleDeleteFromEdit,
-    confirmDeleteCharacter,
-    handleDeleteCharacter,
     handleToggleLike,
     handleToggleLikeInEdit,
     loadOriginalCharacterData,
     loadLikedCharacters,
     handleImportUserCharacter,
-    uploadToServer,
     updateToServer,
     updateFromServer
   }

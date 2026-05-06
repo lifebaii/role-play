@@ -102,8 +102,8 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5">
                   <div :class="['font-semibold truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white' : 'text-theme-text-primary']">{{ getCharacterName(character) }}</div>
-                  <svg v-if="character.role_play?.originalId" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-accent)]']" fill="currentColor" viewBox="0 0 20 20" title="来自分享"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-                  <svg v-else-if="character.shared" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-success)]']" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="已分享"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                  <svg v-if="getFriendMeta(character)?.addType === 'add'" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="currentColor" viewBox="0 0 20 20" title="来自分享"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                  <svg v-else-if="getFriendMeta(character)?.shared" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="已分享"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                 </div>
                 <div :class="['text-xs truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-theme-text-secondary']">
                   <template v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)">
@@ -220,7 +220,7 @@ import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
 import { getAvatarUrl, preloadAvatars, getCharacterDisplayName, getCharacterDisplayDescription, useAvatar } from '@/composables/useAvatar'
-import { clearCharacterAvatarCache, getFriendAvatar } from '@/utils/localFriendStorage'
+import { clearCharacterAvatarCache, getFriendAvatar, getFriendMetaList } from '@/utils/localFriendStorage'
 import { eventBus } from '@/utils/eventBus'
 import { config } from '@/utils/config'
 import AvatarImage from '@/components/AvatarImage.vue'
@@ -321,6 +321,13 @@ function getCharacterName(character: any): string {
 
 function getCharacterDescription(character: any): string {
   return getCharacterDisplayDescription(character)
+}
+
+function getFriendMeta(character: any) {
+  const charId = character.role_play?.id || character.id
+  if (!charId) return null
+  const metaList = getFriendMetaList()
+  return metaList.find(m => m.id === charId)
 }
 
 function selectCharacter(character: any) {

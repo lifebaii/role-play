@@ -11,8 +11,10 @@
     :input-placeholder="dialog.inputPlaceholder"
     :input-value="dialog.inputValue"
     :variant="dialog.variant"
+    :buttons="dialog.buttons"
     @confirm="(value) => handleConfirm(dialog.id, value)"
     @cancel="handleCancel(dialog.id)"
+    @multi-button="(value) => handleMultiButton(dialog.id, value)"
   />
 </template>
 
@@ -20,5 +22,5 @@
 import Dialog from '@/components/Dialog.vue'
 import { useDialog } from '@/composables/useDialog'
 
-const { dialogQueue, handleConfirm, handleCancel } = useDialog()
+const { dialogQueue, handleConfirm, handleMultiButton, handleCancel } = useDialog()
 </script>

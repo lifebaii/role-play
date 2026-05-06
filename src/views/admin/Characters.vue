@@ -4,6 +4,7 @@
     :show-import="characterSource === 'admin'"
     :show-drag-handle="characterSource === 'admin'"
     :show-share-toggle="true"
+    :show-batch-operations="true"
     :loading="isLoading"
     :total="adminStore.charactersTotal"
     :page="adminStore.charactersPage"
@@ -19,6 +20,8 @@
     @page-change="handlePageChange"
     @search="handleSearch"
     @sort-change="handleSortChange"
+    @batch-delete="handleBatchDelete"
+    @batch-share="handleBatchShare"
   >
     <template #header>
       <div class="flex gap-2 mb-4">
@@ -227,6 +230,50 @@ async function handleImport(event: Event) {
   } finally {
     isImporting.value = false
     ;(event.target as HTMLInputElement).value = ''
+  }
+}
+
+async function handleBatchDelete(ids: string[]) {
+  const confirmed = await showDangerConfirm(`确定要删除选中的 ${ids.length} 个角色吗？此操作不可撤销。`)
+  if (confirmed) {
+    isLoading.value = true
+    try {
+      const result = await adminStore.batchDeleteCharacters(ids)
+      
+      let message = `成功删除 ${result.deleted} 个角色`
+      if (result.failed.length > 0) {
+        message += `，${result.failed.length} 个删除失败`
+      }
+      if (result.warnings.length > 0) {
+        message += `\n警告: ${result.warnings.join('; ')}`
+      }
+      
+      await showAlert(message)
+    } catch (error: any) {
+      await showErrorAlert('批量删除失败: ' + (error.message || '未知错误'))
+    } finally {
+      isLoading.value = false
+    }
+  }
+}
+
+async function handleBatchShare(ids: string[], shared: boolean) {
+  isLoading.value = true
+  try {
+    const result = await adminStore.batchToggleCharactersShared(ids, shared)
+    
+    const action = shared ? '分享' : '取消分享'
+    let message = `成功${action} ${result.updated} 个角色`
+    if (result.failed.length > 0) {
+      message += `，${result.failed.length} 个${action}失败`
+    }
+    
+    await showAlert(message)
+  } catch (error: any) {
+    const action = shared ? '分享' : '取消分享'
+    await showErrorAlert(`批量${action}失败: ` + (error.message || '未知错误'))
+  } finally {
+    isLoading.value = false
   }
 }
 </script>

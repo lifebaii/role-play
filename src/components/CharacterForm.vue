@@ -498,6 +498,7 @@ import { exportCharacterFile, getCharacterSourceType, getCharacterBlob, saveChar
 import { exportCharacterAsPng, parseCharacterFromPng, downloadBlob } from '@/utils/characterImport'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
+import { debugPrintBlob, debugPrintFile } from '@/utils/debugCharacterFile'
 
 const { showDangerConfirm, showErrorAlert } = useDialog()
 
@@ -736,11 +737,8 @@ async function handleSubmit() {
   emit('submit', submitData)
 }
 
-async function handleDelete() {
-  const confirmed = await showDangerConfirm('确定要删除这个角色吗？删除后聊天记录也会一并删除。')
-  if (confirmed) {
-    emit('delete')
-  }
+function handleDelete() {
+  emit('delete')
 }
 
 async function handleExport() {
@@ -774,6 +772,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         const jsonString = JSON.stringify(exportData, null, 2)
         const blob = new Blob([jsonString], { type: 'application/json' })
         const fileName = form.value.name ? `${form.value.name}.json` : 'character.json'
+        await debugPrintBlob(blob, fileName, '导出JSON')
         downloadBlob(blob, fileName)
       } else {
         if (!form.value.avatar) {
@@ -783,6 +782,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         const pngBlob = await exportCharacterAsPng({ data: form.value, role_play: { id: '' } })
         if (pngBlob) {
           const fileName = form.value.name ? `${form.value.name}.png` : 'character.png'
+          await debugPrintBlob(pngBlob, fileName, '导出图片')
           downloadBlob(pngBlob, fileName)
         } else {
           await showErrorAlert('无法生成图片：头像数据格式不支持')
@@ -799,6 +799,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
+      await debugPrintBlob(result.blob, result.fileName, '导出图片')
       downloadBlob(result.blob, result.fileName)
     } else if (sourceType === 'image' && format === 'json') {
       const blob = await getCharacterBlob(charId)
@@ -817,7 +818,9 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         const jsonString = JSON.stringify(exportData, null, 2)
         const jsonBlob = new Blob([jsonString], { type: 'application/json' })
         const name = data.data?.name || data.name || 'character'
-        downloadBlob(jsonBlob, `${name}.json`)
+        const fileName = `${name}.json`
+        await debugPrintBlob(jsonBlob, fileName, '导出JSON')
+        downloadBlob(jsonBlob, fileName)
       } else {
         await showErrorAlert('无法解析图片中的角色数据')
       }
@@ -827,6 +830,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
+      await debugPrintBlob(result.blob, result.fileName, '导出JSON')
       downloadBlob(result.blob, result.fileName)
     } else if (sourceType === 'json' && format === 'image') {
       const result = await exportCharacterFile(charId)
@@ -846,7 +850,9 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
       const pngBlob = await exportCharacterAsPng({ data: normalizedData, role_play: { id: charId } })
       if (pngBlob) {
         const name = normalizedData.name || 'character'
-        downloadBlob(pngBlob, `${name}.png`)
+        const fileName = `${name}.png`
+        await debugPrintBlob(pngBlob, fileName, '导出图片')
+        downloadBlob(pngBlob, fileName)
       } else {
         await showErrorAlert('无法生成图片：头像数据格式不支持')
       }

@@ -1,3 +1,5 @@
+import { debugPrintFile, debugPrintBlob } from './debugCharacterFile'
+
 /**
  * @deprecated Use NormalizedCharacter instead
  */
@@ -443,6 +445,10 @@ function normalizeSingleCharacter(charData: any): NormalizedCharacter {
     }
   }
 
+  if (res.data && res.data.role_play) {
+    delete res.data.role_play
+  }
+
   return res as NormalizedCharacter
 }
 
@@ -453,6 +459,7 @@ export async function importCharactersFromFiles(files: FileList | File[]): Promi
   let failCount = 0
 
   for (const file of Array.from(files)) {
+    await debugPrintFile(file, '导入角色')
     console.log(`[Import] Processing file: ${file.name}, type: ${file.type}`)
 
     try {
@@ -673,7 +680,8 @@ export async function exportCharacterAsPng(character: NormalizedCharacter): Prom
   return writePngChunks(imageBuffer, exportData)
 }
 
-export function downloadBlob(blob: Blob, filename: string): void {
+export async function downloadBlob(blob: Blob, filename: string): Promise<void> {
+  await debugPrintBlob(blob, filename, '下载角色')
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

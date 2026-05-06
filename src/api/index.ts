@@ -75,16 +75,22 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
       const errorMessage = error.error || `HTTP ${response.status}`
       
       if (response.status === 401) {
-        console.log('[API] 401 Unauthorized, logging out')
-        if (tokenSource === 'admin-only') {
-          localStorage.removeItem('admin_token')
-          eventBus.emit('admin-logout')
-        } else {
-          localStorage.removeItem('user_token')
-          localStorage.removeItem('user_data')
-          eventBus.emit('user-logout')
+        const errorCode = error.code || ''
+        
+        if (errorCode === 'TOKEN_MISSING' || errorCode === 'TOKEN_INVALID' || 
+            errorCode === 'TOKEN_INVALID_ROLE' || errorCode === 'TOKEN_INVALID_USER' ||
+            errorCode === 'USER_NOT_FOUND') {
+          console.log('[API] 401 Unauthorized, logging out')
+          if (tokenSource === 'admin-only') {
+            localStorage.removeItem('admin_token')
+            eventBus.emit('admin-logout')
+          } else {
+            localStorage.removeItem('user_token')
+            localStorage.removeItem('user_data')
+            eventBus.emit('user-logout')
+          }
+          eventBus.emit('auth-error', { type: tokenSource, message: '登录已过期，请重新登录' })
         }
-        eventBus.emit('auth-error', { type: tokenSource, message: '登录已过期，请重新登录' })
       } else {
         eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
@@ -111,13 +117,16 @@ export const api = {
     }
     
     let url = `${API_BASE}${path}`
-    if (params) {
-      const searchParams = new URLSearchParams()
-      Object.entries(params).forEach(([key, value]) => searchParams.append(key, value))
-      url += `?${searchParams.toString()}`
-    }
+    const allParams = { ...params }
+    // 添加时间戳禁用缓存
+    allParams.t = Date.now().toString()
+    
+    const searchParams = new URLSearchParams()
+    Object.entries(allParams).forEach(([key, value]) => searchParams.append(key, value))
+    url += `?${searchParams.toString()}`
     
     const response = await fetch(url, {
+      cache: 'no-store',
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
     
@@ -126,10 +135,16 @@ export const api = {
       const errorMessage = error.error || `HTTP ${response.status}`
       
       if (response.status === 401) {
-        localStorage.removeItem('user_token')
-        localStorage.removeItem('user_data')
-        eventBus.emit('user-logout')
-        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        const errorCode = error.code || ''
+        
+        if (errorCode === 'TOKEN_MISSING' || errorCode === 'TOKEN_INVALID' || 
+            errorCode === 'TOKEN_INVALID_ROLE' || errorCode === 'TOKEN_INVALID_USER' ||
+            errorCode === 'USER_NOT_FOUND') {
+          localStorage.removeItem('user_token')
+          localStorage.removeItem('user_data')
+          eventBus.emit('user-logout')
+          eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        }
       } else {
         eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
@@ -148,7 +163,7 @@ export const adminApiClient = {
   postForm: <T>(path: string, body: FormData) => adminOnlyRequest<T>(path, { method: 'POST', body }),
   put: <T>(path: string, body: any) => adminOnlyRequest<T>(path, { method: 'PUT', body }),
   putForm: <T>(path: string, body: FormData) => adminOnlyRequest<T>(path, { method: 'PUT', body }),
-  delete: <T>(path: string) => adminOnlyRequest<T>(path, { method: 'DELETE' })
+  delete: <T>(path: string, body?: any) => adminOnlyRequest<T>(path, { method: 'DELETE', body })
 }
 
 export interface CharacterData {
@@ -189,7 +204,6 @@ export interface RolePlayMeta {
   id: string
   createdAt: number
   updatedAt: number
-  originalId?: string
   shared?: boolean
   userId?: string
   originalUserId?: string
@@ -236,7 +250,6 @@ export interface Character {
   userId?: string
   shared?: boolean
   originalUserId?: string
-  originalId?: string
   likeCount?: number
   liked?: boolean
   isFriend?: boolean
@@ -372,8 +385,10 @@ export const charactersApi = {
   toggleShared: (id: string, shared: boolean) => 
     adminApiClient.put<{ success: boolean; shared: boolean; character?: Character }>(`/characters/${id}/shared`, { shared }),
   delete: (id: string) => adminApiClient.delete<DeleteResult>(`/characters/${id}`),
+  batchDelete: (ids: string[]) => adminApiClient.delete<{ success: boolean; deleted: number; failed: Array<{ id: string; error: string }>; warnings: string[] }>('/characters/batch', { ids }),
+  batchUpdateShared: (ids: string[], shared: boolean) => adminApiClient.put<{ success: boolean; updated: number; failed: Array<{ id: string; error: string }> }>('/characters/batch/shared', { ids, shared }),
   import: (data: any) => adminApiClient.post('/characters/import', data),
-  importFiles: (files: File[], id?: string): Promise<ImportResult> => {
+  importFiles: (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file_${index}`, file);
@@ -383,9 +398,13 @@ export const charactersApi = {
       formData.append('id', id);
     }
     
+    if (share !== undefined) {
+      formData.append('share', share.toString());
+    }
+    
     return api.post('/characters/import-files', formData);
   },
-  importFilesAdmin: (files: File[], id?: string): Promise<ImportResult> => {
+  importFilesAdmin: (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file_${index}`, file);
@@ -393,6 +412,10 @@ export const charactersApi = {
     
     if (id) {
       formData.append('id', id);
+    }
+    
+    if (share !== undefined) {
+      formData.append('share', share.toString());
     }
     
     return adminApiClient.postForm('/characters/import-files', formData);
@@ -420,7 +443,7 @@ export const charactersApi = {
     api.put<Character>(`/characters/user/${userId}/${charId}/data`, data),
   updateUserCharacterShared: (userId: string, charId: string, shared: boolean) => 
     api.put<{ success: boolean; shared: boolean }>(`/characters/user/${userId}/${charId}/shared`, { shared }),
-  deleteUserCharacter: (userId: string, charId: string) => api.delete(`/characters/user/${userId}/${charId}`),
+  deleteUserCharacter: (charId: string) => api.delete(`/characters/${charId}`),
   importUserCharacters: (userId: string, characters: any[]) => 
     api.post(`/characters/user/import`, { userId, characters }),
   getSharedCharacters: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string; own?: string; sortBy?: string }) => 
@@ -440,32 +463,16 @@ export const charactersApi = {
     likeCount: number
     commentCount: number
     isLiked: boolean
-    originalId: string | null
     originalUserId: string | null
-    originalMeta: {
-      originalId: string | null
-      shared: boolean
-      likeCount: number
-      commentCount: number
-      isLiked: boolean
-    } | null
   }>(`/characters/${characterId}/meta`),
   
   getCharacterDetail: (characterId: string) => api.get<{
     characterMeta: {
-      originalId: string | null
       shared: boolean
       originalUserId: string | null
       likeCount: number
       commentCount: number
       isLiked: boolean
-      originalMeta: {
-        originalId: string | null
-        shared: boolean
-        likeCount: number
-        commentCount: number
-        isLiked: boolean
-      } | null
     }
     character: any | null
     exists: boolean
@@ -731,20 +738,26 @@ export const v1Api = {
     
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}`
+      let errorCode = ''
       try {
         const errorData = await response.json()
         if (errorData.error) {
           errorMessage = errorData.error
         }
+        errorCode = errorData.code || ''
       } catch (e) {
         // ignore
       }
       
       if (response.status === 401) {
-        localStorage.removeItem('user_token')
-        localStorage.removeItem('user_data')
-        eventBus.emit('user-logout')
-        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        if (errorCode === 'TOKEN_MISSING' || errorCode === 'TOKEN_INVALID' || 
+            errorCode === 'TOKEN_INVALID_ROLE' || errorCode === 'TOKEN_INVALID_USER' ||
+            errorCode === 'USER_NOT_FOUND') {
+          localStorage.removeItem('user_token')
+          localStorage.removeItem('user_data')
+          eventBus.emit('user-logout')
+          eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        }
       } else {
         eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
@@ -805,20 +818,26 @@ export const v1Api = {
     
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}`
+      let errorCode = ''
       try {
         const errorData = await response.json()
         if (errorData.error) {
           errorMessage = errorData.error
         }
+        errorCode = errorData.code || ''
       } catch (e) {
         // ignore
       }
       
       if (response.status === 401) {
-        localStorage.removeItem('user_token')
-        localStorage.removeItem('user_data')
-        eventBus.emit('user-logout')
-        eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        if (errorCode === 'TOKEN_MISSING' || errorCode === 'TOKEN_INVALID' || 
+            errorCode === 'TOKEN_INVALID_ROLE' || errorCode === 'TOKEN_INVALID_USER' ||
+            errorCode === 'USER_NOT_FOUND') {
+          localStorage.removeItem('user_token')
+          localStorage.removeItem('user_data')
+          eventBus.emit('user-logout')
+          eventBus.emit('auth-error', { type: 'user-only', message: '登录已过期，请重新登录' })
+        }
       } else {
         eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }

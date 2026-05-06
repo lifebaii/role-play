@@ -1,6 +1,7 @@
-import { dbGet, dbDelete, fileGet, fileDelete, deleteByPrefix, STORE_NAME, FILES_STORE_NAME, characterSet, characterGet, characterDelete, characterGetAll, characterClear } from './db'
-import { parseCharacterFromPng, normalizeCharacterData, writePngChunks } from './characterImport'
+import { dbGet, dbDelete, fileGet, fileDelete, deleteByPrefix, STORE_NAME, FILES_STORE_NAME, characterSet, characterGet, characterDelete, characterGetAll, characterClear, dbSet, getChatRecordsByCharacter, saveChatRecord, deleteChatRecord, ChatMessage, ChatRecord } from './db'
+import { parseCharacterFromPng, normalizeCharacterData, writePngChunks, downloadBlob } from './characterImport'
 import { eventBus } from './eventBus'
+import { debugPrintFile, debugPrintBlob } from './debugCharacterFile'
 
 const LOCAL_FRIENDS_KEY = 'local_friends_list'
 const FRIEND_IMG_PREFIX = 'character_img_'
@@ -12,6 +13,7 @@ export interface FriendMetaItem {
   id: string
   addType: FriendAddType
   addedAt?: number
+  shared?: boolean
 }
 
 let friendsCache: LocalFriend[] | null = null
@@ -29,18 +31,24 @@ export function getFriendMetaList(): FriendMetaItem[] {
   }
 }
 
+export function getFriendMetaById(id: string): FriendMetaItem | undefined {
+  const list = getFriendMetaList()
+  return list.find(item => item.id === id)
+}
+
 export function setFriendMetaList(list: FriendMetaItem[]): void {
   localStorage.setItem(FRIEND_META_KEY, JSON.stringify(list))
 }
 
-export function addFriendMeta(id: string, addType: FriendAddType): void {
+export function addFriendMeta(id: string, addType: FriendAddType, shared?: boolean): void {
   const list = getFriendMetaList()
   const existingIndex = list.findIndex(item => item.id === id)
   
   const newItem: FriendMetaItem = {
     id,
     addType,
-    addedAt: Date.now()
+    addedAt: Date.now(),
+    shared
   }
   
   if (existingIndex !== -1) {
@@ -50,6 +58,27 @@ export function addFriendMeta(id: string, addType: FriendAddType): void {
   list.unshift(newItem)
   setFriendMetaList(list)
   eventBus.emit('friend-order-changed', id)
+}
+
+export function updateFriendMetaShared(id: string, shared: boolean): void {
+  const list = getFriendMetaList()
+  const existingIndex = list.findIndex(item => item.id === id)
+  
+  if (existingIndex !== -1) {
+    list[existingIndex].shared = shared
+    setFriendMetaList(list)
+  }
+}
+
+export function convertToLocalFriend(id: string): void {
+  const list = getFriendMetaList()
+  const existingIndex = list.findIndex(item => item.id === id)
+  
+  if (existingIndex !== -1) {
+    list[existingIndex].addType = 'import'
+    setFriendMetaList(list)
+    eventBus.emit('friend-order-changed', id)
+  }
 }
 
 export function removeFriendMeta(id: string): void {
@@ -356,8 +385,7 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
 export async function addOnlineFriend(character: any, originalId: string): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
-  const serverId = character.role_play?.id || character.id
-  const existingIndex = friends.findIndex(f => getFriendId(f) === serverId)
+  const existingIndex = friends.findIndex(f => getFriendId(f) === originalId)
 
   if (existingIndex !== -1) {
     return friends[existingIndex]
@@ -365,25 +393,27 @@ export async function addOnlineFriend(character: any, originalId: string): Promi
 
   const hasDataField = character.data !== undefined
   const characterData = hasDataField ? character.data : character
+  const shared = character.role_play?.shared || false
 
   const characterName = characterData.name || 'character'
   const jsonFile = new File([JSON.stringify(characterData)], `${characterName}.json`, { type: 'application/json' })
-  await characterSet(serverId, jsonFile)
+  await characterSet(originalId, jsonFile)
 
   const newFriend: LocalFriend = {
     ...character,
     data: characterData,
     role_play: {
-      id: serverId,
-      originalId: originalId,
-      shared: character.role_play?.shared || false
+      id: originalId,
+      shared
     }
   }
 
   friends.unshift(newFriend)
   friendsCache = friends
 
-  console.log(`[LocalFriend] Added online friend: ${serverId}, originalId: ${originalId}`)
+  addFriendMeta(originalId, 'add', shared)
+
+  console.log(`[LocalFriend] Added online friend: ${originalId}, shared: ${shared}`)
 
   return newFriend
 }
@@ -396,11 +426,13 @@ export async function addOnlineFriendFromBlob(
 ): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
-  const existingIndex = friends.findIndex(f => getFriendId(f) === characterId)
+  const existingIndex = friends.findIndex(f => getFriendId(f) === originalId)
 
   if (existingIndex !== -1) {
     return friends[existingIndex]
   }
+
+  await debugPrintBlob(blob, `character-${originalId}`, '添加在线好友')
 
   let characterData: any = null
   let fileToSave: File
@@ -438,14 +470,13 @@ export async function addOnlineFriendFromBlob(
     fileToSave = new File([blob], `${characterName}.${ext}`, { type: contentType })
   }
 
-  await characterSet(characterId, fileToSave)
+  await characterSet(originalId, fileToSave)
 
   const newFriend: LocalFriend = {
     ...characterData,
     data: characterData.data || characterData,
     role_play: {
-      id: characterId,
-      originalId: originalId,
+      id: originalId,
       shared: true
     }
   }
@@ -453,9 +484,9 @@ export async function addOnlineFriendFromBlob(
   friends.unshift(newFriend)
   friendsCache = friends
 
-  addFriendMeta(characterId, 'add')
+  addFriendMeta(originalId, 'add', true)
 
-  console.log(`[LocalFriend] Added online friend from blob: ${characterId}, originalId: ${originalId}`)
+  console.log(`[LocalFriend] Added online friend from blob: ${originalId}`)
 
   return newFriend
 }
@@ -689,10 +720,6 @@ export async function getLocalFriend(friendId: string): Promise<LocalFriend | nu
   if (!blob) return null
 
   return await parseCharacterFile(friendId, blob)
-}
-
-export async function getLocalFriendByOriginalId(_originalId: string): Promise<LocalFriend | null> {
-  return null
 }
 
 export async function reorderLocalFriends(oldIndex: number, newIndex: number): Promise<void> {
@@ -1052,7 +1079,9 @@ export async function importFriendFromFile(file: File): Promise<LocalFriend> {
 
 export async function importRawFile(file: File): Promise<{ id: string; fileType: 'json' | 'image' }> {
   const newId = generateUUID()
-
+  
+  await debugPrintFile(file, '导入原始文件')
+  
   await characterSet(newId, file)
 
   const isImage = file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.png')
@@ -1077,14 +1106,17 @@ export async function exportCharacterFile(friendId: string): Promise<{ blob: Blo
   }
 
   const name = friend?.data?.name || 'character'
+  let fileName: string
 
   if (isImageBlob(blob)) {
-    const fileName = (blob instanceof File && blob.name) ? blob.name : `${name}.png`
-    return { blob, fileName }
+    fileName = (blob instanceof File && blob.name) ? blob.name : `${name}.png`
   } else {
-    const fileName = (blob instanceof File && blob.name) ? blob.name : `${name}.json`
-    return { blob, fileName }
+    fileName = (blob instanceof File && blob.name) ? blob.name : `${name}.json`
   }
+
+  await debugPrintBlob(blob, fileName, '导出角色')
+
+  return { blob, fileName }
 }
 
 export async function getCharacterSourceType(friendId: string): Promise<'image' | 'json'> {
@@ -1165,6 +1197,8 @@ export async function saveCharacterImage(
   try {
     console.log(`[LocalFriend] Saving character image for: ${friendId}`)
     
+    await debugPrintFile(imageFile, '保存角色图片')
+    
     let pngBlob: Blob
     if (imageFile.type === 'image/png') {
       pngBlob = imageFile
@@ -1205,5 +1239,67 @@ export async function saveCharacterImage(
   } catch (error) {
     console.error('[LocalFriend] Failed to save character image:', error)
     return false
+  }
+}
+
+export async function migrateChatHistory(oldId: string, newId: string): Promise<void> {
+  const oldChatKey = `silly_tavern_chat_${oldId}`
+  const newChatKey = `silly_tavern_chat_${newId}`
+  
+  const chatHistory = await dbGet<ChatMessage[]>(oldChatKey)
+  if (chatHistory && chatHistory.length > 0) {
+    await dbSet(newChatKey, chatHistory)
+    await dbDelete(oldChatKey)
+    console.log(`[LocalFriend] Migrated chat history: ${oldChatKey} -> ${newChatKey}`)
+  }
+  
+  const oldRecords = await getChatRecordsByCharacter(oldId)
+  for (const record of oldRecords) {
+    const newRecord: ChatRecord = {
+      ...record,
+      characterId: newId
+    }
+    await saveChatRecord(newRecord)
+    await deleteChatRecord(record.id)
+    console.log(`[LocalFriend] Migrated chat record: ${record.id}`)
+  }
+}
+
+export async function convertToLocalFriendWithNewId(oldId: string): Promise<string | null> {
+  try {
+    const newId = generateUUID()
+    
+    const success = await updateLocalFriendId(oldId, newId)
+    if (!success) {
+      console.error('[LocalFriend] Failed to update friend ID')
+      return null
+    }
+    
+    const list = getFriendMetaList()
+    const existingIndex = list.findIndex(item => item.id === oldId)
+    
+    if (existingIndex !== -1) {
+      list.splice(existingIndex, 1)
+    }
+    
+    const newItem: FriendMetaItem = {
+      id: newId,
+      addType: 'import',
+      addedAt: Date.now(),
+      shared: false
+    }
+    list.unshift(newItem)
+    setFriendMetaList(list)
+    
+    await migrateChatHistory(oldId, newId)
+    
+    friendsCache = null
+    
+    console.log(`[LocalFriend] Converted online friend to local: ${oldId} -> ${newId}`)
+    
+    return newId
+  } catch (e) {
+    console.error('[LocalFriend] Failed to convert to local friend:', e)
+    return null
   }
 }

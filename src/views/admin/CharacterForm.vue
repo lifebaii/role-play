@@ -117,6 +117,7 @@ const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
 const sourceUrl = ref<string | null>(null)
 const sourceFileType = ref<'json' | 'png' | null>(null)
 const sourceFile = ref<File | Blob | null>(null)
+const sourceJsonData = ref<any | null>(null)
 
 const availableModels = ref<{ id: string; name: string }[]>([])
 const selectedModelId = ref<string>('')
@@ -248,6 +249,14 @@ onMounted(async () => {
           } catch (e) {
             console.error('Failed to load raw PNG file:', e)
           }
+        } else if (sourceFileType.value === 'json') {
+          try {
+            const { blob } = await charactersApi.getRaw(characterId)
+            const text = await blob.text()
+            sourceJsonData.value = JSON.parse(text)
+          } catch (e) {
+            console.error('Failed to load raw JSON file:', e)
+          }
         }
       }
     }
@@ -279,7 +288,6 @@ async function handleSubmit(data: any) {
       description: data.description,
       avatar: data.avatar,
       first_mes: data.first_mes || data.greeting,
-      greeting: data.first_mes || data.greeting,
       personality: data.personality,
       scenario: data.scenario,
       system_prompt: data.system_prompt,
@@ -293,6 +301,12 @@ async function handleSubmit(data: any) {
       tags: data.tags || []
     }
     
+    const removeRolePlay = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return obj
+      const { role_play, ...rest } = obj
+      return rest
+    }
+    
     if (isEdit.value) {
       const id = route.params.id as string
       
@@ -300,26 +314,67 @@ async function handleSubmit(data: any) {
         const buffer = await sourceFile.value.arrayBuffer()
         const { data: cardData } = await extractCharacterFromPng(buffer)
         
-        const dataToWrite = {
+        const dataToWrite = removeRolePlay({
           ...cardData,
           data: {
-            ...cardData.data,
+            ...removeRolePlay(cardData.data || {}),
             ...characterData
           }
-        }
+        })
         
         const pngBlob = await writePngChunks(buffer, dataToWrite)
         const pngFile = new File([pngBlob], `${id}.png`, { type: 'image/png' })
         await charactersApi.importFilesAdmin([pngFile], id)
       } else {
-        const jsonBlob = new Blob([JSON.stringify(characterData, null, 2)], { type: 'application/json' })
+        const originalData = sourceJsonData.value || {}
+        
+        const dataToWrite = removeRolePlay({
+          ...originalData,
+          data: {
+            ...removeRolePlay(originalData.data || {}),
+            ...characterData
+          }
+        })
+        
+        const jsonBlob = new Blob([JSON.stringify(dataToWrite, null, 2)], { type: 'application/json' })
         const jsonFile = new File([jsonBlob], `${id}.json`, { type: 'application/json' })
         await charactersApi.importFilesAdmin([jsonFile], id)
       }
       
       await adminStore.loadCharacters()
     } else {
-      await adminStore.createCharacter({ data: characterData })
+      if (characterData.avatar && characterData.avatar.startsWith('data:image')) {
+        const base64Data = characterData.avatar.split(',')[1]
+        const binaryString = atob(base64Data)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        const imageBuffer = bytes.buffer
+        
+        const dataToWrite = removeRolePlay({
+          spec: 'chara_card_v2',
+          spec_version: '2.0',
+          data: {
+            ...characterData,
+            avatar: undefined
+          }
+        })
+        
+        const pngBlob = await writePngChunks(imageBuffer, dataToWrite)
+        const pngFile = new File([pngBlob], `${characterData.name || 'character'}.png`, { type: 'image/png' })
+        await charactersApi.importFilesAdmin([pngFile])
+      } else {
+        const dataToWrite = removeRolePlay({
+          spec: 'chara_card_v2',
+          spec_version: '2.0',
+          data: characterData
+        })
+        
+        const jsonBlob = new Blob([JSON.stringify(dataToWrite, null, 2)], { type: 'application/json' })
+        const jsonFile = new File([jsonBlob], `${characterData.name || 'character'}.json`, { type: 'application/json' })
+        await charactersApi.importFilesAdmin([jsonFile])
+      }
     }
     await showSuccessAlert('保存成功')
     router.push('/admin/characters')
@@ -344,7 +399,7 @@ async function loadFromSource(silent: boolean = false) {
   
   isLoadingSource.value = true
   try {
-    const response = await fetch(sourceUrl.value)
+    const response = await fetch(sourceUrl.value, { cache: 'no-store' })
     
     if (!response.ok) {
       throw new Error(`下载失败: ${response.status}`)

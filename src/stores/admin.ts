@@ -251,6 +251,47 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function batchDeleteCharacters(ids: string[]): Promise<{ deleted: number; failed: Array<{ id: string; error: string }>; warnings: string[] }> {
+    try {
+      const result = await charactersApi.batchDelete(ids)
+      await loadCharacters()
+      return {
+        deleted: result.deleted,
+        failed: result.failed,
+        warnings: result.warnings
+      }
+    } catch (error) {
+      console.error('Failed to batch delete characters:', error)
+      throw error
+    }
+  }
+
+  async function batchToggleCharactersShared(ids: string[], shared: boolean): Promise<{ updated: number; failed: Array<{ id: string; error: string }> }> {
+    try {
+      const result = await charactersApi.batchUpdateShared(ids, shared)
+      
+      for (const id of ids) {
+        const index = characters.value.findIndex(c => getCharacterId(c) === id)
+        if (index !== -1) {
+          const char = characters.value[index]
+          if (char.role_play) {
+            char.role_play.shared = shared
+          } else {
+            char.shared = shared
+          }
+        }
+      }
+      
+      return {
+        updated: result.updated,
+        failed: result.failed
+      }
+    } catch (error) {
+      console.error('Failed to batch toggle characters shared:', error)
+      throw error
+    }
+  }
+
   async function importCharacters(): Promise<void> {
     await loadCharacters()
   }
@@ -341,6 +382,8 @@ export const useAdminStore = defineStore('admin', () => {
     updateCharacter,
     toggleCharacterShared,
     deleteCharacter,
+    batchDeleteCharacters,
+    batchToggleCharactersShared,
     importCharacters,
     getSettings,
     updateSettings,

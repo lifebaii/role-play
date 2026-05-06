@@ -3,7 +3,7 @@ import type { DialogOptions } from '@/components/Dialog.vue'
 
 export interface DialogState extends DialogOptions {
   id: number
-  resolve: (value: boolean | string) => void
+  resolve: (value: boolean | string | any) => void
 }
 
 const dialogQueue = ref<DialogState[]>([])
@@ -29,11 +29,13 @@ export function useDialog() {
     })
   }
 
-  async function showConfirm(message: string, title = '确认'): Promise<boolean> {
+  async function showConfirm(message: string, title = '确认', confirmText?: string, cancelText?: string): Promise<boolean> {
     return showDialog({
       type: 'confirm',
       title,
-      message
+      message,
+      confirmText,
+      cancelText
     }) as Promise<boolean>
   }
 
@@ -54,6 +56,21 @@ export function useDialog() {
       message,
       variant: 'danger'
     }) as Promise<boolean>
+  }
+
+  async function showMultiButtonConfirm(
+    message: string,
+    title: string,
+    buttons: Array<{ text: string; value: any; variant?: 'default' | 'primary' | 'danger' | 'success' }>,
+    variant?: 'default' | 'danger' | 'success'
+  ): Promise<any> {
+    return showDialog({
+      type: 'multi-button',
+      title,
+      message,
+      buttons,
+      variant: variant || 'default'
+    }) as Promise<any>
   }
 
   async function showSuccessAlert(message: string, title = '成功'): Promise<void> {
@@ -89,6 +106,15 @@ export function useDialog() {
     }
   }
 
+  function handleMultiButton(id: number, value: any) {
+    const index = dialogQueue.value.findIndex(d => d.id === id)
+    if (index !== -1) {
+      const dialog = dialogQueue.value[index]
+      dialog.resolve(value)
+      dialogQueue.value.splice(index, 1)
+    }
+  }
+
   function handleCancel(id: number) {
     const index = dialogQueue.value.findIndex(d => d.id === id)
     if (index !== -1) {
@@ -109,9 +135,11 @@ export function useDialog() {
     showConfirm,
     showPrompt,
     showDangerConfirm,
+    showMultiButtonConfirm,
     showSuccessAlert,
     showErrorAlert,
     handleConfirm,
+    handleMultiButton,
     handleCancel
   }
 }

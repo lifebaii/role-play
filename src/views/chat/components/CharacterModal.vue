@@ -142,8 +142,8 @@
           />
           
           <CommentSection
-            v-if="showCommentSection && (editingCharacterMeta.originalId || editingCharacter?.role_play?.id || editingCharacter?.id)"
-            :character-id="editingCharacterMeta.originalId || editingCharacter?.role_play?.id || editingCharacter?.id"
+            v-if="showCommentSection && (getApiCharacterId())"
+            :character-id="getApiCharacterId()"
             :show-original-hint="!!editingCharacterMeta.originalId"
             :initial-comment-count="displayMeta.commentCount"
           />
@@ -186,8 +186,8 @@
               </span>
               <label v-if="!isLoadingMeta" class="relative inline-flex items-center" :class="canToggleShared && !isUpdatingShared ? 'cursor-pointer' : 'cursor-not-allowed'">
                 <input
-                  :checked="editingCharacterMeta.shared"
-                  @change="handleToggleShared"
+                  :checked="displaySharedState"
+                  @click="handleToggleShared"
                   type="checkbox"
                   :disabled="!canToggleShared || isUpdatingShared"
                   class="sr-only peer"
@@ -198,7 +198,9 @@
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 </div>
-                <div v-else class="w-9 h-5 bg-[var(--theme-card-hover)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--theme-primary)]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-theme-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+                <div v-else class="w-9 h-5 bg-[var(--theme-card-hover)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--theme-primary)]/30 rounded-full peer" :class="{'peer-checked:bg-[var(--theme-primary)]': displaySharedState}">
+                  <div class="absolute top-[2px] left-[2px] bg-white border-theme-border border rounded-full h-4 w-4 transition-all" :class="{'translate-x-full': displaySharedState}"></div>
+                </div>
               </label>
             </div>
             
@@ -247,70 +249,47 @@
                 <template v-if="isLoggedIn">
                   <div class="border-t border-theme-border/50"></div>
                   
-                  <template v-if="!editingCharacterMeta.originalId">
-                    <button
-                      v-if="!existsOnServer"
-                      type="button"
-                      :disabled="isUploadingToServer"
-                      @click="handleUploadToServer(); showMoreActions = false"
-                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg v-if="isUploadingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                      <span>{{ isUploadingToServer ? '上传中...' : '上传到服务器' }}</span>
-                    </button>
-                    
-                    <button
-                      v-else-if="existsOnServer && isOwnerOfCharacter"
-                      type="button"
-                      :disabled="isUpdatingToServer"
-                      @click="handleUpdateToServer(); showMoreActions = false"
-                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg v-if="isUpdatingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>{{ isUpdatingToServer ? '更新中...' : '更新到服务器' }}</span>
-                    </button>
-                  </template>
+                  <!-- 下载按钮：只要在服务器上存在就显示 -->
+                  <button
+                    v-if="existsOnServer"
+                    type="button"
+                    :disabled="!editingCharacterMeta.shared || isUpdatingFromServer"
+                    @click="editingCharacterMeta.shared && handleUpdateFromServer()"
+                    :class="editingCharacterMeta.shared 
+                      ? 'w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'w-full px-4 py-3 text-sm text-theme-text-secondary flex items-center gap-3 cursor-not-allowed'"
+                  >
+                    <svg v-if="editingCharacterMeta.shared && isUpdatingFromServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" :class="editingCharacterMeta.shared ? 'text-[var(--theme-primary)]' : 'text-theme-text-secondary'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    <span>
+                      {{ editingCharacterMeta.shared 
+                        ? (isUpdatingFromServer ? '下载中...' : '下载') 
+                        : '下载（分享已被取消）' }}
+                    </span>
+                  </button>
                   
-                  <template v-if="editingCharacterMeta.originalId">
-                    <button
-                      v-if="existsOnServer && editingCharacterMeta.shared"
-                      type="button"
-                      :disabled="isUpdatingFromServer"
-                      @click="handleUpdateFromServer(); showMoreActions = false"
-                      class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg v-if="isUpdatingFromServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>{{ isUpdatingFromServer ? '更新中...' : '更新本地数据' }}</span>
-                    </button>
-                    
-                    <div
-                      v-else-if="existsOnServer && !editingCharacterMeta.shared"
-                      class="w-full px-4 py-3 text-sm text-theme-text-secondary flex items-center gap-3"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                      </svg>
-                      <span>作者已取消分享</span>
-                    </div>
-                  </template>
+                  <!-- 上传按钮：当 shared 为 true 且是所有者时显示 -->
+                  <button
+                    v-if="editingCharacterMeta.shared && isOwnerOfCharacter"
+                    type="button"
+                    :disabled="isUpdatingToServer"
+                    @click="handleUpdateToServer()"
+                    class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg v-if="isUpdatingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>{{ isUpdatingToServer ? '上传中...' : '上传' }}</span>
+                  </button>
                 </template>
               </div>
             </div>
@@ -353,11 +332,12 @@ import CharacterForm from '@/components/CharacterForm.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 import type { Character } from '@/types'
-import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob } from '@/utils/localFriendStorage'
+import { getFriendAvatar, clearCharacterAvatarCache, getCharacterBlob, updateFriendMetaShared, getFriendMetaById } from '@/utils/localFriendStorage'
 import { characterGet } from '@/utils/db'
 import { useUserStore } from '@/stores/user'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
+import { debugPrintFile, debugPrintBlob } from '@/utils/debugCharacterFile'
 
 const userStore = useUserStore()
 const { showAlert, showConfirm, showErrorAlert } = useDialog()
@@ -375,8 +355,16 @@ const characterFormRef = ref<InstanceType<typeof CharacterForm> | null>(null)
 const localIsUpdatingShared = ref(false)
 const showMoreActions = ref(false)
 const backgroundBlobUrl = ref<string | null>(null)
+const tempSharedState = ref<boolean | null>(null)
 
 const isLoggedIn = computed(() => userStore.isLoggedIn())
+
+const displaySharedState = computed(() => {
+  if (tempSharedState.value !== null) {
+    return tempSharedState.value
+  }
+  return props.editingCharacterMeta.shared
+})
 
 async function loadBackgroundImage() {
   if (backgroundBlobUrl.value) {
@@ -397,6 +385,16 @@ async function loadBackgroundImage() {
   } catch (e) {
     console.error('Failed to load background image:', e)
   }
+}
+
+function getApiCharacterId(): string | null {
+  const charId = props.editingCharacter?.role_play?.id || props.editingCharacter?.id
+  if (!charId) return null
+  
+  const friendMeta = getFriendMetaById(charId)
+  const originalId = friendMeta?.originalId
+  
+  return originalId || props.editingCharacter?.role_play?.id || props.editingCharacter?.id || null
 }
 
 const backgroundImageUrl = computed(() => {
@@ -432,7 +430,6 @@ const props = defineProps<{
   isOwnerOfCharacter: boolean
   showCommentSection: boolean
   characterData: any
-  isUploadingToServer: boolean
   isUpdatingToServer: boolean
   isUpdatingFromServer: boolean
   thumbnailUrl: string | null
@@ -449,7 +446,6 @@ const emit = defineEmits<{
   (e: 'toggleLike'): void
   (e: 'update:shared', value: boolean): void
   (e: 'avatarUpdated', characterId: string): void
-  (e: 'uploadToServer', data: any): void
   (e: 'updateToServer', data: any): void
   (e: 'updateFromServer'): void
 }>()
@@ -506,11 +502,6 @@ function handleImageSaved(characterId: string) {
   loadAvatar()
   loadBackgroundImage()
   emit('avatarUpdated', characterId)
-}
-
-function handleUploadToServer() {
-  if (!props.characterData) return
-  emit('uploadToServer', props.characterData)
 }
 
 function handleUpdateToServer() {
@@ -570,7 +561,10 @@ async function handleSharedClick(event: MouseEvent) {
   }
 }
 
-async function handleToggleShared() {
+async function handleToggleShared(event: Event) {
+  // 阻止 checkbox 自动切换状态
+  event.preventDefault()
+  
   if (!isLoggedIn.value) {
     userStore.requireLogin()
     return
@@ -590,7 +584,10 @@ async function handleToggleShared() {
     }
   }
   
+  // 显示临时的加载状态
+  tempSharedState.value = newSharedState
   localIsUpdatingShared.value = true
+  let hasError = false
   
   try {
     if (newSharedState) {
@@ -605,7 +602,9 @@ async function handleToggleShared() {
       const fileName = isImage ? `${characterName}.png` : `${characterName}.json`
       const file = new File([blob], fileName, { type: blob.type })
       
-      const result = await charactersApi.importFiles([file])
+      await debugPrintFile(file, '分享角色')
+      
+      const result = await charactersApi.importFiles([file], characterId, true)
       if (!result.success || result.imported === 0) {
         throw new Error(result.failedFiles?.[0]?.error || '上传失败')
       }
@@ -613,12 +612,29 @@ async function handleToggleShared() {
       await charactersApi.updateUserCharacterShared(userId, characterId, false)
     }
     
+    // 更新本地 friend_meta 中的 shared 状态
+    updateFriendMetaShared(characterId, newSharedState)
+    
     emit('update:shared', newSharedState)
   } catch (error: any) {
     console.error('更新分享状态失败:', error)
     await showErrorAlert('更新分享状态失败: ' + error.message)
+    // 失败时回滚到原来的状态
+    tempSharedState.value = null
+    hasError = true
   } finally {
     localIsUpdatingShared.value = false
+    // 成功后清除临时状态，让它从 props 读取最新状态
+    if (!hasError) {
+      tempSharedState.value = null
+    }
   }
 }
+
+watch(() => props.visible, (visible) => {
+  if (!visible) {
+    // 关闭 modal 时清理临时状态
+    tempSharedState.value = null
+  }
+})
 </script>

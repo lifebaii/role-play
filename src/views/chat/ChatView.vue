@@ -248,30 +248,6 @@
             </div>
             <span>清空聊天</span>
           </button>
-          <button
-            v-if="isCurrentCharacterFriend"
-            @click="showRemoveFriendConfirm = true"
-            class="w-full px-4 py-2.5 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] flex items-center gap-3 transition-all"
-          >
-            <div class="w-7 h-7 rounded-lg bg-[var(--theme-danger-bg)] flex items-center justify-center text-[var(--theme-danger)]">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-              </svg>
-            </div>
-            <span>删除好友</span>
-          </button>
-          <button
-            v-if="isCurrentCharacterUserOwned"
-            @click="showDeleteCharacterConfirm = true"
-            class="w-full px-4 py-2.5 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] flex items-center gap-3 transition-all"
-          >
-            <div class="w-7 h-7 rounded-lg bg-[var(--theme-danger-bg)] flex items-center justify-center text-[var(--theme-danger)]">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
-            </div>
-            <span>删除角色</span>
-          </button>
         </div>
 
         <ChatMessages
@@ -350,9 +326,14 @@
           </button>
           <button
             @click="handleRemoveFriend"
-            class="flex-1 px-4 py-2 bg-gradient-to-r from-[var(--theme-danger)] to-[var(--theme-danger-light)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
+            :disabled="isRemovingFriend"
+            class="flex-1 px-4 py-2 bg-gradient-to-r from-[var(--theme-danger)] to-[var(--theme-danger-light)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            确认删除
+            <svg v-if="isRemovingFriend" class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ isRemovingFriend ? '删除中...' : '确认删除' }}</span>
           </button>
         </div>
       </div>
@@ -380,27 +361,6 @@
             class="px-6 py-2 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-xl hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] transition-all shadow-lg hover:shadow-xl"
           >
             关闭
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showDeleteCharacterConfirm" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click.self="showDeleteCharacterConfirm = false">
-      <div class="chat-card rounded-2xl p-3 sm:p-6 max-w-md w-full shadow-2xl border border-theme-border">
-        <h3 class="text-base sm:text-lg font-bold text-theme-text-primary mb-1 sm:mb-2">确认删除角色</h3>
-        <p class="text-theme-text-secondary text-sm sm:text-base mb-4 sm:mb-6">确定要删除这个角色吗？删除后聊天记录也会一并删除。</p>
-        <div class="flex gap-3">
-          <button
-            @click="showDeleteCharacterConfirm = false"
-            class="flex-1 px-4 py-2 chat-card text-theme-text-primary rounded-xl hover:bg-[var(--theme-card-hover)] transition-all"
-          >
-            取消
-          </button>
-          <button
-            @click="handleDeleteCharacter"
-            class="flex-1 px-4 py-2 bg-gradient-to-r from-[var(--theme-danger)] to-[var(--theme-danger-light)] text-white rounded-xl hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
-          >
-            确认删除
           </button>
         </div>
       </div>
@@ -451,7 +411,7 @@
       :is-updating-from-server="isUpdatingFromServer"
       :thumbnail-url="editingCharacterMeta.thumbnailUrl"
       :source-url="editingCharacterMeta.sourceUrl"
-      @save="saveCharacter"
+      @save="handleSaveCharacter"
       @delete="handleDeleteFromEdit"
       @load-original="handleLoadOriginalCharacterData"
       @toggle-like="handleToggleLikeInEdit"
@@ -692,6 +652,7 @@ const showMenuDropdown = ref(false)
 const showUserNameDialog = ref(false)
 const editingUserName = ref('')
 const showRemoveFriendConfirm = ref(false)
+const isRemovingFriend = ref(false)
 const showErrorDialog = ref(false)
 const errorMessage = ref('')
 const showFriendSelector = ref(false)
@@ -716,7 +677,6 @@ watch(showUserSettings, async (visible) => {
 
 const {
   showCreateCharacterModal,
-  showDeleteCharacterConfirm,
   isLoadingCharacterDetail,
   isSavingCharacter,
   isImportingCharacter,
@@ -737,7 +697,6 @@ const {
   friendCharacters,
   isCurrentCharacterFriend,
   isCurrentCharacterUserOwned,
-  isUploadingToServer,
   isUpdatingToServer,
   isUpdatingFromServer,
   selectCharacter,
@@ -747,13 +706,11 @@ const {
   editUserCharacter,
   handleViewCharacter,
   handleDeleteFromEdit,
-  handleDeleteCharacter,
   handleToggleLikeInEdit,
   handleUpdateShared,
   loadOriginalCharacterData: originalLoadOriginalCharacterData,
   loadLikedCharacters,
   handleImportUserCharacter,
-  uploadToServer,
   updateToServer,
   updateFromServer
 } = useCharacter()
@@ -769,15 +726,6 @@ async function handleLoadOriginalCharacterData() {
   }
 }
 
-async function handleUploadToServer(data: any) {
-  try {
-    await uploadToServer(data)
-    showToast('上传到服务器成功', 'success')
-  } catch (e: any) {
-    showToast(e.message || '上传到服务器失败', 'error')
-  }
-}
-
 async function handleUpdateToServer(data: any) {
   try {
     await updateToServer(data)
@@ -789,10 +737,23 @@ async function handleUpdateToServer(data: any) {
 
 async function handleUpdateFromServer() {
   try {
-    await updateFromServer()
-    showToast('从服务器更新成功', 'success')
+    const result = await updateFromServer()
+    if (result.success && result.message) {
+      showToast(result.message, 'success')
+    }
   } catch (e: any) {
     showToast(e.message || '从服务器更新失败', 'error')
+  }
+}
+
+async function handleSaveCharacter(data: any) {
+  try {
+    const result = await saveCharacter(data)
+    if (result.success && result.message) {
+      showToast(result.message, 'success')
+    }
+  } catch (e: any) {
+    showToast(e.message || '保存失败', 'error')
   }
 }
 
@@ -1125,6 +1086,7 @@ async function saveUserName() {
 async function handleRemoveFriend() {
   if (!chatStore.currentCharacter) return
   
+  isRemovingFriend.value = true
   try {
     await userStore.removeFriend(chatStore.currentCharacter.id)
     await chatStore.clearCharacterHistory(chatStore.currentCharacter.id)
@@ -1133,6 +1095,8 @@ async function handleRemoveFriend() {
   } catch (error) {
     console.error('Failed to remove friend:', error)
     showToast('删除好友失败', 'error')
+  } finally {
+    isRemovingFriend.value = false
   }
 }
 
