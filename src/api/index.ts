@@ -1,6 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 import { eventBus } from '@/utils/eventBus'
 import { compressBody } from '@/utils/gzipRequest'
+import { debugPrintFile } from '@/utils/debugCharacterFile'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -388,7 +389,11 @@ export const charactersApi = {
   batchDelete: (ids: string[]) => adminApiClient.delete<{ success: boolean; deleted: number; failed: Array<{ id: string; error: string }>; warnings: string[] }>('/characters/batch', { ids }),
   batchUpdateShared: (ids: string[], shared: boolean) => adminApiClient.put<{ success: boolean; updated: number; failed: Array<{ id: string; error: string }> }>('/characters/batch/shared', { ids, shared }),
   import: (data: any) => adminApiClient.post('/characters/import', data),
-  importFiles: (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
+  importFiles: async (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
+    for (const file of files) {
+      await debugPrintFile(file, 'importFiles 接口调用')
+    }
+    
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file_${index}`, file);
@@ -404,7 +409,11 @@ export const charactersApi = {
     
     return api.post('/characters/import-files', formData);
   },
-  importFilesAdmin: (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
+  importFilesAdmin: async (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
+    for (const file of files) {
+      await debugPrintFile(file, 'importFilesAdmin 接口调用')
+    }
+    
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file_${index}`, file);
