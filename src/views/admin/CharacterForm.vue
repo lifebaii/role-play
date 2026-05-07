@@ -92,6 +92,28 @@
         </button>
       </div>
     </div>
+
+    <div
+      v-if="showOptimizingModal"
+      class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+    >
+      <div class="chat-card rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-theme-border max-h-[80vh] flex flex-col">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-6 h-6 animate-spin rounded-full border-2 border-[var(--theme-primary)] border-t-transparent"></div>
+          <h3 class="text-lg font-semibold text-theme-text-primary">正在优化角色数据...</h3>
+        </div>
+        
+        <div 
+          ref="optimizingContentRef"
+          class="flex-1 overflow-auto bg-[var(--theme-card-hover)] rounded-xl p-4 border border-theme-border min-h-[200px]"
+          @scroll="handleContentScroll"
+        >
+          <pre class="text-sm text-theme-text-secondary whitespace-pre-wrap">{{ optimizingContent }}</pre>
+        </div>
+        
+        <p class="text-xs text-theme-text-secondary mt-3">正在接收流式数据中，请稍候...</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -123,6 +145,10 @@ const availableModels = ref<{ id: string; name: string }[]>([])
 const selectedModelId = ref<string>('')
 const showOptimizeModal = ref(false)
 const isOptimizing = ref(false)
+const showOptimizingModal = ref(false)
+const optimizingContent = ref('')
+const optimizingContentRef = ref<HTMLDivElement | null>(null)
+const shouldAutoScroll = ref(true)
 
 const optimizationPresets = ref<OptimizationPreset[]>([])
 
@@ -509,12 +535,40 @@ function openSourceUrl() {
   }
 }
 
+function handleContentScroll() {
+  const container = optimizingContentRef.value
+  if (!container) return
+  
+  // 检查是否滚动到底部（允许20像素的误差）
+  const isScrolledToBottom = 
+    container.scrollHeight - container.scrollTop - container.clientHeight <= 20
+  
+  shouldAutoScroll.value = isScrolledToBottom
+}
+
+function scrollToBottom() {
+  const container = optimizingContentRef.value
+  if (!container) return
+  
+  container.scrollTop = container.scrollHeight
+}
+
+watch(optimizingContent, () => {
+  if (shouldAutoScroll.value) {
+    // 使用 nextTick 确保 DOM 更新后再滚动
+    setTimeout(scrollToBottom, 0)
+  }
+})
+
 async function handleOptimize(preset: typeof optimizationPresets[0]) {
   // 优先使用选择的模型，没选择才用预设配置的模型
   const modelToUse = selectedModelId.value || preset.model_id
   
   showOptimizeModal.value = false
   isOptimizing.value = true
+  showOptimizingModal.value = true
+  optimizingContent.value = ''
+  shouldAutoScroll.value = true
   
   let lastAccumulatedContent = ''
   let hasPartialResult = false
@@ -527,9 +581,11 @@ async function handleOptimize(preset: typeof optimizationPresets[0]) {
     })) {
       if (chunk.content) {
         lastAccumulatedContent += chunk.content
+        optimizingContent.value = lastAccumulatedContent
       }
       if (chunk.accumulated) {
         lastAccumulatedContent = chunk.accumulated
+        optimizingContent.value = lastAccumulatedContent
       }
       if (chunk.partialResult) {
         hasPartialResult = true
@@ -609,6 +665,7 @@ async function handleOptimize(preset: typeof optimizationPresets[0]) {
     await showErrorAlert('优化失败: ' + (e.message || '未知错误'))
   } finally {
     isOptimizing.value = false
+    showOptimizingModal.value = false
   }
 }
 </script>
