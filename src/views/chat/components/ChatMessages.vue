@@ -168,6 +168,7 @@ import { useChatStore } from '@/stores/chat'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CompiledRegexScript } from '@/composables/useChat'
+import { applyRegexScriptsToHtml } from '@/utils/regexUtils'
 
 const props = defineProps<{
   messages: any[]
@@ -222,12 +223,8 @@ function renderMarkdown(content: string, role: string = 'assistant') {
   const isAssistant = role === 'assistant'
   
   const compiled = props.compiledRegexScripts
-  for (const script of compiled) {
-    if (isUser && !script.placement.includes(1)) continue
-    if (isAssistant && !script.placement.includes(2)) continue
-    if (!script.markdownOnly && script.promptOnly) continue
-    processed = processed.replace(script.regex, script.replacement)
-  }
+  // 应用正则替换，但不影响HTML标签
+  processed = applyRegexScriptsToHtml(processed, compiled, isUser, isAssistant)
   
   if (isStreaming) {
     const trimmed = processed.trim()

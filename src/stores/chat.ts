@@ -649,6 +649,7 @@ const globalDefaultModel = ref('')
     const characterId = currentCharacter.value.id
     if (backgroundStreams.value.has(characterId)) return false
     
+    // 提前验证配置
     if (userStore.isAnonymous && !useCustomModel.value) {
       error.value = '匿名用户只能使用自定义模型，请先配置您的 API Key'
       return false
@@ -664,6 +665,7 @@ const globalDefaultModel = ref('')
 
     pinFriendToTop(characterId)
 
+    // 立即添加用户消息和空的助手消息
     const userMessage: Message = {
       role: 'user',
       content,
@@ -683,19 +685,30 @@ const globalDefaultModel = ref('')
 
     messages.value = [...allMessages]
 
+    // 立即保存到历史记录，只保存有内容的消息（此时只有用户消息有内容）
+    const messagesToSave = messages.value.filter(m => {
+      if (m.role === 'system') return false
+      const msgContent = m.content || ''
+      if (!msgContent.trim()) return false
+      return !msgContent.includes('[测试内容]') && !msgContent.includes('STA2N')
+    })
+    await saveChatHistory(characterId, messagesToSave)
+
     const historyForApi = messages.value
       .slice(0, -2)
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role, content: m.content }))
 
-    await executeStream(
+    // 异步执行流式响应，不等待
+    executeStream(
       characterId,
       currentCharacter.value.name,
       currentCharacter.value.avatar,
       content,
       historyForApi,
       allMessages
-    )
+    ).catch(console.error)
+    
     return true
   }
 

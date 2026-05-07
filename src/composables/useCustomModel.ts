@@ -135,13 +135,11 @@ export function useCustomModel() {
   async function switchToBuiltinModel() {
     chatStore.setUseCustomModel(false)
     
-    if (chatStore.uniqueModels.length === 0) {
-      isLoadingBuiltinModels.value = true
-      try {
-        await chatStore.loadModels()
-      } finally {
-        isLoadingBuiltinModels.value = false
-      }
+    isLoadingBuiltinModels.value = true
+    try {
+      await chatStore.loadModels(true)
+    } finally {
+      isLoadingBuiltinModels.value = false
     }
   }
   

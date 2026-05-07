@@ -5,6 +5,7 @@ import { useUserDataStore } from '@/stores/userData'
 import { useDialog } from '@/composables/useDialog'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { compileRegexScripts, applyRegexScriptsToHtml } from '@/utils/regexUtils'
 
 export interface CompiledRegexScript {
   regex: RegExp
@@ -38,45 +39,7 @@ export function useChat(globalRegex: any[] = []) {
     const globalRegexList = globalRegex || []
     const charRegexList = chatStore.currentCharacter?.regex_scripts || []
     const userRegexList = userDataStore.enabledRegexScripts || []
-    const allRegex = [...globalRegexList, ...charRegexList, ...userRegexList]
-
-    const result: CompiledRegexScript[] = []
-
-    for (const script of allRegex) {
-      if (script.disabled || script.enabled === false) continue
-
-      try {
-        const regexStr = script.findRegex || script.regex || ''
-        let pattern = regexStr
-        let flags = script.flags || 'g'
-
-        if (pattern.startsWith('/')) {
-          const lastSlash = pattern.lastIndexOf('/')
-          if (lastSlash > 0) {
-            const flagStr = pattern.substring(lastSlash + 1)
-            pattern = pattern.substring(1, lastSlash)
-            flags = flagStr || flags
-          }
-        }
-
-        const validFlags = new Set(['g', 'i', 'm'])
-        flags = [...new Set(flags.split('') as string[])].filter((f: string) => validFlags.has(f)).join('')
-
-        const regex = new RegExp(pattern, flags)
-        result.push({
-          regex,
-          replacement: script.replaceString || script.replacement,
-          placement: script.placement || [1, 2],
-          promptOnly: script.promptOnly || false,
-          markdownOnly: script.markdownOnly || false,
-          name: script.name || script.scriptName || ''
-        })
-      } catch (e) {
-        console.error('Regex compile error:', script.name || script.scriptName, e)
-      }
-    }
-
-    return result
+    return compileRegexScripts(globalRegexList, charRegexList, userRegexList)
   })
 
   function scrollToBottom() {
@@ -118,16 +81,10 @@ export function useChat(globalRegex: any[] = []) {
     const beforeRegex = processed
     let hasRegexChange = false
     
-    for (const script of compiled) {
-      if (isUser && !script.placement.includes(1)) continue
-      if (isAssistant && !script.placement.includes(2)) continue
-      if (!script.markdownOnly && script.promptOnly) continue
-      const before = processed
-      processed = processed.replace(script.regex, script.replacement)
-      if (before !== processed) {
-        hasRegexChange = true
-      }
-    }
+    // 应用正则替换，但不影响HTML标签
+    const processedWithRegex = applyRegexScriptsToHtml(processed, compiled, isUser, isAssistant)
+    hasRegexChange = processedWithRegex !== processed
+    processed = processedWithRegex
     
     if (!isStreaming && hasRegexChange) {
       console.log('%c[正则替换对比]', 'color: #4CAF50; font-weight: bold; font-size: 14px;')
