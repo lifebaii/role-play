@@ -58,6 +58,11 @@ const routes = [
         component: () => import('@/views/admin/Regex.vue')
       },
       {
+        path: 'optimization-presets',
+        name: 'OptimizationPresets',
+        component: () => import('@/views/admin/OptimizationPresets.vue')
+      },
+      {
         path: 'models',
         name: 'Models',
         component: () => import('@/views/admin/Models.vue')

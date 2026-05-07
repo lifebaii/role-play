@@ -288,6 +288,12 @@ export interface Preset {
   enabled: boolean
 }
 
+export interface OptimizationPreset {
+  name: string
+  system_prompt: string
+  model_id?: string
+}
+
 export interface Message {
   role: 'user' | 'assistant' | 'system'
   name?: string
@@ -576,7 +582,7 @@ export const adminApi = {
       modelId: string
     },
     signal?: AbortSignal
-  ): AsyncGenerator<string> {
+  ): AsyncGenerator<{ content: string; accumulated?: string; error?: string; partialResult?: boolean }> {
     const token = localStorage.getItem('admin_token')
     
     const response = await fetch(`${API_BASE}/admin/characters/optimize`, {
@@ -623,7 +629,7 @@ export const adminApi = {
             if (data === '[DONE]') return
             try {
               const parsed = JSON.parse(data)
-              if (parsed.content) yield parsed.content
+              yield parsed
               if (parsed.error) throw new Error(parsed.error)
             } catch (e) {
               // Skip invalid JSON
@@ -693,6 +699,12 @@ export const regexApi = {
   list: () => adminApiClient.get<RegexScript[]>('/regex'),
   update: (regex: RegexScript[]) => adminApiClient.put<RegexScript[]>('/regex', { regex }),
   import: (data: any) => adminApiClient.post('/regex/import', data)
+}
+
+export const optimizationPresetsApi = {
+  list: () => adminApiClient.get<OptimizationPreset[]>('/optimization-presets'),
+  update: (presets: OptimizationPreset[]) => adminApiClient.put<OptimizationPreset[]>('/optimization-presets', { presets }),
+  import: (data: any) => adminApiClient.post('/optimization-presets/import', data)
 }
 
 export interface User {

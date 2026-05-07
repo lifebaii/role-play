@@ -133,6 +133,7 @@ const menuItems = [
   { path: '/admin/presets', name: '预设管理', icon: '📝' },
   { path: '/admin/worldinfo', name: '世界书', icon: '📚' },
   { path: '/admin/regex', name: '正则脚本', icon: '🔤' },
+  { path: '/admin/optimization-presets', name: '优化预设', icon: '⚡' },
   { path: '/admin/models', name: '模型配置', icon: '🤖' },
   { path: '/admin/settings', name: '系统设置', icon: '⚙️' }
 ]

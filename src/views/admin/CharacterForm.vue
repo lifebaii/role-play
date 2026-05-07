@@ -40,7 +40,7 @@
           
           <button
             @click="showOptimizeModal = true"
-            :disabled="!selectedModelId || isOptimizing"
+            :disabled="isOptimizing"
             class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-xl hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg v-if="isOptimizing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -100,7 +100,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { extractCharacterFromPng, normalizeCharacterData, writePngChunks } from '@/utils/characterImport'
-import { charactersApi, modelsApi, adminApi } from '@/api'
+import { charactersApi, modelsApi, adminApi, optimizationPresetsApi, type OptimizationPreset } from '@/api'
 import CharacterForm from '@/components/CharacterForm.vue'
 import { useDialog } from '@/composables/useDialog'
 
@@ -124,20 +124,7 @@ const selectedModelId = ref<string>('')
 const showOptimizeModal = ref(false)
 const isOptimizing = ref(false)
 
-const optimizationPresets = [
-  { 
-    name: '优化1 - 丰富细节', 
-    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个专业的角色设计师和作家。你的任务是优化角色卡数据，使角色更加生动、立体、有深度。请保持原有的核心特征，同时丰富细节描写，让角色更加真实可信。优化时注意：1. 丰富角色描述，增加外貌、气质、习惯等细节；2. 深化人设，让性格特点更加鲜明；3. 完善场景设定，增加环境氛围描写；4. 优化开场白，使其更符合角色性格且更有吸引力。' 
-  },
-  { 
-    name: '优化2 - 情感深度', 
-    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个心理学专家和情感作家。你的任务是优化角色卡数据，使角色具有更丰富的情感层次和内心世界。请保持原有的核心特征，同时深化角色的情感表达。优化时注意：1. 为角色添加情感背景和内心冲突；2. 丰富角色的情感表达方式；3. 增加角色之间的情感互动可能性；4. 让开场白更能展现角色的情感状态。' 
-  },
-  { 
-    name: '优化3 - 故事性', 
-    system_prompt: '用户会发给你一个纯json字符串，你处理完毕后也返回纯json字符串。你是一个资深的故事创作者和剧本作家。你的任务是优化角色卡数据，使角色具有更强的故事性和戏剧张力。请保持原有的核心特征，同时增强角色的叙事潜力。优化时注意：1. 为角色添加背景故事和成长经历；2. 设置角色的目标和动机；3. 创造角色面临的挑战和冲突；4. 让场景设定更具戏剧性；5. 优化开场白，使其暗示更多故事可能性。' 
-  }
-]
+const optimizationPresets = ref<OptimizationPreset[]>([])
 
 const formData = ref({
   name: '',
@@ -183,6 +170,13 @@ onMounted(async () => {
     const savedModelId = localStorage.getItem('admin_optimize_model_id')
     if (savedModelId && availableModels.value.some(m => m.id === savedModelId)) {
       selectedModelId.value = savedModelId
+    }
+    
+    // 加载优化预设
+    try {
+      optimizationPresets.value = await optimizationPresetsApi.list()
+    } catch (err) {
+      console.error('Failed to load optimization presets:', err)
     }
   } catch (e) {
     console.error('Failed to load models:', e)
@@ -516,26 +510,33 @@ function openSourceUrl() {
 }
 
 async function handleOptimize(preset: typeof optimizationPresets[0]) {
-  if (!selectedModelId.value) {
-    await showErrorAlert('请先选择模型')
-    return
-  }
+  // 优先使用选择的模型，没选择才用预设配置的模型
+  const modelToUse = selectedModelId.value || preset.model_id
   
   showOptimizeModal.value = false
   isOptimizing.value = true
   
+  let lastAccumulatedContent = ''
+  let hasPartialResult = false
+  
   try {
-    let fullResponse = ''
-    
     for await (const chunk of adminApi.optimizeCharacterStream({
       characterData: formData.value,
       optimizationType: preset,
-      modelId: selectedModelId.value
+      modelId: modelToUse
     })) {
-      fullResponse += chunk
+      if (chunk.content) {
+        lastAccumulatedContent += chunk.content
+      }
+      if (chunk.accumulated) {
+        lastAccumulatedContent = chunk.accumulated
+      }
+      if (chunk.partialResult) {
+        hasPartialResult = true
+      }
     }
     
-    let jsonStr = fullResponse.trim()
+    let jsonStr = lastAccumulatedContent.trim()
     
     if (jsonStr.startsWith('```')) {
       const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -560,9 +561,51 @@ async function handleOptimize(preset: typeof optimizationPresets[0]) {
       regex_scripts: optimizedData.regex_scripts || formData.value.regex_scripts || [],
       tags: optimizedData.tags || formData.value.tags || []
     }
-    await showSuccessAlert('优化成功！')
+    
+    if (hasPartialResult) {
+      await showAlert('优化过程中遇到问题，但已保存部分结果！')
+    } else {
+      await showSuccessAlert('优化成功！')
+    }
   } catch (e: any) {
     console.error('Optimization failed:', e)
+    
+    // 如果有部分结果，尝试解析并应用
+    if (lastAccumulatedContent) {
+      try {
+        let jsonStr = lastAccumulatedContent.trim()
+        
+        if (jsonStr.startsWith('```')) {
+          const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+          if (codeBlockMatch) {
+            jsonStr = codeBlockMatch[1].trim()
+          }
+        }
+        
+        if (!jsonStr.startsWith('{')) {
+          const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0]
+          }
+        }
+        
+        const optimizedData = JSON.parse(jsonStr)
+        
+        formData.value = {
+          ...formData.value,
+          ...optimizedData,
+          character_book: optimizedData.character_book || formData.value.character_book || { entries: [] },
+          regex_scripts: optimizedData.regex_scripts || formData.value.regex_scripts || [],
+          tags: optimizedData.tags || formData.value.tags || []
+        }
+        
+        await showAlert('优化失败，但已保存部分结果！错误: ' + (e.message || '未知错误'))
+        return
+      } catch (parseError) {
+        console.error('Failed to parse partial result:', parseError)
+      }
+    }
+    
     await showErrorAlert('优化失败: ' + (e.message || '未知错误'))
   } finally {
     isOptimizing.value = false
