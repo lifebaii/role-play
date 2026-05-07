@@ -268,7 +268,7 @@ function handleFileClick(file: any) {
 function downloadFile() {
   if (!fileData.value) return
   const token = localStorage.getItem('admin_token')
-  const url = `${import.meta.env.VITE_API_BASE_URL || ''}/api/admin/filesystem/raw?path=${encodeURIComponent(fileData.value.path)}&t=${Date.now()}`
+  const url = `/api/admin/filesystem/raw?path=${encodeURIComponent(fileData.value.path)}&t=${Date.now()}`
   const a = document.createElement('a')
   a.href = url
   a.download = fileData.value.name
