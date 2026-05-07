@@ -8,7 +8,7 @@
       </div>
       <div>
         <h1 class="text-xl sm:text-2xl font-bold text-theme-text-primary">文件系统</h1>
-        <p class="text-sm text-theme-text-secondary">浏览和查看服务器文件</p>
+        <p class="text-sm text-theme-text-secondary">浏览和编辑服务器文件</p>
       </div>
     </div>
 
@@ -130,12 +130,12 @@
       </div>
     </template>
 
-    <!-- 文件视图 -->
+    <!-- 文件编辑视图 -->
     <template v-else-if="fileData">
       <div class="space-y-4">
-        <!-- 文件信息 -->
+        <!-- 文件信息和操作栏 -->
         <div class="chat-card rounded-2xl p-4 border border-theme-border">
-          <div class="flex items-start justify-between">
+          <div class="flex items-start justify-between flex-wrap gap-4">
             <div class="flex items-start gap-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--theme-accent)] to-[var(--theme-accent-light)] flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,10 +148,20 @@
                   <span>{{ formatSize(fileData.size) }}</span>
                   <span>·</span>
                   <span>{{ formatDate(fileData.modifiedAt) }}</span>
+                  <span v-if="isJsonFile" class="text-blue-500">(JSON)</span>
                 </div>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
+              <button 
+                @click="navigateToParent"
+                class="px-4 py-2 chat-card text-theme-text-primary rounded-lg hover:bg-[var(--theme-card-hover)] border border-theme-border transition-all flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                返回
+              </button>
               <button 
                 @click="downloadFile"
                 class="px-4 py-2 chat-card text-theme-text-primary rounded-lg hover:bg-[var(--theme-card-hover)] border border-theme-border transition-all flex items-center gap-2"
@@ -162,24 +172,66 @@
                 下载
               </button>
               <button 
-                @click="navigateToParent"
-                class="px-4 py-2 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-primary-dark)] transition-all flex items-center gap-2"
+                @click="saveFile"
+                :disabled="saving"
+                class="px-4 py-2 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-primary-dark)] transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                <svg v-if="saving" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
-                返回
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {{ saving ? '保存中...' : '保存' }}
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 文件内容 -->
-        <div class="chat-card rounded-2xl border border-theme-border overflow-hidden">
-          <div class="p-4 border-b border-theme-border bg-[var(--theme-card-hover)]/30">
-            <h4 class="text-sm font-medium text-theme-text-secondary">文件内容</h4>
+        <!-- JSON错误提示 -->
+        <div v-if="jsonError" class="chat-card rounded-xl p-4 border border-red-500/30 bg-red-500/5">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="flex-1">
+              <h4 class="font-semibold text-red-500 text-sm">JSON格式错误</h4>
+              <p class="text-red-600 text-sm mt-1">{{ jsonError }}</p>
+            </div>
           </div>
-          <pre class="p-4 overflow-x-auto text-sm text-theme-text-primary bg-[var(--theme-bg-start)]"><code>{{ fileData.content }}</code></pre>
+        </div>
+
+        <!-- 文件内容编辑 -->
+        <div class="chat-card rounded-2xl border border-theme-border overflow-hidden">
+          <div class="p-4 border-b border-theme-border bg-[var(--theme-card-hover)]/30 flex items-center justify-between">
+            <h4 class="text-sm font-medium text-theme-text-secondary">
+              编辑内容
+              <span v-if="isDirty" class="text-orange-500 ml-2">(已修改)</span>
+            </h4>
+            <div class="flex items-center gap-2">
+              <button 
+                v-if="isJsonFile"
+                @click="formatJson"
+                :disabled="jsonError"
+                class="text-xs px-3 py-1 rounded hover:bg-[var(--theme-primary)]/10 text-theme-text-secondary transition-all disabled:opacity-50"
+              >
+                格式化
+              </button>
+              <button 
+                @click="resetContent"
+                :disabled="!isDirty"
+                class="text-xs px-3 py-1 rounded hover:bg-[var(--theme-primary)]/10 text-theme-text-secondary transition-all disabled:opacity-50"
+              >
+                重置
+              </button>
+            </div>
+          </div>
+          <textarea
+            v-model="editContent"
+            @input="handleContentChange"
+            class="w-full min-h-[400px] p-4 bg-[var(--theme-bg-start)] text-theme-text-primary font-mono text-sm resize-vertical focus:outline-none"
+            spellcheck="false"
+          ></textarea>
         </div>
       </div>
     </template>
@@ -187,27 +239,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
 import { adminApiClient } from '@/api'
 
-const route = useRoute()
-const router = useRouter()
+const STORAGE_KEY = 'admin-filesystem-last-path'
 
 const currentPath = ref('/')
 const loading = ref(false)
+const saving = ref(false)
 const error = ref<string | null>(null)
 const directoryData = ref<any>(null)
 const fileData = ref<any>(null)
+const editContent = ref('')
+const originalContent = ref('')
+const jsonError = ref<string | null>(null)
+
+const isDirty = computed(() => editContent.value !== originalContent.value)
+
+const isJsonFile = computed(() => {
+  if (!fileData.value?.name) return false
+  return fileData.value.name.toLowerCase().endsWith('.json')
+})
 
 const breadcrumbs = computed(() => {
-  if (currentPath.value === '/') return []
-  const parts = currentPath.value.split('/').filter(Boolean)
-  let path = ''
-  return parts.map(part => {
-    path += '/' + part
-    return { name: part, path }
-  })
+  if (currentPath.value === '/' || !currentPath.value) return []
+  // 处理 Windows 驱动器路径（如 C:\）和普通路径
+  const parts = currentPath.value.split('/').filter(Boolean);
+  let path = '';
+  return parts.map((part, index) => {
+    // 对于 Windows 驱动器，保持原样
+    if (index === 0 && (part.endsWith(':') || part.endsWith(':\\'))) {
+      path = '/' + part;
+    } else {
+      path = path ? path + '/' + part : '/' + part;
+    }
+    return { name: part, path };
+  });
+})
+
+// 从本地存储读取上次打开的路径
+onMounted(() => {
+  try {
+    const savedPath = localStorage.getItem(STORAGE_KEY)
+    if (savedPath) {
+      loadPath(savedPath)
+    } else {
+      loadPath('/')
+    }
+  } catch {
+    loadPath('/')
+  }
+})
+
+// 监听当前路径变化，保存到本地存储
+watch(currentPath, (newPath) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, newPath)
+  } catch {
+    // 忽略存储错误
+  }
 })
 
 function getTypeBadgeClass(file: any): string {
@@ -244,6 +334,9 @@ async function loadPath(path: string) {
   error.value = null
   directoryData.value = null
   fileData.value = null
+  editContent.value = ''
+  originalContent.value = ''
+  jsonError.value = null
 
   try {
     const data = await adminApiClient.get('/admin/filesystem', { path })
@@ -252,6 +345,8 @@ async function loadPath(path: string) {
       directoryData.value = data
     } else {
       fileData.value = data
+      editContent.value = data.content || ''
+      originalContent.value = data.content || ''
     }
     
     currentPath.value = data.path
@@ -268,17 +363,96 @@ function navigateTo(path: string) {
 
 function navigateToParent() {
   if (currentPath.value === '/') return
-  const parentPath = currentPath.value.substring(0, currentPath.value.lastIndexOf('/')) || '/'
-  loadPath(parentPath)
+  
+  // 处理 Windows 驱动器情况（如 /C:）
+  const parts = currentPath.value.split('/').filter(Boolean);
+  if (parts.length === 1) {
+    loadPath('/');
+    return;
+  }
+  
+  // 普通情况：去掉最后一个路径部分
+  const parentPath = currentPath.value.substring(0, currentPath.value.lastIndexOf('/')) || '/';
+  loadPath(parentPath);
 }
 
 function handleFileClick(file: any) {
-  if (file.isDirectory) {
-    const newPath = currentPath.value === '/' ? '/' + file.name : currentPath.value + '/' + file.name
-    loadPath(newPath)
+  if (!file.accessible) return
+  
+  let newPath;
+  if (currentPath.value === '/') {
+    newPath = '/' + file.name;
+  } else if (currentPath.value.endsWith('/')) {
+    newPath = currentPath.value + file.name;
   } else {
-    const newPath = currentPath.value === '/' ? '/' + file.name : currentPath.value + '/' + file.name
-    loadPath(newPath)
+    newPath = currentPath.value + '/' + file.name;
+  }
+  loadPath(newPath);
+}
+
+function handleContentChange() {
+  // 只对JSON文件进行校验
+  if (isJsonFile.value) {
+    validateJson()
+  }
+}
+
+function validateJson() {
+  if (!isJsonFile.value) {
+    jsonError.value = null
+    return true
+  }
+  
+  try {
+    JSON.parse(editContent.value)
+    jsonError.value = null
+    return true
+  } catch (e: any) {
+    jsonError.value = e.message
+    return false
+  }
+}
+
+function formatJson() {
+  if (!isJsonFile.value) return
+  
+  try {
+    const parsed = JSON.parse(editContent.value)
+    editContent.value = JSON.stringify(parsed, null, 2)
+    jsonError.value = null
+  } catch (e: any) {
+    jsonError.value = e.message
+  }
+}
+
+function resetContent() {
+  editContent.value = originalContent.value
+  if (isJsonFile.value) {
+    validateJson()
+  }
+}
+
+async function saveFile() {
+  if (!fileData.value) return
+  
+  // JSON文件必须合法才能保存
+  if (isJsonFile.value && !validateJson()) {
+    return
+  }
+  
+  saving.value = true
+  try {
+    await adminApiClient.put('/admin/filesystem', {
+      path: fileData.value.path,
+      content: editContent.value
+    })
+    originalContent.value = editContent.value
+    // 重新加载文件信息
+    await loadPath(fileData.value.path)
+  } catch (err: any) {
+    error.value = err.message || '保存失败'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -310,10 +484,6 @@ function downloadFile() {
     a.click()
   }
 }
-
-onMounted(() => {
-  loadPath('/')
-})
 </script>
 
 <style scoped>
