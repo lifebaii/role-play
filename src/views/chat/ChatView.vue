@@ -514,6 +514,7 @@ import type { Character } from '@/types'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import { compileRegexScripts } from '@/utils/regexUtils'
 import { hasLocalUserName } from '@/utils/anonymousUser'
+import { userApi } from '@/api'
 
 import ChatSidebar from './components/ChatSidebar.vue'
 import ChatMessages from './components/ChatMessages.vue'
@@ -627,17 +628,6 @@ const showAbout = ref(false)
 const backgroundImageUrl = ref<string | null>(null)
 let currentBgObjectUrl: string | null = null
 const characterLimit = ref<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number } | null>(null)
-
-watch(showUserSettings, async (visible) => {
-  if (visible && userStore.isLoggedIn()) {
-    try {
-      const result = await userApi.getCharacterLimit()
-      characterLimit.value = result
-    } catch (e) {
-      console.error('Failed to get character limit:', e)
-    }
-  }
-})
 
 const {
   showCreateCharacterModal,
@@ -990,9 +980,16 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
   }
 }
 
-function handleOpenUserSettings() {
+async function handleOpenUserSettings() {
   if (userStore.user) {
     showUserSettings.value = true
+    // 直接在这里调用 API 获取最新数据
+    try {
+      const result = await userApi.getCharacterLimit()
+      characterLimit.value = result
+    } catch (e) {
+      console.error('Failed to get user data:', e)
+    }
   } else {
     editingUserName.value = chatStore.userName || ''
     showUserNameDialog.value = true

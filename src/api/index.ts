@@ -75,6 +75,9 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
       const errorMessage = error.error || `HTTP ${response.status}`
       
+      // 检查是否是 /auth/verify 接口
+      const isVerifyEndpoint = path === '/auth/verify' || path === '/admin/verify'
+      
       if (response.status === 401) {
         const errorCode = error.code || ''
         
@@ -92,7 +95,8 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
           }
           eventBus.emit('auth-error', { type: tokenSource, message: '登录已过期，请重新登录' })
         }
-      } else {
+      } else if (!isVerifyEndpoint) {
+        // 只有不是 /auth/verify 接口的其他错误才发出 api-error 事件
         eventBus.emit('api-error', { status: response.status, message: errorMessage })
       }
       
@@ -707,6 +711,26 @@ export const optimizationPresetsApi = {
   import: (data: any) => adminApiClient.post('/optimization-presets/import', data)
 }
 
+export interface UploadedSync {
+  syncId: string
+  characterId: string
+  characterName: string
+  uploadTime: string
+  totalDownloads: number
+}
+
+export interface ChatSyncMeta {
+  userId: string
+  syncCount: {
+    total: number
+    daily: number
+    lastResetDate: string
+  }
+  syncHistory: any[]
+  uploadedSyncs: UploadedSync[]
+  totalUploadedDownloads: number
+}
+
 export interface User {
   id: string
   login: string
@@ -716,6 +740,7 @@ export interface User {
   totalChats: number
   lastSigninDate: string | null
   userName: string
+  chatSyncMeta?: ChatSyncMeta
 }
 
 export const userApi = {
@@ -723,7 +748,9 @@ export const userApi = {
   signin: () => api.post<{ success: boolean; bonusQuota: number; user: User }>('/auth/signin', {}),
   logout: () => api.post<{ success: boolean }>('/auth/logout', {}),
   getCharacterLimit: () => api.get<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number }>('/auth/character-limit'),
-  updateUserName: (userName: string) => api.put<{ success: boolean; user: User }>('/auth/username', { userName })
+  updateUserName: (userName: string) => api.put<{ success: boolean; user: User }>('/auth/username', { userName }),
+  addFriend: (characterId: string) => api.post<{ success: boolean; user: User }>('/auth/friend', { characterId }),
+  removeFriend: (characterId: string) => api.delete<{ success: boolean; user: User }>(`/auth/friend/${characterId}`)
 }
 
 export interface V1ChatCompletionOptions {
@@ -877,13 +904,17 @@ export interface SyncStatus {
   dailyUsed: number
   remainingTotal: number
   remainingDaily: number
+  remainingBonus: number
   activeSync?: {
     syncId: string
     syncCode: string
     characterName: string
     createdAt: string
     expiresAt: string
+    downloadCount?: number
   }
+  totalUploadedDownloads: number
+  uploadedSyncs: UploadedSync[]
 }
 
 export interface UploadResult {

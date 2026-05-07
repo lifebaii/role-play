@@ -44,7 +44,7 @@
           
           <div class="p-4 bg-gradient-to-r from-[var(--theme-secondary)]/10 to-[var(--theme-accent)]/10 rounded-xl border border-theme-border">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-theme-text-accent">角色上限</span>
+              <span class="text-sm font-medium text-theme-text-accent">在线角色上限</span>
               <div class="text-right">
                 <span class="text-2xl font-bold text-theme-text-accent">{{ characterLimit?.currentCount || 0 }}</span>
                 <span class="text-lg text-theme-text-secondary">/</span>

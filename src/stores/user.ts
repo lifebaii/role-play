@@ -149,9 +149,10 @@ export const useUserStore = defineStore('user', () => {
         .then(result => {
           setUser(result.user);
         })
-        .catch(() => {
-          setToken(null);
-          setUser(null);
+        .catch(error => {
+          // 检查错误处理逻辑和 API 层已经处理了 401 的情况
+          // 这里不需要再清除 token，因为 API 层已经处理了
+          console.log('[UserStore] verify failed:', error.message);
         });
       return { user: user.value };
     }
@@ -162,8 +163,10 @@ export const useUserStore = defineStore('user', () => {
       setUser(result.user);
       return result;
     } catch (error) {
-      setToken(null);
-      setUser(null);
+      // 错误处理逻辑和 API 层已经处理了 401 的情况
+      // 其他错误不清除 token
+      console.log('[UserStore] verify failed:', error);
+      isAuthenticating.value = false;
       throw error;
     } finally {
       isAuthenticating.value = false;
@@ -225,6 +228,11 @@ export const useUserStore = defineStore('user', () => {
 
   const addOnlineFriendCharacter = async (characterId: string, sourceUrl?: string) => {
     try {
+      // 先调用后端接口添加好友（检查限额）
+      if (isLoggedIn()) {
+        await userApi.addFriend(characterId);
+      }
+      
       let blob: Blob;
       let contentType: string;
       
@@ -280,7 +288,7 @@ export const useUserStore = defineStore('user', () => {
     
     if (isLoggedIn()) {
       try {
-        await charactersApi.deleteUserCharacter(characterId);
+        await userApi.removeFriend(characterId);
       } catch (error) {
         console.error('[UserStore] Failed to delete character from server:', error);
       }

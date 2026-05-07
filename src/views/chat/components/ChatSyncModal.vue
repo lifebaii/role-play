@@ -12,15 +12,31 @@
         </div>
 
         <!-- 同步状态 -->
-        <div v-if="syncStatus" class="mb-4 p-3 bg-[var(--theme-primary)]/10 rounded-lg">
-          <div class="text-sm text-theme-text-accent">
-            <div class="flex justify-between mb-1">
-              <span>下载次数：</span>
-              <span>{{ syncStatus.remainingTotal }} / {{ syncStatus.totalLimit }}</span>
+        <div v-if="syncStatus" class="mb-4 p-4 bg-gradient-to-br from-[var(--theme-primary)]/15 to-[var(--theme-secondary)]/10 rounded-xl border border-[var(--theme-primary)]/20">
+          <div class="space-y-3">
+            <!-- 今日剩余下载 -->
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-theme-text-primary flex items-center gap-2">
+                <svg class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                今日剩余下载次数
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-lg font-bold" :class="syncStatus.remainingDaily > 0 ? 'text-[var(--theme-success)]' : 'text-theme-text-secondary'">{{ syncStatus.remainingDaily }}</span>
+                <span class="text-xs text-theme-text-secondary">/ {{ syncStatus.dailyLimit }}</span>
+              </div>
             </div>
-            <div class="flex justify-between">
-              <span>今日下载：</span>
-              <span>{{ syncStatus.remainingDaily }} / {{ syncStatus.dailyLimit }}</span>
+            
+            <!-- 额外可下载次数 -->
+            <div class="flex items-center justify-between pt-2 border-t border-[var(--theme-border)]">
+              <span class="text-sm font-medium text-theme-text-primary flex items-center gap-2">
+                <svg class="w-4 h-4 text-[var(--theme-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                </svg>
+                额外可下载次数
+              </span>
+              <span class="text-lg font-bold" :class="syncStatus.remainingBonus > 0 ? 'text-[var(--theme-accent)]' : 'text-theme-text-secondary'">{{ syncStatus.remainingBonus }}</span>
             </div>
           </div>
         </div>
@@ -132,17 +148,22 @@
         </div>
 
         <!-- 活跃同步 -->
-        <div v-if="syncStatus?.activeSync && mode === 'upload'" class="mt-4 p-3 bg-[var(--theme-primary)]/10 rounded-lg border border-[var(--theme-primary)]">
-          <p class="text-sm text-theme-text-primary mb-2">
-            您有一个活跃的同步任务
-          </p>
-          <div class="text-xs text-theme-text-secondary">
+        <div v-if="syncStatus?.activeSync && mode === 'upload'" class="mt-4 p-4 bg-gradient-to-br from-[var(--theme-primary)]/15 to-[var(--theme-accent)]/10 rounded-xl border border-[var(--theme-primary)]/30">
+          <div class="flex items-center gap-2 mb-3">
+            <svg class="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm font-semibold text-theme-text-primary">
+              您有一个活跃的同步任务
+            </p>
+          </div>
+          <div class="text-sm text-theme-text-secondary space-y-2">
             <div class="flex items-center gap-2">
-              <span>同步码：</span>
-              <span class="font-mono font-bold text-theme-text-accent">{{ syncStatus.activeSync.syncCode }}</span>
+              <span class="text-theme-text-secondary">同步码：</span>
+              <span class="font-mono font-bold text-theme-text-accent text-lg tracking-wider">{{ syncStatus.activeSync.syncCode }}</span>
               <button
                 @click="copyToClipboard(syncStatus.activeSync.syncCode)"
-                class="p-1 rounded hover:bg-[var(--theme-card-hover)] transition-colors"
+                class="p-1.5 rounded-lg hover:bg-[var(--theme-card-hover)] transition-all"
                 :title="copySuccess ? '已复制' : '复制同步码'"
               >
                 <svg v-if="!copySuccess" class="w-4 h-4 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,13 +174,16 @@
                 </svg>
               </button>
             </div>
-            <p>角色：{{ syncStatus.activeSync.characterName }}</p>
-            <p>下载次数：{{ syncStatus.activeSync.downloadCount || 0 }} 次</p>
-            <p>过期时间：{{ formatTime(syncStatus.activeSync.expiresAt) }}</p>
+            <p><span class="text-theme-text-secondary">角色：</span><span class="text-theme-text-primary font-medium">{{ syncStatus.activeSync.characterName }}</span></p>
+            <p v-if="syncStatus.activeSync.downloadCount" class="text-theme-text-accent">
+              <span class="text-theme-text-secondary">被下载：</span>
+              <span class="font-medium">{{ syncStatus.activeSync.downloadCount }} 次</span>
+            </p>
+            <p><span class="text-theme-text-secondary">过期时间：</span>{{ formatTime(syncStatus.activeSync.expiresAt) }}</p>
           </div>
           <button
             @click="handleCancel"
-            class="mt-2 text-sm text-danger hover:underline"
+            class="mt-3 w-full py-2 px-4 border border-danger/30 text-danger rounded-lg hover:bg-danger/10 transition-all text-sm font-medium"
           >
             取消同步
           </button>
@@ -233,7 +257,9 @@ const isSyncing = computed(() => chatStore.isSyncing)
 
 const canDownload = computed(() => {
   if (!syncStatus.value) return false
-  return syncStatus.value.remainingTotal > 0 && syncStatus.value.remainingDaily > 0
+  const hasRemainingDaily = syncStatus.value.remainingDaily > 0
+  const hasRemainingBonus = syncStatus.value.remainingBonus > 0
+  return syncStatus.value.remainingTotal > 0 && (hasRemainingDaily || hasRemainingBonus)
 })
 
 watch(() => props.show, async (newVal) => {

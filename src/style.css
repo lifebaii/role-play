@@ -32,7 +32,7 @@
   --theme-sidebar-hover: rgba(18, 172, 153, 0.08);
   --theme-input-area: rgba(255, 255, 255, 0.7);
   --theme-input-bg: rgba(255, 255, 255, 0.5);
-  --theme-bubble-assistant: rgba(255, 255, 255, 0.92);
+  --theme-bubble-assistant: rgba(255, 255, 255, 0.7);
   --theme-bubble-assistant-border: rgba(18, 172, 153, 0.15);
   --theme-card-bg: rgba(255, 255, 255, 0.95);
   --theme-card-hover: rgba(18, 172, 153, 0.06);
@@ -343,15 +343,15 @@ body {
 .bubble-assistant {
   background-color: var(--theme-bubble-assistant);
   border: 1px solid var(--theme-bubble-assistant-border);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .bubble-user {
   background-color: var(--theme-bubble-assistant);
   border: 1px solid color-mix(in srgb, var(--theme-primary-light) 30%, transparent);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .chat-card {
