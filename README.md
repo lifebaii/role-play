@@ -1,8 +1,26 @@
 # Role-Play Frontend
 
-![Role-Play Logo](https://github.com/smanx/role-play/blob/master/public/pwa-512x512.png?raw=true)
+<img src="https://github.com/smanx/role-play/blob/master/public/pwa-512x512.png?raw=true" alt="Role-Play Logo" width="128" />
 
 基于 Vue 3 + Vite + TypeScript + Tailwind CSS 的前端应用。
+
+## 项目简介
+
+Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
+
+- 🎭 创建和管理自定义角色
+- 💬 与 AI 角色进行流畅对话
+- 🌍 世界书和正则脚本增强角色设定
+- 📱 响应式设计，支持 PC 和移动端
+- 🔄 聊天记录同步（登录后）
+- 👥 群聊功能，支持多角色互动
+- 📤 角色导入/导出，支持多种格式
+- 🎨 主题切换和个性化设置
+- 📦 离线 PWA 支持
+
+## 在线体验
+
+🚀 **[https://rp.good.hidns.vip/](https://rp.good.hidns.vip/)**
 
 ## 技术栈
 
@@ -16,6 +34,20 @@
 - **Markdown**: marked + dompurify
 - **拖拽**: sortablejs + vuedraggable
 - **压缩**: pako
+
+## 登录与未登录功能对比
+
+| 功能 | 未登录 | 已登录 |
+|------|--------|--------|
+| 好友列表 | ✅ 本地保存 | ✅ 本地保存 |
+| 聊天记录 | ✅ 本地保存 | ✅ 本地保存 |
+| 大模型 API 配置 | ✅ 本地保存 | ✅ 本地保存 |
+| 使用内置大模型 | ❌ | ✅ |
+| 浏览角色评论 | ❌ | ✅ |
+| 角色点赞 | ❌ | ✅ |
+| 添加在线角色 | ❌ | ✅ |
+| 分享角色到在线列表 | ❌ | ✅ |
+| 同步和分享聊天记录 | ❌ | ✅ (手动触发) |
 
 ## 目录结构
 

@@ -766,6 +766,8 @@ const globalDefaultModel = ref('')
       }
     }
 
+    pinFriendToTop(characterId)
+
     const userMessage = messages.value[userMessageIndex]
 
     const historyForApi = messages.value

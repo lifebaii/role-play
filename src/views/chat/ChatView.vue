@@ -28,6 +28,7 @@
       @select-character="selectCharacter"
       @import-character="onImportCharacter"
       @open-about="showAbout = true"
+      @friend-characters-updated="handleFriendCharactersUpdated"
     />
 
     <div class="flex-1 flex flex-col min-w-0 relative overflow-hidden">
@@ -733,6 +734,11 @@ async function onImportCharacter(event: Event) {
   } catch (e: any) {
     showToast(e.message || '导入失败', 'error')
   }
+}
+
+async function handleFriendCharactersUpdated(characters: any[]) {
+  // 好友列表已经通过 localFriendStorage 更新，这里不需要额外处理
+  // 保持 friendCharacters 的响应性即可
 }
 
 const {

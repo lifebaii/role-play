@@ -750,6 +750,77 @@ export async function reorderLocalFriends(oldIndex: number, newIndex: number): P
   const [moved] = friends.splice(oldIndex, 1)
   friends.splice(newIndex, 0, moved)
   friendsCache = friends
+  
+  // 更新 meta 列表中的顺序
+  const metaList = getFriendMetaList()
+  const friendIds = friends.map(f => getFriendId(f)).filter(Boolean) as string[]
+  
+  // 根据新的顺序重新排列 meta 列表
+  const newMetaList: FriendMetaItem[] = []
+  const existingMetaMap = new Map(metaList.map(m => [m.id, m]))
+  
+  for (const id of friendIds) {
+    const existing = existingMetaMap.get(id)
+    if (existing) {
+      newMetaList.push(existing)
+    }
+  }
+  
+  // 添加不在 friends 中的 meta 项（如果有）
+  for (const meta of metaList) {
+    if (!newMetaList.find(m => m.id === meta.id)) {
+      newMetaList.push(meta)
+    }
+  }
+  
+  setFriendMetaList(newMetaList)
+  eventBus.emit('friend-order-changed')
+}
+
+export async function reorderLocalFriendsByIds(orderedIds: string[]): Promise<void> {
+  const friends = await getLocalFriends()
+  
+  // 重新排列 friends 数组
+  const newFriends: LocalFriend[] = []
+  const friendMap = new Map(friends.map(f => [getFriendId(f), f]))
+  
+  for (const id of orderedIds) {
+    const friend = friendMap.get(id)
+    if (friend) {
+      newFriends.push(friend)
+    }
+  }
+  
+  // 添加不在 orderedIds 中的 friends（如果有）
+  for (const friend of friends) {
+    if (!newFriends.find(f => getFriendId(f) === getFriendId(friend))) {
+      newFriends.push(friend)
+    }
+  }
+  
+  friendsCache = newFriends
+  
+  // 更新 meta 列表
+  const metaList = getFriendMetaList()
+  const newMetaList: FriendMetaItem[] = []
+  const existingMetaMap = new Map(metaList.map(m => [m.id, m]))
+  
+  for (const id of orderedIds) {
+    const existing = existingMetaMap.get(id)
+    if (existing) {
+      newMetaList.push(existing)
+    }
+  }
+  
+  // 添加不在 orderedIds 中的 meta 项
+  for (const meta of metaList) {
+    if (!newMetaList.find(m => m.id === meta.id)) {
+      newMetaList.push(meta)
+    }
+  }
+  
+  setFriendMetaList(newMetaList)
+  eventBus.emit('friend-order-changed')
 }
 
 export async function getLocalFriendCount(): Promise<number> {

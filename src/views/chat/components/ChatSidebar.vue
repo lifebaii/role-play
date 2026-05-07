@@ -70,51 +70,59 @@
           </div>
         </div>
         
-        <div v-if="friendCharacters.length > 0" class="space-y-2">
-          <div
-            v-for="(character, index) in friendCharacters"
-            :key="character.id || index"
-            class="p-3 rounded-xl cursor-pointer transition-all duration-200 relative"
-            :class="chatStore.currentCharacter?.role_play?.id === character.role_play?.id 
-              ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-lg shadow-[var(--theme-primary)]/25 scale-[1.02] active' 
-              : 'character-item hover:shadow-md hover:scale-[1.01]'"
-            @click="selectCharacter(character)"
-          >
-            <div class="flex items-center gap-3">
-              <div class="relative flex-shrink-0">
-                <AvatarImage
-                  :src="getCharacterAvatar(character)"
-                  :name="getCharacterName(character)"
-                  size="md"
-                  rounded="lg"
-                  :gradient="character.isUserCreated ? 'primary' : 'secondary'"
-                  class="shadow-lg"
-                />
-                <span
-                    v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-[var(--theme-success-light)] to-[var(--theme-success)] rounded-full border-2 border-[var(--theme-card-bg)] animate-ping"
-                  ></span>
+        <draggable
+          v-if="friendCharacters.length > 0"
+          v-model="localFriendCharacters"
+          item-key="id"
+          class="space-y-2"
+          ghost-class="sortable-ghost"
+          drag-class="sortable-drag"
+          @end="handleDragEnd"
+        >
+          <template #item="{ element: character, index }">
+            <div
+              class="p-3 rounded-xl cursor-pointer transition-all duration-200 relative"
+              :class="chatStore.currentCharacter?.role_play?.id === character.role_play?.id 
+                ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-lg shadow-[var(--theme-primary)]/25 scale-[1.02] active' 
+                : 'character-item hover:shadow-md hover:scale-[1.01]'"
+              @click="selectCharacter(character)"
+            >
+              <div class="flex items-center gap-3">
+                <div class="relative flex-shrink-0">
+                  <AvatarImage
+                    :src="getCharacterAvatar(character)"
+                    :name="getCharacterName(character)"
+                    size="md"
+                    rounded="lg"
+                    :gradient="character.isUserCreated ? 'primary' : 'secondary'"
+                    class="shadow-lg"
+                  />
                   <span
-                    v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)"
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-[var(--theme-success-light)] to-[var(--theme-success)] rounded-full border-2 border-[var(--theme-card-bg)] animate-pulse"
-                  ></span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5">
-                  <div :class="['font-semibold truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white' : 'text-theme-text-primary']">{{ getCharacterName(character) }}</div>
-                  <svg v-if="getFriendMeta(character)?.addType === 'add'" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="currentColor" viewBox="0 0 20 20" title="来自分享"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-                  <svg v-else-if="getFriendMeta(character)?.shared" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="已分享"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                      v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)"
+                      class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-[var(--theme-success-light)] to-[var(--theme-success)] rounded-full border-2 border-[var(--theme-card-bg)] animate-ping"
+                    ></span>
+                    <span
+                      v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)"
+                      class="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-[var(--theme-success-light)] to-[var(--theme-success)] rounded-full border-2 border-[var(--theme-card-bg)] animate-pulse"
+                    ></span>
                 </div>
-                <div :class="['text-xs truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-theme-text-secondary']">
-                  <template v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)">
-                    <span class="text-[var(--theme-success-light)]">回复中...</span>
-                  </template>
-                  <template v-else>{{ getCharacterDescription(character) || '暂无描述' }}</template>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <div :class="['font-semibold truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white' : 'text-theme-text-primary']">{{ getCharacterName(character) }}</div>
+                    <svg v-if="getFriendMeta(character)?.addType === 'add'" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="currentColor" viewBox="0 0 20 20" title="来自分享"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+                    <svg v-else-if="getFriendMeta(character)?.shared" :class="['w-3.5 h-3.5 flex-shrink-0', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-[var(--theme-primary)]']" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="已分享"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                  </div>
+                  <div :class="['text-xs truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-theme-text-secondary']">
+                    <template v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)">
+                      <span class="text-[var(--theme-success-light)]">回复中...</span>
+                    </template>
+                    <template v-else>{{ getCharacterDescription(character) || '暂无描述' }}</template>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </draggable>
         
         <div v-else class="px-2 mb-3">
           <div class="text-center py-6 text-sm text-theme-text-secondary chat-card rounded-xl border border-dashed border-theme-border p-4">
@@ -220,12 +228,13 @@ import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import type { Character } from '@/types'
 import { getAvatarUrl, preloadAvatars, getCharacterDisplayName, getCharacterDisplayDescription, useAvatar } from '@/composables/useAvatar'
-import { clearCharacterAvatarCache, getFriendAvatar, getFriendMetaList } from '@/utils/localFriendStorage'
+import { clearCharacterAvatarCache, getFriendAvatar, getFriendMetaList, reorderLocalFriendsByIds } from '@/utils/localFriendStorage'
 import { eventBus } from '@/utils/eventBus'
 import { config } from '@/utils/config'
 import AvatarImage from '@/components/AvatarImage.vue'
 import { toggleColorMode, getColorMode, type ColorMode } from '@/utils/theme'
 import { useDialog } from '@/composables/useDialog'
+import draggable from 'vuedraggable'
 
 const { showConfirm } = useDialog()
 
@@ -245,6 +254,7 @@ const emit = defineEmits<{
   (e: 'selectCharacter', character: any): void
   (e: 'importCharacter', event: Event): void
   (e: 'openAbout'): void
+  (e: 'friendCharactersUpdated', characters: any[]): void
 }>()
 
 const chatStore = useChatStore()
@@ -252,6 +262,7 @@ const userStore = useUserStore()
 const avatarMap = ref(new Map<string, string>())
 const showAuthEntry = config.showAuthEntry
 const currentColorMode = ref<ColorMode>(getColorMode())
+const localFriendCharacters = ref<any[]>([])
 
 const colorModeTitle = computed(() => {
   switch (currentColorMode.value) {
@@ -285,9 +296,12 @@ async function loadAvatarForCharacter(character: any) {
 
 watch(() => props.friendCharacters, (friends) => {
   if (friends && friends.length > 0) {
+    localFriendCharacters.value = [...friends]
     for (const friend of friends) {
       loadAvatarForCharacter(friend)
     }
+  } else {
+    localFriendCharacters.value = []
   }
 }, { immediate: true })
 
@@ -335,6 +349,13 @@ function selectCharacter(character: any) {
   emit('update:modelValue', false)
 }
 
+async function handleDragEnd() {
+  // 保存排序
+  const orderedIds = localFriendCharacters.value.map(c => c.role_play?.id || c.id).filter(Boolean) as string[]
+  await reorderLocalFriendsByIds(orderedIds)
+  emit('friendCharactersUpdated', localFriendCharacters.value)
+}
+
 async function handleLogout() {
   const confirmed = await showConfirm('确定要退出登录吗？')
   if (confirmed) {
@@ -358,3 +379,15 @@ function handleImportUserCharacter(event: Event) {
   emit('importCharacter', event)
 }
 </script>
+
+<style scoped>
+.sortable-ghost {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.sortable-drag {
+  transform: scale(1.05);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+</style>
