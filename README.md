@@ -1,6 +1,6 @@
 # Role-Play Frontend
 
-<img src="https://github.com/smanx/role-play/blob/master/public/pwa-512x512.png?raw=true" alt="Role-Play Logo" width="128" />
+<img src="https://github.com/smanx/role-play/blob/master/public/pwa-192x192.png?raw=true" alt="Role-Play Logo" width="128" />
 
 基于 Vue 3 + Vite + TypeScript + Tailwind CSS 的前端应用。
 
@@ -17,6 +17,17 @@ Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
 - 📤 角色导入/导出，支持多种格式
 - 🎨 主题切换和个性化设置
 - 📦 离线 PWA 支持
+
+## 截图展示
+
+### PC端
+<img src="https://github.com/smanx/role-play/blob/master/docs/imgs/pc-home-light.jpg?raw=true" alt="PC端主页" width="800" />
+
+### 移动端
+<p float="left">
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-list.jpg?raw=true" alt="移动端列表" width="300" />
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-chat.jpg?raw=true" alt="移动端聊天" width="300" />
+</p>
 
 ## 在线体验
 
