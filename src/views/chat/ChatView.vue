@@ -410,6 +410,7 @@
       :is-uploading-to-server="isUploadingToServer"
       :is-updating-to-server="isUpdatingToServer"
       :is-updating-from-server="isUpdatingFromServer"
+      :is-deleting-character="isDeletingCharacter"
       :thumbnail-url="editingCharacterMeta.thumbnailUrl"
       :source-url="editingCharacterMeta.sourceUrl"
       @save="handleSaveCharacter"
@@ -653,6 +654,7 @@ const {
   isCurrentCharacterUserOwned,
   isUpdatingToServer,
   isUpdatingFromServer,
+  isDeletingCharacter,
   selectCharacter,
   openCreateCharacterModal,
   closeCreateCharacterModal,

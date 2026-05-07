@@ -749,7 +749,6 @@ export const userApi = {
   logout: () => api.post<{ success: boolean }>('/auth/logout', {}),
   getCharacterLimit: () => api.get<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number }>('/auth/character-limit'),
   updateUserName: (userName: string) => api.put<{ success: boolean; user: User }>('/auth/username', { userName }),
-  addFriend: (characterId: string) => api.post<{ success: boolean; user: User }>('/auth/friend', { characterId }),
   removeFriend: (characterId: string) => api.delete<{ success: boolean; user: User }>(`/auth/friend/${characterId}`)
 }
 

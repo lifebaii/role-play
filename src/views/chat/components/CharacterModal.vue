@@ -237,13 +237,18 @@
                 
                 <button
                   type="button"
-                  @click="characterFormRef?.handleDelete(); showMoreActions = false"
-                  class="w-full px-4 py-3 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)]/50 transition-colors flex items-center gap-3"
+                  @click="handleDelete"
+                  :disabled="localIsDeleting || isDeletingCharacter"
+                  class="w-full px-4 py-3 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)]/50 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="localIsDeleting || isDeletingCharacter" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  <span>删除角色</span>
+                  <span>{{ (localIsDeleting || isDeletingCharacter) ? '删除中...' : '删除角色' }}</span>
                 </button>
                 
                 <template v-if="isLoggedIn">
@@ -335,6 +340,20 @@
         </div>
         </div>
       </div>
+      
+      <!-- 删除loading遮罩层 -->
+      <div 
+        v-if="localIsDeleting || isDeletingCharacter" 
+        class="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl"
+      >
+        <div class="bg-[var(--theme-card-bg)] rounded-2xl p-6 sm:p-8 flex flex-col items-center gap-4 shadow-2xl border border-theme-border">
+          <div class="w-12 h-12 border-4 border-[var(--theme-danger)] border-t-transparent rounded-full animate-spin"></div>
+          <div class="text-center">
+            <p class="text-base sm:text-lg font-semibold text-theme-text-primary">删除中...</p>
+            <p class="text-xs sm:text-sm text-theme-text-secondary mt-1">请稍候</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -369,6 +388,7 @@ const localIsUpdatingShared = ref(false)
 const showMoreActions = ref(false)
 const backgroundBlobUrl = ref<string | null>(null)
 const tempSharedState = ref<boolean | null>(null)
+const localIsDeleting = ref(false)
 
 // 记录上次的上传/下载状态，用于检测操作完成
 const prevIsUpdatingToServer = ref(false)
@@ -449,6 +469,7 @@ const props = defineProps<{
   characterData: any
   isUpdatingToServer: boolean
   isUpdatingFromServer: boolean
+  isDeletingCharacter: boolean
   thumbnailUrl: string | null
   sourceUrl: string | null
 }>()
@@ -528,6 +549,17 @@ async function handleUpdateToServer() {
 
 async function handleUpdateFromServer() {
   emit('updateFromServer')
+}
+
+async function handleDelete() {
+  showMoreActions.value = false
+  localIsDeleting.value = true
+  try {
+    emit('delete')
+  } catch (error) {
+    console.error('Delete failed:', error)
+    localIsDeleting.value = false
+  }
 }
 
 function handleUpdateToServerWithClose() {
@@ -679,5 +711,13 @@ watch(() => props.isUpdatingFromServer, (newVal, oldVal) => {
     showMoreActions.value = false
   }
   prevIsUpdatingFromServer.value = newVal
+})
+
+// 监听删除状态变化，操作完成后关闭弹框
+watch(() => props.isDeletingCharacter, (newVal, oldVal) => {
+  if (oldVal === true && newVal === false) {
+    localIsDeleting.value = false
+    emit('update:visible', false)
+  }
 })
 </script>

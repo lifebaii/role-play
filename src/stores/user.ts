@@ -228,12 +228,7 @@ export const useUserStore = defineStore('user', () => {
 
   const addOnlineFriendCharacter = async (characterId: string, sourceUrl?: string) => {
     try {
-      // 先调用后端接口添加好友（检查限额）
-      if (isLoggedIn()) {
-        await userApi.addFriend(characterId);
-      }
-      
-      let blob: Blob;
+      let blob: Blob
       let contentType: string;
       
       if (sourceUrl) {

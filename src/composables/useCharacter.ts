@@ -480,6 +480,8 @@ export function useCharacter() {
     }
     
     try {
+      isDeletingCharacter.value = true
+      
       // 如果角色在服务器上存在且用户是所有者，显示多按钮确认
       if (existsOnServer.value && isOwnerOfCharacter.value) {
         const result = await showMultiButtonConfirm(
@@ -494,6 +496,7 @@ export function useCharacter() {
         )
         
         if (result === 'cancel' || !result) {
+          isDeletingCharacter.value = false
           return
         }
         
@@ -516,6 +519,7 @@ export function useCharacter() {
         // 普通删除确认
         const confirmed = await showDangerConfirm('确定要删除这个角色吗？删除后聊天记录也会一并删除。')
         if (!confirmed) {
+          isDeletingCharacter.value = false
           return
         }
         
@@ -533,9 +537,11 @@ export function useCharacter() {
       if (currentId === charId) {
         chatStore.setCurrentCharacter(null)
       }
-      closeCreateCharacterModal()
+      // 删除成功，设置状态为 false，让 CharacterModal 通过 watch 关闭弹框
+      isDeletingCharacter.value = false
     } catch (error) {
       console.error('Failed to delete character:', error)
+      isDeletingCharacter.value = false
       throw new Error('删除角色失败')
     }
   }
@@ -763,6 +769,7 @@ export function useCharacter() {
   
   const isUpdatingToServer = ref(false)
   const isUpdatingFromServer = ref(false)
+  const isDeletingCharacter = ref(false)
   
   async function updateToServer(data: any): Promise<boolean> {
     const charId = editingCharacter.value?.role_play?.id || editingCharacter.value?.id
@@ -904,6 +911,7 @@ export function useCharacter() {
     isCurrentCharacterLocal,
     isUpdatingToServer,
     isUpdatingFromServer,
+    isDeletingCharacter,
     selectCharacter,
     openCreateCharacterModal,
     closeCreateCharacterModal,

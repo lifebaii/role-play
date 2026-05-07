@@ -77,6 +77,7 @@
           class="space-y-2"
           ghost-class="sortable-ghost"
           drag-class="sortable-drag"
+          handle=".drag-handle"
           @end="handleDragEnd"
         >
           <template #item="{ element: character, index }">
@@ -88,7 +89,7 @@
               @click="selectCharacter(character)"
             >
               <div class="flex items-center gap-3">
-                <div class="relative flex-shrink-0">
+                <div class="relative flex-shrink-0 drag-handle cursor-grab active:cursor-grabbing">
                   <AvatarImage
                     :src="getCharacterAvatar(character)"
                     :name="getCharacterName(character)"
