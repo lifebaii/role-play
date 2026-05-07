@@ -428,7 +428,7 @@ export async function addOnlineFriend(character: any, originalId: string): Promi
   friends.unshift(newFriend)
   friendsCache = friends
 
-  addFriendMeta(originalId, 'add', shared)
+  addFriendMeta(originalId, 'import', shared)
 
   console.log(`[LocalFriend] Added online friend: ${originalId}, shared: ${shared}`)
 
@@ -501,7 +501,7 @@ export async function addOnlineFriendFromBlob(
   friends.unshift(newFriend)
   friendsCache = friends
 
-  addFriendMeta(originalId, 'add', true)
+  addFriendMeta(originalId, 'import', true)
 
   console.log(`[LocalFriend] Added online friend from blob: ${originalId}`)
 

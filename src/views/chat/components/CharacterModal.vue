@@ -251,14 +251,14 @@
                   
                   <!-- 下载按钮：只要在服务器上存在就显示 -->
                   <button
-                    v-if="existsOnServer"
-                    type="button"
-                    :disabled="!editingCharacterMeta.shared || isUpdatingFromServer"
-                    @click="editingCharacterMeta.shared && handleUpdateFromServer()"
-                    :class="editingCharacterMeta.shared 
-                      ? 'w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                      : 'w-full px-4 py-3 text-sm text-theme-text-secondary flex items-center gap-3 cursor-not-allowed'"
-                  >
+            v-if="existsOnServer"
+            type="button"
+            :disabled="!editingCharacterMeta.shared || isUpdatingFromServer"
+            @click="editingCharacterMeta.shared && handleUpdateFromServer()"
+            :class="editingCharacterMeta.shared 
+              ? 'w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+              : 'w-full px-4 py-3 text-sm text-theme-text-secondary flex items-center gap-3 cursor-not-allowed'"
+          >
                     <svg v-if="editingCharacterMeta.shared && isUpdatingFromServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -275,12 +275,12 @@
                   
                   <!-- 上传按钮：当 shared 为 true 且是所有者时显示 -->
                   <button
-                    v-if="editingCharacterMeta.shared && isOwnerOfCharacter"
-                    type="button"
-                    :disabled="isUpdatingToServer"
-                    @click="handleUpdateToServer()"
-                    class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
+            v-if="editingCharacterMeta.shared && isOwnerOfCharacter"
+            type="button"
+            :disabled="isUpdatingToServer"
+            @click="handleUpdateToServer()"
+            class="w-full px-4 py-3 text-left text-sm text-theme-text-primary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
                     <svg v-if="isUpdatingToServer" class="w-4 h-4 animate-spin text-[var(--theme-primary)]" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -291,6 +291,19 @@
                     <span>{{ isUpdatingToServer ? '上传中...' : '上传' }}</span>
                   </button>
                 </template>
+                
+                <div class="border-t border-theme-border/50"></div>
+                
+                <button
+                  type="button"
+                  @click="showMoreActions = false"
+                  class="w-full px-4 py-3 text-left text-sm text-theme-text-secondary hover:bg-[var(--theme-card-hover)]/80 transition-colors flex items-center gap-3"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  <span>取消</span>
+                </button>
               </div>
             </div>
           </div>
@@ -327,7 +340,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, watch, onUnmounted, watchEffect } from 'vue'
 import CharacterForm from '@/components/CharacterForm.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
@@ -356,6 +369,10 @@ const localIsUpdatingShared = ref(false)
 const showMoreActions = ref(false)
 const backgroundBlobUrl = ref<string | null>(null)
 const tempSharedState = ref<boolean | null>(null)
+
+// 记录上次的上传/下载状态，用于检测操作完成
+const prevIsUpdatingToServer = ref(false)
+const prevIsUpdatingFromServer = ref(false)
 
 const isLoggedIn = computed(() => userStore.isLoggedIn())
 
@@ -504,13 +521,23 @@ function handleImageSaved(characterId: string) {
   emit('avatarUpdated', characterId)
 }
 
-function handleUpdateToServer() {
+async function handleUpdateToServer() {
   if (!props.characterData) return
   emit('updateToServer', props.characterData)
 }
 
-function handleUpdateFromServer() {
+async function handleUpdateFromServer() {
   emit('updateFromServer')
+}
+
+function handleUpdateToServerWithClose() {
+  showMoreActions = false;
+  handleUpdateToServer();
+}
+
+function handleUpdateFromServerWithClose() {
+  showMoreActions = false;
+  handleUpdateFromServer();
 }
 
 const characterTypeLabel = computed(() => {
@@ -636,5 +663,21 @@ watch(() => props.visible, (visible) => {
     // 关闭 modal 时清理临时状态
     tempSharedState.value = null
   }
+})
+
+// 监听上传状态变化，操作完成后关闭更多菜单
+watch(() => props.isUpdatingToServer, (newVal, oldVal) => {
+  if (oldVal === true && newVal === false) {
+    showMoreActions.value = false
+  }
+  prevIsUpdatingToServer.value = newVal
+})
+
+// 监听下载状态变化，操作完成后关闭更多菜单
+watch(() => props.isUpdatingFromServer, (newVal, oldVal) => {
+  if (oldVal === true && newVal === false) {
+    showMoreActions.value = false
+  }
+  prevIsUpdatingFromServer.value = newVal
 })
 </script>
