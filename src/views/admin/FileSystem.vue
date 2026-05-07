@@ -76,7 +76,7 @@
               <tr 
                 v-if="currentPath !== '/'"
                 @click="navigateToParent"
-                class="hover:bg-[var(--theme-primary)]/5 cursor-pointer transition-colors"
+                class="file-row-parent"
               >
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
@@ -94,28 +94,35 @@
               <tr 
                 v-for="file in directoryData.files" 
                 :key="file.name"
-                @click="handleFileClick(file)"
-                class="hover:bg-[var(--theme-primary)]/5 cursor-pointer transition-colors"
+                @click="file.accessible && handleFileClick(file)"
+                :class="file.accessible ? 'file-row-accessible' : 'file-row-inaccessible'"
               >
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
-                    <svg v-if="file.isDirectory" class="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg v-if="!file.accessible && file.isDirectory" class="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
                     </svg>
-                    <svg v-else class="w-5 h-5 text-theme-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg v-else-if="file.accessible && file.isDirectory" class="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                    </svg>
+                    <svg v-else-if="file.accessible && file.isFile" class="w-5 h-5 text-theme-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
+                    <svg v-else class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                     <span class="text-theme-text-primary">{{ file.name }}</span>
+                    <span v-if="!file.accessible" class="text-xs text-red-500 ml-2" :title="file.error">(无法访问)</span>
                   </div>
                 </td>
                 <td class="px-4 py-3">
                   <span class="px-2 py-1 rounded-full text-xs" 
-                        :class="file.isDirectory ? 'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)]' : 'bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]'">
-                    {{ file.isDirectory ? '目录' : '文件' }}
+                        :class="getTypeBadgeClass(file)">
+                    {{ file.accessible ? (file.isDirectory ? '目录' : '文件') : '无权限' }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-right text-theme-text-secondary">{{ formatSize(file.size) }}</td>
-                <td class="px-4 py-3 text-right text-theme-text-secondary">{{ formatDate(file.modifiedAt) }}</td>
+                <td class="px-4 py-3 text-right text-theme-text-secondary">{{ file.accessible ? formatSize(file.size) : '-' }}</td>
+                <td class="px-4 py-3 text-right text-theme-text-secondary">{{ file.accessible && file.modifiedAt ? formatDate(file.modifiedAt) : '-' }}</td>
               </tr>
             </tbody>
           </table>
@@ -202,6 +209,16 @@ const breadcrumbs = computed(() => {
     return { name: part, path }
   })
 })
+
+function getTypeBadgeClass(file: any): string {
+  if (!file.accessible) {
+    return 'bg-gray-200 text-gray-500'
+  }
+  if (file.isDirectory) {
+    return 'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)]'
+  }
+  return 'bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]'
+}
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -298,3 +315,28 @@ onMounted(() => {
   loadPath('/')
 })
 </script>
+
+<style scoped>
+.file-row-parent {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-row-parent:hover {
+  background-color: rgba(var(--theme-primary), 0.05);
+}
+
+.file-row-accessible {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-row-accessible:hover {
+  background-color: rgba(var(--theme-primary), 0.05);
+}
+
+.file-row-inaccessible {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+</style>
