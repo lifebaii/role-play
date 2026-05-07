@@ -515,7 +515,7 @@ import type { Character } from '@/types'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import { compileRegexScripts } from '@/utils/regexUtils'
 import { hasLocalUserName } from '@/utils/anonymousUser'
-import { userApi } from '@/api'
+import { userApi, v1Api } from '@/api'
 
 import ChatSidebar from './components/ChatSidebar.vue'
 import ChatMessages from './components/ChatMessages.vue'
@@ -939,11 +939,37 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     if (chatStore.useCustomModel && chatStore.customModelConfig) {
       response = await llmChat(
         chatStore.customModelConfig,
-        context,
+        context as any,
         { temperature: 1.0 }
       )
     } else {
-      response = ''
+      // 使用内置模型调用 API（共用相同的上下文）
+      if (userStore.isAnonymous) {
+        showToast('请先登录以使用内置模型服务', 'error')
+        return
+      }
+      
+      let modelToUse = chatStore.selectedModel
+      if (!modelToUse) {
+        modelToUse = chatStore.globalDefaultModel
+      }
+      
+      if (!modelToUse) {
+        showToast('请先选择一个模型', 'error')
+        return
+      }
+      
+      // 使用相同的上下文调用内置模型 API
+      response = await v1Api.chatCompletion({
+        messages: context.map(m => ({
+          role: m.role,
+          content: m.content,
+          name: m.name
+        })),
+        temperature: 1.0,
+        model: modelToUse,
+        mode: 'suggestions'
+      })
     }
     
     let content = response
