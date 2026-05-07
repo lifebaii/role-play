@@ -329,8 +329,8 @@ async function saveCharacterData(id: string, data: any): Promise<void> {
   if (existingBlob && isImageBlob(existingBlob)) {
     const imageBuffer = await existingBlob.arrayBuffer()
     const exportData = {
-      spec: 'chara_card_v2',
-      spec_version: '2.0',
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
       data: {
         ...saveData,
         avatar: undefined
@@ -341,8 +341,13 @@ async function saveCharacterData(id: string, data: any): Promise<void> {
     const newFile = new File([newImageBlob], `${characterName}.png`, { type: 'image/png' })
     await characterSet(id, newFile)
   } else {
+    const exportData = {
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: saveData
+    }
     const characterName = saveData.name || 'character'
-    const jsonFile = new File([JSON.stringify(saveData)], `${characterName}.json`, { type: 'application/json' })
+    const jsonFile = new File([JSON.stringify(exportData)], `${characterName}.json`, { type: 'application/json' })
     await characterSet(id, jsonFile)
   }
 }
@@ -362,8 +367,14 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
   const hasDataField = character.data !== undefined
   const characterData = hasDataField ? character.data : character
 
+  const exportData = {
+    spec: 'chara_card_v3',
+    spec_version: '3.0',
+    data: characterData
+  }
+
   const characterName = characterData.name || 'character'
-  const jsonFile = new File([JSON.stringify(characterData)], `${characterName}.json`, { type: 'application/json' })
+  const jsonFile = new File([JSON.stringify(exportData)], `${characterName}.json`, { type: 'application/json' })
   await characterSet(newId, jsonFile)
 
   const newFriend: LocalFriend = {
@@ -395,8 +406,14 @@ export async function addOnlineFriend(character: any, originalId: string): Promi
   const characterData = hasDataField ? character.data : character
   const shared = character.role_play?.shared || false
 
+  const exportData = {
+    spec: 'chara_card_v3',
+    spec_version: '3.0',
+    data: characterData
+  }
+
   const characterName = characterData.name || 'character'
-  const jsonFile = new File([JSON.stringify(characterData)], `${characterName}.json`, { type: 'application/json' })
+  const jsonFile = new File([JSON.stringify(exportData)], `${characterName}.json`, { type: 'application/json' })
   await characterSet(originalId, jsonFile)
 
   const newFriend: LocalFriend = {
@@ -559,8 +576,14 @@ export async function createLocalFriend(characterData: any, _shared: boolean = f
 
   const saveData = { ...characterData }
 
+  const exportData = {
+    spec: 'chara_card_v3',
+    spec_version: '3.0',
+    data: saveData
+  }
+
   const characterName = saveData.name || 'character'
-  const jsonFile = new File([JSON.stringify(saveData)], `${characterName}.json`, { type: 'application/json' })
+  const jsonFile = new File([JSON.stringify(exportData)], `${characterName}.json`, { type: 'application/json' })
   await characterSet(newId, jsonFile)
 
   const newFriend: LocalFriend = {
@@ -1196,9 +1219,9 @@ export async function saveCharacterImage(
 ): Promise<boolean> {
   try {
     console.log(`[LocalFriend] Saving character image for: ${friendId}`)
-    
+
     await debugPrintFile(imageFile, '保存角色图片')
-    
+
     let pngBlob: Blob
     if (imageFile.type === 'image/png') {
       pngBlob = imageFile
@@ -1206,25 +1229,25 @@ export async function saveCharacterImage(
       console.log(`[LocalFriend] Converting ${imageFile.type} to PNG`)
       pngBlob = await convertImageToPng(imageFile)
     }
-    
+
     const imageBuffer = await pngBlob.arrayBuffer()
-    
+
     const exportData = {
-      spec: 'chara_card_v2',
-      spec_version: '2.0',
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
       data: {
         ...characterData,
         avatar: undefined
       }
     }
-    
+
     const newImageBlob = await writePngChunks(imageBuffer, exportData)
-    
+
     const characterName = characterData.name || 'character'
     const newFile = new File([newImageBlob], `${characterName}.png`, { type: 'image/png' })
-    
+
     await characterSet(friendId, newFile)
-    
+
     if (friendsCache) {
       const index = friendsCache.findIndex(f => getFriendId(f) === friendId)
       if (index >= 0) {
@@ -1233,7 +1256,7 @@ export async function saveCharacterImage(
     } else {
       friendsCache = null
     }
-    
+
     console.log(`[LocalFriend] Character image saved successfully`)
     return true
   } catch (error) {

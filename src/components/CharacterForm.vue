@@ -776,7 +776,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
         downloadBlob(blob, fileName)
       } else {
         if (!form.value.avatar) {
-          await showErrorAlert('无法生成图片：缺少头像数据')
+          await showErrorAlert('无法生成图片：缺少角色图片')
           return
         }
         const pngBlob = await exportCharacterAsPng({ data: form.value, role_play: { id: '' } })
@@ -795,12 +795,21 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
 
     if (sourceType === 'image' && format === 'image') {
       const result = await exportCharacterFile(charId)
+      const blob = result?.blob
       if (!result) {
         await showErrorAlert('导出角色失败，未找到角色数据')
         return
       }
+      if (!blob) {
+        await showErrorAlert('导出角色失败，未找到角色数据')
+        return
+      }
+      const file = new File([blob], 'character.png', { type: blob.type || 'image/png' })
+      const { data } = await parseCharacterFromPng(file)
+      const name = data.data?.name || data.name || 'character'
+      const fileName = `${name}.png`
       await debugPrintBlob(result.blob, result.fileName, '导出图片')
-      downloadBlob(result.blob, result.fileName)
+      downloadBlob(result.blob, fileName)
     } else if (sourceType === 'image' && format === 'json') {
       const blob = await getCharacterBlob(charId)
       if (!blob) {
@@ -843,7 +852,7 @@ async function handleExportFormatSelect(format: 'image' | 'json') {
       const normalizedData = charData.data || charData
       
       if (!normalizedData.avatar) {
-        await showErrorAlert('无法生成图片：缺少头像数据')
+        await showErrorAlert('无法生成图片：缺少角色图片')
         return
       }
       
