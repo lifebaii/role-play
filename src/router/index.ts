@@ -76,6 +76,11 @@ const routes = [
         path: 'character-viewer',
         name: 'CharacterViewer',
         component: () => import('@/views/admin/CharacterViewer.vue')
+      },
+      {
+        path: 'filesystem',
+        name: 'FileSystem',
+        component: () => import('@/views/admin/FileSystem.vue')
       }
     ]
   },
