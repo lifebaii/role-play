@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Model, Character, AdminSettings } from '@/types'
+import type { Model, Character, AdminSettings, User } from '@/types'
 import { adminApi, charactersApi, modelsApi } from '@/api'
 import { eventBus } from '@/utils/eventBus'
 
@@ -37,6 +37,7 @@ export const useAdminStore = defineStore('admin', () => {
   const charactersPage = ref(1)
   const charactersPageSize = ref(10)
   const charactersTotalPages = ref(1)
+  const users = ref<User[]>([])
   const settings = ref<AdminSettings>({
     registrationEnabled: true,
     defaultQuota: 100,
@@ -344,6 +345,40 @@ export const useAdminStore = defineStore('admin', () => {
     return updateSettings(newSettings)
   }
 
+  async function loadUsers(): Promise<void> {
+    try {
+      const response = await adminApi.getUsers()
+      users.value = response.users || []
+    } catch (error) {
+      console.error('Failed to load users:', error)
+      users.value = []
+    }
+  }
+
+  async function deleteUser(userId: string): Promise<void> {
+    try {
+      const response = await adminApi.deleteUser(userId)
+      users.value = response.users || []
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      throw error
+    }
+  }
+
+  async function updateUserQuota(userId: string, quota: number): Promise<void> {
+    try {
+      const response = await adminApi.updateUserQuota(userId, quota)
+      // 更新本地用户列表中的用户数据
+      const index = users.value.findIndex(u => u.id === userId)
+      if (index !== -1 && response.user) {
+        users.value[index] = response.user
+      }
+    } catch (error) {
+      console.error('Failed to update user quota:', error)
+      throw error
+    }
+  }
+
   function logout(): void {
     isLoggedIn.value = false
     hasVerified.value = false
@@ -383,6 +418,7 @@ export const useAdminStore = defineStore('admin', () => {
     charactersPage,
     charactersPageSize,
     charactersTotalPages,
+    users,
     settings,
     saveButtonVisible,
     saveButtonLoading,
@@ -410,6 +446,9 @@ export const useAdminStore = defineStore('admin', () => {
     updateSettings,
     loadSettings,
     saveSettings,
+    loadUsers,
+    deleteUser,
+    updateUserQuota,
     logout,
     showSaveButton,
     hideSaveButton,

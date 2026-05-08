@@ -129,6 +129,7 @@ function handleToggleColorMode() {
 const menuItems = [
   { path: '/admin', name: '仪表盘', icon: '📊' },
   { path: '/admin/characters', name: '角色管理', icon: '👤' },
+  { path: '/admin/users', name: '用户管理', icon: '👥' },
   { path: '/admin/character-viewer', name: '数据查看器', icon: '🔍' },
   { path: '/admin/filesystem', name: '文件系统', icon: '📁' },
   { path: '/admin/presets', name: '预设管理', icon: '📝' },

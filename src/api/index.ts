@@ -646,6 +646,13 @@ export const adminApi = {
   updateSettings: (data: Partial<AdminSettings>) =>
     adminApiClient.put<AdminSettings>('/admin/settings', data),
   
+  getUsers: () => adminApiClient.get<{ users: User[] }>('/admin/users'),
+  
+  deleteUser: (userId: string) => adminApiClient.delete<{ users: User[] }>(`/admin/users/${userId}`),
+  
+  updateUserQuota: (userId: string, quota: number) =>
+    adminApiClient.put<{ user: User }>(`/admin/users/${userId}/quota`, { quota }),
+  
   getGitSync: () => adminApiClient.get<{
     enabled: boolean
     syncInterval: number

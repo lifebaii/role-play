@@ -43,6 +43,11 @@ const routes = [
         component: () => import('@/views/admin/CharacterForm.vue')
       },
       {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/views/admin/Users.vue')
+      },
+      {
         path: 'presets',
         name: 'Presets',
         component: () => import('@/views/admin/Presets.vue')
