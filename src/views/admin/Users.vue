@@ -163,15 +163,15 @@
                 <p class="text-xs text-theme-text-secondary mb-2">同步数据</p>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div class="text-center">
-                    <p class="text-lg font-semibold text-theme-text-primary">{{ user.chatSyncMeta.syncCount.total }}</p>
+                    <p class="text-lg font-semibold text-theme-text-primary">{{ user.chatSyncMeta.syncCount?.total || 0 }}</p>
                     <p class="text-xs text-theme-text-secondary">总同步</p>
                   </div>
                   <div class="text-center">
-                    <p class="text-lg font-semibold text-theme-text-primary">{{ user.chatSyncMeta.syncCount.daily }}</p>
+                    <p class="text-lg font-semibold text-theme-text-primary">{{ user.chatSyncMeta.syncCount?.daily || 0 }}</p>
                     <p class="text-xs text-theme-text-secondary">今日同步</p>
                   </div>
                   <div class="text-center">
-                    <p class="text-lg font-semibold text-theme-text-primary">{{ user.chatSyncMeta.uploadedSyncs.length }}</p>
+                    <p class="text-lg font-semibold text-theme-text-primary">{{ (user.chatSyncMeta.uploadedSyncs || []).length }}</p>
                     <p class="text-xs text-theme-text-secondary">上传分享</p>
                   </div>
                   <div class="text-center">
@@ -306,9 +306,21 @@ const quotaFilter = ref('all')
 const currentPage = ref(1)
 const pageSize = ref(10)
 
+// 规范化用户数据，确保所有必需字段都存在
+const normalizeUser = (user: any): User => {
+  return {
+    ...user,
+    chatSyncMeta: user.chatSyncMeta || {
+      syncCount: { total: 0, daily: 0 },
+      uploadedSyncs: [],
+      totalUploadedDownloads: 0
+    }
+  }
+}
+
 // 筛选和排序后的用户列表
 const filteredUsers = computed(() => {
-  let users = [...adminStore.users]
+  let users = [...adminStore.users].map(normalizeUser)
 
   // 搜索筛选
   if (searchQuery.value.trim()) {
