@@ -135,6 +135,15 @@
             {{ clipboardAction === 'copy' ? '已复制' : '已剪切' }}: {{ clipboardItem.name }}
           </span>
           <button 
+            @click="pasteItem"
+            class="px-3 py-1.5 bg-[var(--theme-primary)] text-white rounded hover:bg-[var(--theme-primary-dark)] transition-all text-sm flex items-center gap-1"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            粘贴到当前目录
+          </button>
+          <button 
             @click="clearClipboard"
             class="text-sm px-2 py-1 hover:bg-[var(--theme-primary)]/10 rounded transition-all"
           >
@@ -282,18 +291,7 @@
         </div>
       </div>
 
-      <!-- 粘贴按钮 -->
-      <div v-if="clipboardItem" class="mt-4 flex justify-end">
-        <button 
-          @click="pasteItem"
-          class="px-4 py-2 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-primary-dark)] transition-all flex items-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          粘贴到当前目录
-        </button>
-      </div>
+
     </template>
 
     <!-- 文件编辑视图 -->
