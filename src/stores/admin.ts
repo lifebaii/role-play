@@ -38,6 +38,7 @@ export const useAdminStore = defineStore('admin', () => {
   const charactersPage = ref(1)
   const charactersPageSize = ref(10)
   const charactersTotalPages = ref(1)
+  const charactersSharedFilter = ref<boolean | undefined>(undefined)
   const users = ref<User[]>([])
   const settings = ref<AdminSettings>({
     registrationEnabled: true,
@@ -196,7 +197,7 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function loadCharacters(params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string }): Promise<void> {
+  async function loadCharacters(params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string; shared?: boolean | string }): Promise<void> {
     try {
       const result = await charactersApi.listAdmin(params)
       characters.value = result.characters || []
@@ -489,6 +490,7 @@ export const useAdminStore = defineStore('admin', () => {
     charactersPage,
     charactersPageSize,
     charactersTotalPages,
+    charactersSharedFilter,
     users,
     settings,
     saveButtonVisible,

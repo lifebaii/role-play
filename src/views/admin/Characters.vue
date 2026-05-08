@@ -12,6 +12,7 @@
       :page="adminStore.charactersPage"
       :page-size="adminStore.charactersPageSize"
       :total-pages="adminStore.charactersTotalPages"
+      :shared-filter="adminStore.charactersSharedFilter"
       @select="handleSelect"
       @edit="handleEdit"
       @delete="handleDelete"
@@ -25,6 +26,7 @@
       @sort-change="handleSortChange"
       @batch-delete="handleBatchDelete"
       @batch-share="handleBatchShare"
+      @shared-filter-change="handleSharedFilterChange"
     >
       <template #header>
         <div class="flex gap-2 mb-4">
@@ -637,12 +639,18 @@ async function loadCharacters(page = 1) {
         page,
         pageSize: adminStore.charactersPageSize,
         search: searchQuery.value || undefined,
-        sortBy: sortBy.value
+        sortBy: sortBy.value,
+        shared: adminStore.charactersSharedFilter
       })
     }
   } finally {
     isLoading.value = false
   }
+}
+
+function handleSharedFilterChange(shared: boolean | undefined) {
+  adminStore.charactersSharedFilter = shared
+  loadCharacters(1)
 }
 
 function handleSourceChange(source: 'admin' | 'user' | 'orphan') {
@@ -651,6 +659,7 @@ function handleSourceChange(source: 'admin' | 'user' | 'orphan') {
   localSearchQuery.value = ''
   batchMode.value = false
   selectedIds.value = []
+  adminStore.charactersSharedFilter = undefined
   loadCharacters(1)
   
   // 如果切换到流浪角色页面且用户列表还没从服务器加载（只有默认管理员），则加载用户数据

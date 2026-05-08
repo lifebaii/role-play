@@ -454,13 +454,13 @@ export const charactersApi = {
     const response = await api.get<CharactersResponse>('/characters')
     return response.characters
   },
-  listAdmin: async (params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string }) => {
-    const response = await adminApiClient.get<CharactersResponse>('/characters', params)
-    return response
+  listAdmin: async (params?: { source?: 'admin' | 'user'; page?: number; pageSize?: number; search?: string; sortBy?: string; shared?: boolean | string }) => {
+    const response = await adminApiClient.get<CharactersResponse>('/characters', params);
+    return response;
   },
   search: (params?: { search?: string; page?: number; pageSize?: number }) => 
     api.get<CharactersResponse>('/characters', params),
-  searchAdmin: (params?: { search?: string; page?: number; pageSize?: number; source?: 'admin' | 'user'; sortBy?: string }) => 
+  searchAdmin: (params?: { search?: string; page?: number; pageSize?: number; source?: 'admin' | 'user'; sortBy?: string; shared?: boolean | string }) => 
     adminApiClient.get<CharactersResponse>('/characters', params),
   getAll: (params?: { search?: string; page?: number; pageSize?: number; userId?: string; friendIds?: string }) => 
     api.get<CharactersResponse>('/characters/all', params),

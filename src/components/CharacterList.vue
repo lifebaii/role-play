@@ -82,6 +82,15 @@
                 <option value="commentCount">评论数</option>
                 <option value="createdAt">创建日期</option>
               </select>
+              <select
+                :value="sharedFilter === undefined ? '' : (sharedFilter ? 'true' : 'false')"
+                class="px-3 py-1.5 chat-input-field border border-theme-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+                @change="handleSharedFilterChange"
+              >
+                <option value="">全部状态</option>
+                <option value="true">已分享</option>
+                <option value="false">未分享</option>
+              </select>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -516,6 +525,7 @@ const props = defineProps<{
   page?: number
   pageSize?: number
   totalPages?: number
+  sharedFilter?: boolean | undefined
 }>()
 
 const emit = defineEmits<{
@@ -532,6 +542,7 @@ const emit = defineEmits<{
   (e: 'sortChange', sortBy: string): void
   (e: 'batchDelete', ids: string[]): void
   (e: 'batchShare', ids: string[], shared: boolean): void
+  (e: 'sharedFilterChange', shared: boolean | undefined): void
 }>()
 
 const dragIndex = ref<number | null>(null)
@@ -583,6 +594,20 @@ function handleSearchSubmit() {
 
 function handleSortChange() {
   emit('sortChange', localSortBy.value)
+}
+
+function handleSharedFilterChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const value = target.value
+  let shared: boolean | undefined
+  if (value === 'true') {
+    shared = true
+  } else if (value === 'false') {
+    shared = false
+  } else {
+    shared = undefined
+  }
+  emit('sharedFilterChange', shared)
 }
 
 function handlePageSizeChange(event: Event) {
