@@ -477,6 +477,7 @@ export const charactersApi = {
     adminApiClient.put<{ success: boolean; shared: boolean; character?: Character }>(`/characters/${id}/shared`, { shared }),
   delete: (id: string) => adminApiClient.delete<DeleteResult>(`/characters/${id}`),
   batchDelete: (ids: string[]) => adminApiClient.delete<{ success: boolean; deleted: number; failed: Array<{ id: string; error: string }>; warnings: string[] }>('/characters/batch', { ids }),
+  batchUpdate: (ids: string[]) => adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number }>('/characters/batch/update', { ids }),
   batchUpdateShared: (ids: string[], shared: boolean) => adminApiClient.put<{ success: boolean; updated: number; failed: Array<{ id: string; error: string }> }>('/characters/batch/shared', { ids, shared }),
   import: (data: any) => adminApiClient.post('/characters/import', data),
   importFiles: async (files: File[], id?: string, share?: boolean): Promise<ImportResult> => {
@@ -1088,6 +1089,9 @@ export const orphanedCharactersApi = {
   
   batchAssign: (ids: string[], userId: string) =>
     adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number; userId: string }>('/admin/orphaned-characters/batch-assign', { ids, userId }),
+  
+  batchUpdate: (ids: string[]) =>
+    adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number }>('/admin/orphaned-characters/batch-update', { ids }),
   
   batchDelete: (ids: string[]) =>
     adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number }>('/admin/orphaned-characters/batch-delete', { ids })

@@ -26,6 +26,7 @@
       @sort-change="handleSortChange"
       @batch-delete="handleBatchDelete"
       @batch-share="handleBatchShare"
+      @batch-update="handleBatchUpdate"
       @shared-filter-change="handleSharedFilterChange"
     >
       <template #header>
@@ -430,6 +431,15 @@
               </span>
             </div>
             <div class="flex items-center gap-3">
+              <button
+                @click="handleBatchUpdateOrphans"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--theme-accent)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                批量更新
+              </button>
               <button
                 @click="showAssignDialog = true"
                 class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--theme-primary)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
@@ -894,6 +904,22 @@ async function handleBatchShare(ids: string[], shared: boolean) {
   }
 }
 
+async function handleBatchUpdate(ids: string[]) {
+  const confirmed = await showDangerConfirm(`确定要更新选中的 ${ids.length} 个角色的元数据吗？此操作将从 Hugging Face 下载原文件并更新本地元数据。`)
+  if (confirmed) {
+    isLoading.value = true
+    try {
+      const result = await charactersApi.batchUpdate(ids)
+      await showAlert(`成功更新 ${result.successCount || 0} 个角色的元数据`)
+      await loadCharacters(adminStore.charactersPage)
+    } catch (error: any) {
+      await showErrorAlert('批量更新失败: ' + (error.message || '未知错误'))
+    } finally {
+      isLoading.value = false
+    }
+  }
+}
+
 const displayedOrphanPages = computed(() => {
   const pages: number[] = []
   const current = adminStore.orphanedCharactersPage
@@ -1029,6 +1055,24 @@ async function handleBatchDeleteOrphans() {
       await loadCharacters(adminStore.orphanedCharactersPage)
     } catch (error: any) {
       await showErrorAlert('批量删除失败: ' + (error.message || '未知错误'))
+    } finally {
+      isLoading.value = false
+    }
+  }
+}
+
+async function handleBatchUpdateOrphans() {
+  const confirmed = await showDangerConfirm(`确定要更新选中的 ${selectedIds.value.length} 个角色的元数据吗？此操作将从 Hugging Face 下载原文件并更新本地元数据。`)
+  if (confirmed) {
+    isLoading.value = true
+    try {
+      const result = await adminStore.batchUpdateOrphanedCharacters(selectedIds.value)
+      await showAlert(`成功更新 ${result.successCount || 0} 个角色的元数据`)
+      batchMode.value = false
+      selectedIds.value = []
+      await loadCharacters(adminStore.orphanedCharactersPage)
+    } catch (error: any) {
+      await showErrorAlert('批量更新失败: ' + (error.message || '未知错误'))
     } finally {
       isLoading.value = false
     }

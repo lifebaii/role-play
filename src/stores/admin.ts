@@ -471,6 +471,15 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function batchUpdateOrphanedCharacters(ids: string[]): Promise<any> {
+    try {
+      return await orphanedCharactersApi.batchUpdate(ids)
+    } catch (error) {
+      console.error('Failed to batch update orphaned characters:', error)
+      throw error
+    }
+  }
+
   async function batchDeleteOrphanedCharacters(ids: string[]): Promise<any> {
     try {
       return await orphanedCharactersApi.batchDelete(ids)
@@ -538,6 +547,7 @@ export const useAdminStore = defineStore('admin', () => {
     deleteOrphanedCharacter,
     regenerateOrphanedCharacterThumbnail,
     batchAssignOrphanedCharacters,
+    batchUpdateOrphanedCharacters,
     batchDeleteOrphanedCharacters,
   }
 })

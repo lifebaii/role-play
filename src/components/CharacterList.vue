@@ -411,6 +411,15 @@
           </div>
           <div class="flex items-center gap-3">
             <button
+              @click="handleBatchUpdate"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--theme-accent)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              批量更新
+            </button>
+            <button
               @click="handleBatchShare(true)"
               class="inline-flex items-center gap-2 px-4 py-2 bg-[var(--theme-success)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
             >
@@ -542,6 +551,7 @@ const emit = defineEmits<{
   (e: 'sortChange', sortBy: string): void
   (e: 'batchDelete', ids: string[]): void
   (e: 'batchShare', ids: string[], shared: boolean): void
+  (e: 'batchUpdate', ids: string[]): void
   (e: 'sharedFilterChange', shared: boolean | undefined): void
 }>()
 
@@ -702,6 +712,10 @@ function handleBatchShare(shared: boolean) {
 
 function handleBatchDelete() {
   emit('batchDelete', [...selectedIds.value])
+}
+
+function handleBatchUpdate() {
+  emit('batchUpdate', [...selectedIds.value])
 }
 
 watch(() => props.characters, () => {
