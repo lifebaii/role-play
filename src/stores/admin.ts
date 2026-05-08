@@ -148,6 +148,16 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function testAllModels(params: { modelId: string; modelIds: string[] }) {
+    try {
+      const result = await modelsApi.testAll(params)
+      return result.results
+    } catch (error) {
+      console.error('Failed to test all models:', error)
+      throw error
+    }
+  }
+
   async function fetchModelList(params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }): Promise<{ id: string; name: string }[]> {
     try {
       const result = await modelsApi.listModels(params)
@@ -374,6 +384,7 @@ export const useAdminStore = defineStore('admin', () => {
     saveModels,
     loadUniqueModels,
     testModel,
+    testAllModels,
     fetchModelList,
     deleteModel,
     loadCharacters,

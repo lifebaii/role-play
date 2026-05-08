@@ -125,7 +125,7 @@
                   class="w-full px-3 py-2 chat-input-field border border-theme-border rounded-lg text-theme-text-primary text-sm placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
                   @input="filterModels(index)"
                 />
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                   <button
                     @click="selectAllModels(index)"
                     class="px-3 py-1 text-xs bg-[var(--theme-primary)]/10 text-theme-text-accent rounded-lg hover:bg-[var(--theme-primary)]/20 transition-all font-medium"
@@ -138,21 +138,41 @@
                   >
                     反选
                   </button>
+                  <button
+                    @click="testAllModels(index)"
+                    class="px-3 py-1 text-xs bg-gradient-to-r from-[var(--theme-success)] to-[var(--theme-success-light)] text-white rounded-lg hover:opacity-90 transition-all font-medium disabled:opacity-50"
+                    :disabled="testingAllIndex === index || !model.selected_models || model.selected_models.length === 0"
+                  >
+                    {{ testingAllIndex === index ? `测试中... ${testedCount[index] || 0}/${model.selected_models?.length || 0}` : '🧪 测试所有模型' }}
+                  </button>
                 </div>
               </div>
               <div class="max-h-48 overflow-y-auto border border-theme-border rounded-xl">
                 <div
                   v-for="m in getFilteredModels(index)"
                   :key="m.id"
-                  class="flex items-center gap-2 px-3 py-2 hover:bg-[var(--theme-card-hover)] border-b last:border-b-0 border-theme-border transition-colors"
+                  class="flex items-center justify-between gap-2 px-3 py-2 hover:bg-[var(--theme-card-hover)] border-b last:border-b-0 border-theme-border transition-colors"
                 >
-                  <input
-                    type="checkbox"
-                    :checked="isModelSelected(index, m.id)"
-                    @change="toggleModel(index, m.id)"
-                    class="rounded border-theme-border w-4 h-4 text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
-                  />
-                  <span class="text-sm text-theme-text-primary">{{ m.name }}</span>
+                  <div class="flex items-center gap-2 flex-1">
+                    <input
+                      type="checkbox"
+                      :checked="isModelSelected(index, m.id)"
+                      @change="toggleModel(index, m.id)"
+                      class="rounded border-theme-border w-4 h-4 text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
+                    />
+                    <span class="text-sm text-theme-text-primary">{{ m.name }}</span>
+                  </div>
+                  <div v-if="testResults[model.id] && testResults[model.id][m.id]" class="text-sm">
+                    <span v-if="testResults[model.id][m.id].success" class="text-green-500">
+                      ✓ {{ testResults[model.id][m.id].duration }}ms
+                    </span>
+                    <span v-else class="text-red-500" :title="testResults[model.id][m.id].error">
+                      ✗ {{ testResults[model.id][m.id].error?.substring(0, 30) }}{{ testResults[model.id][m.id].error?.length > 30 ? '...' : '' }}
+                    </span>
+                  </div>
+                  <div v-else-if="testingAllIndex === index && isModelSelected(index, m.id)" class="text-sm text-theme-text-secondary">
+                    <span class="animate-pulse">...</span>
+                  </div>
                 </div>
                 <div v-if="getFilteredModels(index).length === 0" class="px-3 py-4 text-center text-theme-text-secondary">
                   没有找到匹配的模型
@@ -214,9 +234,12 @@ const isSaving = ref(false)
 const isDeleting = ref<number | null>(null)
 const isCopying = ref<number | null>(null)
 const testingId = ref<string | null>(null)
+const testingAllIndex = ref<number | null>(null)
 const fetchingIndex = ref<number | null>(null)
 const modelSearch = reactive<Record<number, string>>({})
 const showApiKey = reactive<Record<number, boolean>>({})
+const testResults = reactive<Record<string, Record<string, { success: boolean; error?: string; duration: number }>>>({})
+const testedCount = reactive<Record<number, number>>({})
 
 onMounted(async () => {
   await adminStore.loadModels()
@@ -287,6 +310,9 @@ async function deleteModelItem(index: number) {
   try {
     await adminStore.deleteModel(model.id)
     models.value.splice(index, 1)
+    if (testResults[model.id]) {
+      delete testResults[model.id]
+    }
   } catch (e: any) {
     await showErrorAlert('删除失败: ' + e.message)
   } finally {
@@ -332,6 +358,9 @@ async function fetchModels(index: number) {
     }
     if (models.value[index].default_model && !models.value[index].selected_models.includes(models.value[index].default_model)) {
       models.value[index].selected_models.push(models.value[index].default_model)
+    }
+    if (testResults[model.id]) {
+      delete testResults[model.id]
     }
   } catch (e: any) {
     await showErrorAlert('获取模型列表失败: ' + e.message)
@@ -421,6 +450,40 @@ async function testModel(id: string) {
     await showAlert(success ? '连接成功' : '连接失败')
   } finally {
     testingId.value = null
+  }
+}
+
+async function testAllModels(index: number) {
+  const model = models.value[index]
+  if (!model.selected_models || model.selected_models.length === 0) {
+    return
+  }
+
+  testingAllIndex.value = index
+  testedCount[index] = 0
+  testResults[model.id] = {}
+
+  try {
+    const results = await adminStore.testAllModels({
+      modelId: model.id,
+      modelIds: model.selected_models
+    })
+
+    for (const result of results) {
+      testResults[model.id][result.modelId] = {
+        success: result.success,
+        error: result.error,
+        duration: result.duration
+      }
+      testedCount[index]++
+    }
+
+    const successCount = results.filter(r => r.success).length
+    await showAlert(`测试完成: ${successCount}/${results.length} 成功`)
+  } catch (e: any) {
+    await showErrorAlert('测试失败: ' + e.message)
+  } finally {
+    testingAllIndex.value = null
   }
 }
 </script>

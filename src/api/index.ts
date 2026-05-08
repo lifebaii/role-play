@@ -732,6 +732,11 @@ export const modelsApi = {
       api_url: params.apiUrl, 
       provider: params.provider 
     }),
+  testAll: (params: { modelId: string; modelIds: string[] }) => 
+    adminApiClient.post<{ results: Array<{ modelId: string; success: boolean; error?: string; duration: number }> }>('/models/test-all', { 
+      modelId: params.modelId,
+      modelIds: params.modelIds
+    }),
   listModels: (params: { modelId?: string; apiKey?: string; apiUrl?: string; provider?: string }) => 
     adminApiClient.post<{ models: { id: string; name: string }[] }>('/models/list', { 
       model_id: params.modelId, 
