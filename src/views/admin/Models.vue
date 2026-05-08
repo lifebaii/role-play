@@ -125,7 +125,7 @@
                   class="w-full px-3 py-2 chat-input-field border border-theme-border rounded-lg text-theme-text-primary text-sm placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
                   @input="filterModels(index)"
                 />
-                <div class="flex gap-2 flex-wrap">
+                <div class="flex gap-2 flex-wrap items-center">
                   <button
                     @click="selectAllModels(index)"
                     class="px-3 py-1 text-xs bg-[var(--theme-primary)]/10 text-theme-text-accent rounded-lg hover:bg-[var(--theme-primary)]/20 transition-all font-medium"
@@ -138,6 +138,16 @@
                   >
                     反选
                   </button>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-theme-text-secondary">并发数:</span>
+                    <input
+                      v-model.number="testConcurrency[index]"
+                      type="number"
+                      min="1"
+                      max="20"
+                      class="w-16 px-2 py-1 chat-input-field border border-theme-border rounded-lg text-theme-text-primary text-sm"
+                    />
+                  </div>
                   <button
                     @click="testAllModels(index)"
                     class="px-3 py-1 text-xs bg-gradient-to-r from-[var(--theme-success)] to-[var(--theme-success-light)] text-white rounded-lg hover:opacity-90 transition-all font-medium disabled:opacity-50"
@@ -240,6 +250,7 @@ const modelSearch = reactive<Record<number, string>>({})
 const showApiKey = reactive<Record<number, boolean>>({})
 const testResults = reactive<Record<string, Record<string, { success: boolean; error?: string; duration: number }>>>({})
 const testedCount = reactive<Record<number, number>>({})
+const testConcurrency = reactive<Record<number, number>>({})
 
 onMounted(async () => {
   await adminStore.loadModels()
@@ -249,6 +260,7 @@ onMounted(async () => {
   models.value.forEach((_, index) => {
     modelSearch[index] = ''
     showApiKey[index] = false
+    testConcurrency[index] = 5
   })
 
   await loadUniqueModels()
@@ -279,7 +291,8 @@ function addNewModel() {
   models.value.push(newModel)
   const newIndex = models.value.length - 1
   modelSearch[newIndex] = ''
-  showApiKey[newIndex] = true
+  showApiKey[newIndex] = false
+  testConcurrency[newIndex] = 5
 }
 
 function copyModelItem(index: number) {
@@ -296,7 +309,8 @@ function copyModelItem(index: number) {
   models.value.push(copiedModel)
   const newIndex = models.value.length - 1
   modelSearch[newIndex] = ''
-  showApiKey[newIndex] = true
+  showApiKey[newIndex] = false
+  testConcurrency[newIndex] = testConcurrency[index] || 5
 }
 
 async function deleteModelItem(index: number) {
@@ -464,9 +478,11 @@ async function testAllModels(index: number) {
   testResults[model.id] = {}
 
   try {
+    const concurrency = testConcurrency[index] || 5
     const results = await adminStore.testAllModels({
       modelId: model.id,
-      modelIds: model.selected_models
+      modelIds: model.selected_models,
+      concurrency: concurrency
     })
 
     for (const result of results) {

@@ -148,7 +148,7 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
-  async function testAllModels(params: { modelId: string; modelIds: string[] }) {
+  async function testAllModels(params: { modelId: string; modelIds: string[]; concurrency?: number }) {
     try {
       const result = await modelsApi.testAll(params)
       return result.results

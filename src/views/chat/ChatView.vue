@@ -435,7 +435,7 @@
     <div v-if="showAbout" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click="showAbout = false">
       <div class="chat-card rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-theme-border" @click.stop>
         <div class="text-center">
-          <div class="mx-auto mb-3 sm:mb-4">
+          <div class="mx-auto mb-3 sm:mb-4 flex items-center justify-center">
             <img src="/pwa-512x512.png" alt="ROLE PLAY" class="w-20 h-20 sm:w-24 sm:h-24 object-contain" />
           </div>
           <h2 class="text-xl sm:text-2xl font-bold gradient-text mb-1 sm:mb-2">ROLE PLAY</h2>
