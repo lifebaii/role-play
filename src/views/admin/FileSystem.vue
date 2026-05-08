@@ -89,6 +89,16 @@
           </svg>
           刷新
         </button>
+        <button 
+          @click="showConsole = !showConsole"
+          class="px-4 py-2 chat-card text-theme-text-primary rounded-lg hover:bg-[var(--theme-card-hover)] border border-theme-border transition-all flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3"></path>
+            <rect x="3" y="4" width="18" height="16" rx="2" ry="2" stroke-width="2"></rect>
+          </svg>
+          控制台
+        </button>
         
         <!-- 批量操作按钮 -->
         <template v-if="selectedFiles.length > 0">
@@ -288,6 +298,56 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 控制台 -->
+      <div v-if="showConsole" class="mt-4 chat-card rounded-2xl border border-theme-border overflow-hidden">
+        <div class="p-3 border-b border-theme-border bg-[var(--theme-card-hover)]/30 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3"></path>
+              <rect x="3" y="4" width="18" height="16" rx="2" ry="2" stroke-width="2"></rect>
+            </svg>
+            <span class="text-sm font-medium text-theme-text-primary">控制台 - {{ currentPath }}</span>
+          </div>
+          <button 
+            @click="clearConsole"
+            class="text-sm px-3 py-1 chat-card text-theme-text-secondary rounded hover:bg-[var(--theme-card-hover)] border border-theme-border transition-all"
+          >
+            清空
+          </button>
+        </div>
+        <div 
+          id="console-output"
+          class="p-4 h-64 overflow-y-auto bg-[var(--theme-bg-start)] font-mono text-sm text-theme-text-primary whitespace-pre-wrap"
+        >
+          {{ consoleOutput || '(控制台已就绪，输入命令后按 Enter 执行)' }}
+        </div>
+        <div class="p-3 border-t border-theme-border bg-[var(--theme-card-hover)]/30">
+          <div class="flex items-center gap-2">
+            <span class="text-theme-text-primary font-mono">$</span>
+            <input 
+              v-model="consoleCommand"
+              @keydown="handleConsoleKeydown"
+              :disabled="loadingConsole"
+              placeholder="输入命令..."
+              class="flex-1 px-3 py-2 bg-[var(--theme-card-hover)]/50 border border-theme-border rounded-lg text-theme-text-primary font-mono focus:outline-none focus:border-[var(--theme-primary)] disabled:opacity-50"
+            />
+            <button 
+              @click="executeCommand"
+              :disabled="loadingConsole || !consoleCommand.trim()"
+              class="px-4 py-2 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-primary-dark)] transition-all disabled:opacity-50 flex items-center gap-2"
+            >
+              <svg v-if="loadingConsole" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+              {{ loadingConsole ? '执行中...' : '执行' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -773,6 +833,14 @@ const clipboardItem = ref<any>(null)
 const clipboardAction = ref<'copy' | 'move' | null>(null)
 const batchClipboardItems = ref<string[]>([])
 
+// 控制台
+const showConsole = ref(false)
+const consoleCommand = ref('')
+const consoleOutput = ref('')
+const consoleHistory = ref<string[]>([])
+const consoleHistoryIndex = ref(-1)
+const loadingConsole = ref(false)
+
 // 计算属性
 const selectedFilesPreview = computed(() => {
   const files = directoryData.value?.files || []
@@ -1256,6 +1324,92 @@ async function confirmBatchMove() {
   } finally {
     loadingBatch.value = false
   }
+}
+
+// 控制台相关函数
+async function executeCommand() {
+  if (!consoleCommand.value.trim()) return
+  
+  const command = consoleCommand.value.trim()
+  
+  // 添加到历史记录
+  if (consoleHistory.value[consoleHistory.value.length - 1] !== command) {
+    consoleHistory.value.push(command)
+  }
+  consoleHistoryIndex.value = consoleHistory.value.length
+  
+  // 清空输入框
+  consoleCommand.value = ''
+  
+  // 添加命令到输出
+  const timestamp = new Date().toLocaleTimeString('zh-CN')
+  consoleOutput.value += `[${timestamp}] $ ${command}\n`
+  
+  loadingConsole.value = true
+  try {
+    const result: any = await adminApiClient.execCommand(command, currentPath.value)
+    
+    if (result.stdout) {
+      consoleOutput.value += result.stdout + '\n'
+    }
+    if (result.stderr) {
+      consoleOutput.value += `stderr: ${result.stderr}\n`
+    }
+    if (!result.stdout && !result.stderr) {
+      consoleOutput.value += '(命令执行完成，无输出)\n'
+    }
+  } catch (err: any) {
+    consoleOutput.value += `错误: ${err.message}\n`
+    if (err.stdout) {
+      consoleOutput.value += err.stdout + '\n'
+    }
+    if (err.stderr) {
+      consoleOutput.value += err.stderr + '\n'
+    }
+  } finally {
+    loadingConsole.value = false
+    // 滚动到底部
+    setTimeout(() => {
+      const outputEl = document.getElementById('console-output')
+      if (outputEl) {
+        outputEl.scrollTop = outputEl.scrollHeight
+      }
+    }, 0)
+  }
+}
+
+function handleConsoleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    executeCommand()
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (consoleHistory.value.length > 0) {
+      if (consoleHistoryIndex.value > 0) {
+        consoleHistoryIndex.value--
+      }
+      if (consoleHistoryIndex.value >= 0 && consoleHistoryIndex.value < consoleHistory.value.length) {
+        consoleCommand.value = consoleHistory.value[consoleHistoryIndex.value]
+      }
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (consoleHistory.value.length > 0) {
+      if (consoleHistoryIndex.value < consoleHistory.value.length - 1) {
+        consoleHistoryIndex.value++
+        consoleCommand.value = consoleHistory.value[consoleHistoryIndex.value]
+      } else {
+        consoleHistoryIndex.value = consoleHistory.value.length
+        consoleCommand.value = ''
+      }
+    }
+  }
+}
+
+function clearConsole() {
+  consoleOutput.value = ''
+  consoleHistory.value = []
+  consoleHistoryIndex.value = -1
 }
 </script>
 

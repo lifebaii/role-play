@@ -242,6 +242,12 @@ export const adminApiClient = {
     adminOnlyRequest<T>('/admin/filesystem/batch-move', { 
       method: 'POST', 
       body: { paths, destinationPath } 
+    }),
+
+  execCommand: <T>(command: string, path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/exec', { 
+      method: 'POST', 
+      body: { command, path } 
     })
 }
 
