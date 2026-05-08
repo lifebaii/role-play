@@ -105,6 +105,21 @@ router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const adminStore = useAdminStore()
   
+  // 在任何路径下都检查 URL 中的 token 参数
+  const urlParams = new URLSearchParams(window.location.search)
+  const tokenFromUrl = urlParams.get('token')
+  
+  if (tokenFromUrl) {
+    try {
+      await userStore.loginWithToken(tokenFromUrl)
+      // 清除 URL 中的 token 参数
+      const newUrl = window.location.pathname + window.location.hash
+      window.history.replaceState({}, document.title, newUrl)
+    } catch (error) {
+      console.error('Failed to login with token:', error)
+    }
+  }
+  
   // 检查是否是管理员路由（包括登录页面）
   if (to.path.startsWith('/admin')) {
     // 如果不显示认证入口，则重定向到聊天页面
@@ -150,18 +165,6 @@ router.beforeEach(async (to, from, next) => {
   }
   
   if (to.path === '/chat') {
-    const urlParams = new URLSearchParams(window.location.search)
-    const tokenFromUrl = urlParams.get('token')
-    
-    if (tokenFromUrl) {
-      try {
-        await userStore.loginWithToken(tokenFromUrl)
-        window.history.replaceState({}, document.title, window.location.pathname)
-      } catch (error) {
-        console.error('Failed to login with token:', error)
-      }
-    }
-    
     if (userStore.isLoggedIn()) {
       try {
         await userStore.verify()
