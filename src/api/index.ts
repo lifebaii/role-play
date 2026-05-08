@@ -841,13 +841,23 @@ export interface User {
   chatSyncMeta?: ChatSyncMeta
 }
 
+export interface FriendsResponse {
+  friends: FriendCharacter[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export const userApi = {
   verify: () => api.get<{ valid: boolean; user: User }>('/auth/verify'),
   signin: () => api.post<{ success: boolean; bonusQuota: number; user: User }>('/auth/signin', {}),
   logout: () => api.post<{ success: boolean }>('/auth/logout', {}),
   getCharacterLimit: () => api.get<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number }>('/auth/character-limit'),
   updateUserName: (userName: string) => api.put<{ success: boolean; user: User }>('/auth/username', { userName }),
-  removeFriend: (characterId: string) => api.delete<{ success: boolean; user: User }>(`/auth/friend/${characterId}`)
+  removeFriend: (characterId: string) => api.delete<{ success: boolean; user: User }>(`/auth/friend/${characterId}`),
+  getFriends: (params?: { page?: number; pageSize?: number; search?: string }) => 
+    api.get<FriendsResponse>('/auth/friends', params)
 }
 
 export interface V1ChatCompletionOptions {

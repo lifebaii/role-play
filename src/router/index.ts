@@ -18,6 +18,11 @@ const routes = [
     component: () => import('@/views/chat/ChatView.vue')
   },
   {
+    path: '/friends',
+    name: 'Friends',
+    component: () => import('@/views/friends/FriendsView.vue')
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/admin/AdminLayout.vue'),
