@@ -1256,11 +1256,19 @@ watch(() => chatStore.currentCharacter?.id, () => {
 onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const tokenFromUrl = urlParams.get('token')
+  const isNewFromUrl = urlParams.get('is_new') === 'true'
 
   if (tokenFromUrl) {
     try {
-      await userStore.loginWithToken(tokenFromUrl)
+      await userStore.loginWithToken(tokenFromUrl, isNewFromUrl)
       window.history.replaceState({}, document.title, window.location.pathname)
+      
+      if (isNewFromUrl) {
+        // 延迟一点时间显示欢迎消息，确保用户数据已加载
+        setTimeout(() => {
+          showToast('欢迎加入！您已成功登录，开始您的角色扮演之旅吧！', 'success')
+        }, 500)
+      }
     } catch (error) {
       console.error('Failed to login with token:', error)
     }

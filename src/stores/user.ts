@@ -123,12 +123,18 @@ export const useUserStore = defineStore('user', () => {
     signinMessage.value = '';
   };
 
-  const loginWithToken = async (newToken: string) => {
+  const loginWithToken = async (newToken: string, isNewUser: boolean = false) => {
     try {
       isAuthenticating.value = true;
       setToken(newToken);
       const result = await userApi.verify();
       setUser(result.user);
+      
+      if (isNewUser) {
+        // 新用户特殊处理，通过 eventBus 发送事件
+        eventBus.emit('new-user-welcome');
+      }
+      
       return result;
     } catch (error) {
       setToken(null);
