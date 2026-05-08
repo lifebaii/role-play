@@ -286,10 +286,11 @@ export function useCharacter() {
             }
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log('[Character] Failed to get meta, character may not exist on server')
         existsOnServer.value = false
         isOwnerOfCharacter.value = false
+        throw new Error(e.message || '获取角色信息失败')
       } finally {
         isLoadingMeta.value = false
       }
@@ -430,13 +431,15 @@ export function useCharacter() {
                   tags: serverData.tags || []
                 }
               }
-            } catch (e) {
+            } catch (e: any) {
               console.log('[Character] Failed to get character detail')
+              throw new Error(e.message || '获取角色详情失败')
             }
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log('[Character] Failed to get meta, character may not exist on server')
+        throw new Error(e.message || '获取角色信息失败')
       } finally {
         isLoadingMeta.value = false
         isLoadingViewData.value = false
@@ -617,7 +620,7 @@ export function useCharacter() {
       const response = await fetch(url.toString(), { cache: 'no-store' })
       
       if (!response.ok) {
-        throw new Error(`下载失败: ${response.status}`)
+        throw new Error(`获取角色数据失败: ${response.status}`)
       }
       
       const contentType = response.headers.get('Content-Type') || ''
@@ -684,9 +687,9 @@ export function useCharacter() {
       }
       
       return null
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to load from source:', e)
-      return null
+      throw new Error(e.message || '下载角色数据失败')
     }
   }
   

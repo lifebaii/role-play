@@ -125,7 +125,7 @@ const toggleFriend = async (character: Character) => {
   const sourceUrl = character.sourceUrl
   actionCharacterId.value = characterId
   try {
-    await userStore.addOnlineFriendCharacter(characterId, sourceUrl)
+    await userStore.addOnlineFriendCharacter(characterId, sourceUrl, 'import')
     character.isFriend = true
     await userStore.loadLocalFriends()
     showToast('召回成功', 'success')

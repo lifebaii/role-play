@@ -168,7 +168,81 @@ export const adminApiClient = {
   postForm: <T>(path: string, body: FormData) => adminOnlyRequest<T>(path, { method: 'POST', body }),
   put: <T>(path: string, body: any) => adminOnlyRequest<T>(path, { method: 'PUT', body }),
   putForm: <T>(path: string, body: FormData) => adminOnlyRequest<T>(path, { method: 'PUT', body }),
-  delete: <T>(path: string, body?: any) => adminOnlyRequest<T>(path, { method: 'DELETE', body })
+  delete: <T>(path: string, body?: any) => adminOnlyRequest<T>(path, { method: 'DELETE', body }),
+  
+  // 文件系统相关 API
+  createFile: <T>(path: string, content?: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/create-file', { 
+      method: 'POST', 
+      body: { path, content: content || '' } 
+    }),
+  
+  createFolder: <T>(path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/create-folder', { 
+      method: 'POST', 
+      body: { path } 
+    }),
+  
+  deleteFile: <T>(path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem', { 
+      method: 'DELETE', 
+      body: { path } 
+    }),
+  
+  renameFile: <T>(oldPath: string, newPath: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/rename', { 
+      method: 'PUT', 
+      body: { oldPath, newPath } 
+    }),
+  
+  copyFile: <T>(sourcePath: string, destinationPath: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/copy', { 
+      method: 'POST', 
+      body: { sourcePath, destinationPath } 
+    }),
+  
+  moveFile: <T>(sourcePath: string, destinationPath: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/move', { 
+      method: 'POST', 
+      body: { sourcePath, destinationPath } 
+    }),
+  
+  getFileAttributes: <T>(path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/attributes', { 
+      params: { path } 
+    }),
+  
+  // 文件夹统计相关
+  getFolderSize: <T>(path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/folder-size', { 
+      method: 'POST', 
+      body: { path } 
+    }),
+  
+  getFolderCount: <T>(path: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/folder-count', { 
+      method: 'POST', 
+      body: { path } 
+    }),
+  
+  // 批量操作相关
+  batchDelete: <T>(paths: string[]) => 
+    adminOnlyRequest<T>('/admin/filesystem/batch-delete', { 
+      method: 'POST', 
+      body: { paths } 
+    }),
+  
+  batchCopy: <T>(paths: string[], destinationPath: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/batch-copy', { 
+      method: 'POST', 
+      body: { paths, destinationPath } 
+    }),
+  
+  batchMove: <T>(paths: string[], destinationPath: string) => 
+    adminOnlyRequest<T>('/admin/filesystem/batch-move', { 
+      method: 'POST', 
+      body: { paths, destinationPath } 
+    })
 }
 
 export interface CharacterData {

@@ -24,7 +24,7 @@
       @open-friend-selector="handleOpenFriendSelector"
       @open-user-settings="handleOpenUserSettings"
       @open-user-data-settings="showUserDataSettings = true"
-      @edit-character="editUserCharacter"
+      @edit-character="handleEditUserCharacterWithErrorHandling"
       @select-character="selectCharacter"
       @import-character="onImportCharacter"
       @open-about="showAbout = true"
@@ -382,7 +382,7 @@
       v-model:visible="showUserDataSettings"
     />
 
-    <FriendSelector v-model:visible="showFriendSelector" @view-character="handleViewCharacter" />
+    <FriendSelector v-model:visible="showFriendSelector" @view-character="handleViewCharacterWithErrorHandling" />
 
     <ChatSyncModal
       :show="showChatSync"
@@ -731,6 +731,22 @@ async function onImportCharacter(event: Event) {
 async function handleFriendCharactersUpdated(characters: any[]) {
   // 好友列表已经通过 localFriendStorage 更新，这里不需要额外处理
   // 保持 friendCharacters 的响应性即可
+}
+
+async function handleViewCharacterWithErrorHandling(character: any) {
+  try {
+    await handleViewCharacter(character)
+  } catch (e: any) {
+    showToast(e.message || '查看角色详情失败', 'error')
+  }
+}
+
+async function handleEditUserCharacterWithErrorHandling(character: any) {
+  try {
+    await editUserCharacter(character)
+  } catch (e: any) {
+    showToast(e.message || '加载角色信息失败', 'error')
+  }
 }
 
 const {
@@ -1126,9 +1142,9 @@ function handleUpdateSharedFromModal(value: boolean) {
   userStore.loadLocalFriends()
 }
 
-function openCharacterInfoFromCurrent() {
+async function openCharacterInfoFromCurrent() {
   if (chatStore.currentCharacter) {
-    editUserCharacter(chatStore.currentCharacter)
+    await handleEditUserCharacterWithErrorHandling(chatStore.currentCharacter)
   }
 }
 

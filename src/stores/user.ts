@@ -226,7 +226,7 @@ export const useUserStore = defineStore('user', () => {
     return newFriend;
   };
 
-  const addOnlineFriendCharacter = async (characterId: string, sourceUrl?: string) => {
+  const addOnlineFriendCharacter = async (characterId: string, sourceUrl?: string, addType: 'add' | 'import' = 'import') => {
     try {
       let blob: Blob
       let contentType: string;
@@ -248,7 +248,7 @@ export const useUserStore = defineStore('user', () => {
         contentType = result.contentType;
       }
       
-      const newFriend = await addOnlineFriendFromBlob(blob, contentType, characterId, characterId);
+      const newFriend = await addOnlineFriendFromBlob(blob, contentType, characterId, characterId, addType);
       
       const exists = friendCharacters.value.some(f => 
         f.role_play?.id === newFriend.role_play?.id
@@ -257,7 +257,7 @@ export const useUserStore = defineStore('user', () => {
         friendCharacters.value.unshift(newFriend);
       }
       
-      console.log(`[UserStore] Added online friend: ${characterId}`);
+      console.log(`[UserStore] Added online friend: ${characterId}, addType: ${addType}`);
       return newFriend;
     } catch (error) {
       console.error('[UserStore] Failed to add online friend:', error);

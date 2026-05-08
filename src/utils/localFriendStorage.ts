@@ -393,7 +393,7 @@ export async function addLocalFriend(character: any): Promise<LocalFriend> {
   return newFriend
 }
 
-export async function addOnlineFriend(character: any, originalId: string): Promise<LocalFriend> {
+export async function addOnlineFriend(character: any, originalId: string, addType: FriendAddType = 'import'): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
   const existingIndex = friends.findIndex(f => getFriendId(f) === originalId)
@@ -428,9 +428,9 @@ export async function addOnlineFriend(character: any, originalId: string): Promi
   friends.unshift(newFriend)
   friendsCache = friends
 
-  addFriendMeta(originalId, 'import', shared)
+  addFriendMeta(originalId, addType, shared)
 
-  console.log(`[LocalFriend] Added online friend: ${originalId}, shared: ${shared}`)
+  console.log(`[LocalFriend] Added online friend: ${originalId}, shared: ${shared}, addType: ${addType}`)
 
   return newFriend
 }
@@ -439,7 +439,8 @@ export async function addOnlineFriendFromBlob(
   blob: Blob, 
   contentType: string, 
   characterId: string,
-  originalId: string
+  originalId: string,
+  addType: FriendAddType = 'import'
 ): Promise<LocalFriend> {
   const friends = await getLocalFriends()
 
@@ -501,9 +502,9 @@ export async function addOnlineFriendFromBlob(
   friends.unshift(newFriend)
   friendsCache = friends
 
-  addFriendMeta(originalId, 'import', true)
+  addFriendMeta(originalId, addType, true)
 
-  console.log(`[LocalFriend] Added online friend from blob: ${originalId}`)
+  console.log(`[LocalFriend] Added online friend from blob: ${originalId}, addType: ${addType}`)
 
   return newFriend
 }
