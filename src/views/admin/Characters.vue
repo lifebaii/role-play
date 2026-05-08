@@ -20,6 +20,7 @@
       @reorder="handleReorder"
       @toggle-share="handleToggleShare"
       @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
       @search="handleSearch"
       @sort-change="handleSortChange"
       @batch-delete="handleBatchDelete"
@@ -332,46 +333,79 @@
           </div>
         </div>
 
-        <div v-if="adminStore.orphanedCharactersTotalPages > 1" class="flex justify-center items-center gap-2 mt-6">
-          <button
-            @click="handleOrphanPageChange(adminStore.orphanedCharactersPage - 1)"
-            :disabled="adminStore.orphanedCharactersPage <= 1"
-            :class="[
-              'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-              adminStore.orphanedCharactersPage <= 1
-                ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
-                : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
-            ]"
-          >
-            上一页
-          </button>
-          <div class="flex items-center gap-1">
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-theme-text-secondary">每页</span>
+            <div class="flex items-center">
+              <select
+                :value="localOrphanPageSize"
+                @change="handleOrphanPageSizeChange"
+                class="px-3 py-1.5 chat-input-field border border-theme-border rounded-l-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+              >
+                <option :value="5">5</option>
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+                <option :value="200">200</option>
+                <option :value="500">500</option>
+                <option :value="1000">1000</option>
+              </select>
+              <input
+                type="number"
+                :value="localOrphanPageSize"
+                @input="handleOrphanPageSizeInput"
+                @blur="handleOrphanPageSizeBlur"
+                @keydown="handleOrphanPageSizeKeydown"
+                min="1"
+                max="1000"
+                class="w-20 px-3 py-1.5 chat-input-field border border-theme-border border-l-0 rounded-r-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+              />
+            </div>
+            <span class="text-sm text-theme-text-secondary">条</span>
+          </div>
+          
+          <div v-if="adminStore.orphanedCharactersTotalPages > 1" class="flex items-center gap-2">
             <button
-              v-for="p in displayedOrphanPages"
-              :key="p"
-              @click="handleOrphanPageChange(p)"
+              @click="handleOrphanPageChange(adminStore.orphanedCharactersPage - 1)"
+              :disabled="adminStore.orphanedCharactersPage <= 1"
               :class="[
-                'w-10 h-10 rounded-lg text-sm font-medium transition-all',
-                p === adminStore.orphanedCharactersPage
-                  ? 'bg-[var(--theme-primary)] text-white'
+                'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                adminStore.orphanedCharactersPage <= 1
+                  ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
                   : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
               ]"
             >
-              {{ p }}
+              上一页
+            </button>
+            <div class="flex items-center gap-1">
+              <button
+                v-for="p in displayedOrphanPages"
+                :key="p"
+                @click="handleOrphanPageChange(p)"
+                :class="[
+                  'w-10 h-10 rounded-lg text-sm font-medium transition-all',
+                  p === adminStore.orphanedCharactersPage
+                    ? 'bg-[var(--theme-primary)] text-white'
+                    : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+                ]"
+              >
+                {{ p }}
+              </button>
+            </div>
+            <button
+              @click="handleOrphanPageChange(adminStore.orphanedCharactersPage + 1)"
+              :disabled="adminStore.orphanedCharactersPage >= adminStore.orphanedCharactersTotalPages"
+              :class="[
+                'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                adminStore.orphanedCharactersPage >= adminStore.orphanedCharactersTotalPages
+                  ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
+                  : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+              ]"
+            >
+              下一页
             </button>
           </div>
-          <button
-            @click="handleOrphanPageChange(adminStore.orphanedCharactersPage + 1)"
-            :disabled="adminStore.orphanedCharactersPage >= adminStore.orphanedCharactersTotalPages"
-            :class="[
-              'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-              adminStore.orphanedCharactersPage >= adminStore.orphanedCharactersTotalPages
-                ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
-                : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
-            ]"
-          >
-            下一页
-          </button>
         </div>
       </div>
 
@@ -549,6 +583,7 @@ const viewMode = ref<'grid' | 'list'>('grid')
 const batchMode = ref(false)
 const selectedIds = ref<string[]>([])
 const localSearchQuery = ref('')
+const localOrphanPageSize = ref(adminStore.orphanedCharactersPageSize.toString())
 const showAssignDialog = ref(false)
 const selectedUserId = ref<string>('')
 const usersList = ref<User[]>([
@@ -628,9 +663,47 @@ function handlePageChange(page: number) {
   loadCharacters(page)
 }
 
+function handlePageSizeChange(pageSize: number) {
+  adminStore.charactersPageSize = pageSize
+  loadCharacters(1)
+}
+
 function handleOrphanPageChange(page: number) {
   adminStore.orphanedCharactersPage = page
   loadCharacters(page)
+}
+
+function handleOrphanPageSizeChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const newPageSize = parseInt(target.value, 10)
+  localOrphanPageSize.value = newPageSize.toString()
+  adminStore.orphanedCharactersPageSize = newPageSize
+  loadCharacters(1)
+}
+
+function handleOrphanPageSizeInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  localOrphanPageSize.value = target.value
+}
+
+function handleOrphanPageSizeBlur() {
+  let newPageSize = parseInt(localOrphanPageSize.value, 10)
+  if (isNaN(newPageSize) || newPageSize < 1) {
+    newPageSize = 1
+  } else if (newPageSize > 1000) {
+    newPageSize = 1000
+  }
+  localOrphanPageSize.value = newPageSize.toString()
+  if (newPageSize !== adminStore.orphanedCharactersPageSize) {
+    adminStore.orphanedCharactersPageSize = newPageSize
+    loadCharacters(1)
+  }
+}
+
+function handleOrphanPageSizeKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    handleOrphanPageSizeBlur()
+  }
 }
 
 function handleSearch(query: string) {

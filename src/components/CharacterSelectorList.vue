@@ -87,24 +87,57 @@
       </div>
     </div>
     
-    <div v-if="totalPages > 1" class="mt-4 flex items-center justify-center gap-2">
-      <button
-        @click="$emit('page-change', currentPage - 1)"
-        :disabled="currentPage === 1 || isLoading"
-        class="px-3 py-1.5 rounded-lg border border-theme-border text-theme-text-secondary hover:bg-[var(--theme-card-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        上一页
-      </button>
-      <span class="text-sm text-theme-text-secondary">
-        {{ currentPage }} / {{ totalPages }}
-      </span>
-      <button
-        @click="$emit('page-change', currentPage + 1)"
-        :disabled="currentPage === totalPages || isLoading"
-        class="px-3 py-1.5 rounded-lg border border-theme-border text-theme-text-secondary hover:bg-[var(--theme-card-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        下一页
-      </button>
+    <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-theme-text-secondary">每页</span>
+        <div class="flex items-center">
+          <select
+            :value="localPageSize"
+            @change="handlePageSizeChange"
+            class="px-3 py-1.5 chat-input-field border border-theme-border rounded-l-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+          >
+            <option :value="5">5</option>
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+            <option :value="200">200</option>
+            <option :value="500">500</option>
+            <option :value="1000">1000</option>
+          </select>
+          <input
+            type="number"
+            :value="localPageSize"
+            @input="handlePageSizeInput"
+            @blur="handlePageSizeBlur"
+            @keydown="handlePageSizeKeydown"
+            min="1"
+            max="1000"
+            class="w-20 px-3 py-1.5 chat-input-field border border-theme-border border-l-0 rounded-r-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+          />
+        </div>
+        <span class="text-sm text-theme-text-secondary">条</span>
+      </div>
+      
+      <div v-if="totalPages > 1" class="flex items-center justify-center gap-2">
+        <button
+          @click="$emit('page-change', currentPage - 1)"
+          :disabled="currentPage === 1 || isLoading"
+          class="px-3 py-1.5 rounded-lg border border-theme-border text-theme-text-secondary hover:bg-[var(--theme-card-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          上一页
+        </button>
+        <span class="text-sm text-theme-text-secondary">
+          {{ currentPage }} / {{ totalPages }}
+        </span>
+        <button
+          @click="$emit('page-change', currentPage + 1)"
+          :disabled="currentPage === totalPages || isLoading"
+          class="px-3 py-1.5 rounded-lg border border-theme-border text-theme-text-secondary hover:bg-[var(--theme-card-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          下一页
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -113,12 +146,13 @@
 import type { Character } from '@/types'
 import AvatarImage from './AvatarImage.vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   characters: Character[]
   isLoading: boolean
   currentPage: number
   totalPages: number
   total: number
+  pageSize?: number
   actionCharacterId?: string | null
   showAddButton?: boolean
   showFriendStatus?: boolean
@@ -128,7 +162,8 @@ withDefaults(defineProps<{
   emptyText?: string
   emptySubtext?: string
   friendStatusTitle?: string
-}>(), {
+}>({
+  pageSize: 10,
   showAddButton: true,
   showFriendStatus: true,
   showLikeCount: true,
@@ -137,13 +172,47 @@ withDefaults(defineProps<{
   emptyText: '暂无角色',
   emptySubtext: '',
   friendStatusTitle: '已添加'
-})
+}))
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'page-change', page: number): void
+  (e: 'page-size-change', pageSize: number): void
   (e: 'select', character: Character): void
   (e: 'action', character: Character): void
 }>()
+
+const localPageSize = ref(props.pageSize.toString())
+
+function handlePageSizeChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const newPageSize = parseInt(target.value, 10)
+  localPageSize.value = newPageSize.toString()
+  emit('page-size-change', newPageSize)
+}
+
+function handlePageSizeInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  localPageSize.value = target.value
+}
+
+function handlePageSizeBlur() {
+  let newPageSize = parseInt(localPageSize.value, 10)
+  if (isNaN(newPageSize) || newPageSize < 1) {
+    newPageSize = 1
+  } else if (newPageSize > 1000) {
+    newPageSize = 1000
+  }
+  localPageSize.value = newPageSize.toString()
+  if (newPageSize !== props.pageSize) {
+    emit('page-size-change', newPageSize)
+  }
+}
+
+function handlePageSizeKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    handlePageSizeBlur()
+  }
+}
 
 function getCharacterId(character: Character): string {
   return character.role_play?.id || character.id || ''

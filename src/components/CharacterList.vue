@@ -306,46 +306,79 @@
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-6">
-        <button
-          @click="$emit('pageChange', page - 1)"
-          :disabled="page <= 1"
-          :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-            page <= 1
-              ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
-              : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
-          ]"
-        >
-          上一页
-        </button>
-        <div class="flex items-center gap-1">
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-theme-text-secondary">每页</span>
+          <div class="flex items-center">
+            <select
+              :value="localPageSize"
+              @change="handlePageSizeChange"
+              class="px-3 py-1.5 chat-input-field border border-theme-border rounded-l-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+            >
+              <option :value="5">5</option>
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+              <option :value="200">200</option>
+              <option :value="500">500</option>
+              <option :value="1000">1000</option>
+            </select>
+            <input
+              type="number"
+              :value="localPageSize"
+              @input="handlePageSizeInput"
+              @blur="handlePageSizeBlur"
+              @keydown="handlePageSizeKeydown"
+              min="1"
+              max="1000"
+              class="w-20 px-3 py-1.5 chat-input-field border border-theme-border border-l-0 rounded-r-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
+            />
+          </div>
+          <span class="text-sm text-theme-text-secondary">条</span>
+        </div>
+        
+        <div v-if="totalPages > 1" class="flex items-center gap-2">
           <button
-            v-for="p in displayedPages"
-            :key="p"
-            @click="$emit('pageChange', p)"
+            @click="$emit('pageChange', page - 1)"
+            :disabled="page <= 1"
             :class="[
-              'w-10 h-10 rounded-lg text-sm font-medium transition-all',
-              p === page
-                ? 'bg-[var(--theme-primary)] text-white'
+              'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+              page <= 1
+                ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
                 : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
             ]"
           >
-            {{ p }}
+            上一页
+          </button>
+          <div class="flex items-center gap-1">
+            <button
+              v-for="p in displayedPages"
+              :key="p"
+              @click="$emit('pageChange', p)"
+              :class="[
+                'w-10 h-10 rounded-lg text-sm font-medium transition-all',
+                p === page
+                  ? 'bg-[var(--theme-primary)] text-white'
+                  : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+              ]"
+            >
+              {{ p }}
+            </button>
+          </div>
+          <button
+            @click="$emit('pageChange', page + 1)"
+            :disabled="page >= totalPages"
+            :class="[
+              'px-3 py-2 rounded-lg text-sm font-medium transition-all',
+              page >= totalPages
+                ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
+                : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
+            ]"
+          >
+            下一页
           </button>
         </div>
-        <button
-          @click="$emit('pageChange', page + 1)"
-          :disabled="page >= totalPages"
-          :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium transition-all',
-            page >= totalPages
-              ? 'bg-[var(--theme-card-hover)] text-theme-text-secondary/50 cursor-not-allowed'
-              : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
-          ]"
-        >
-          下一页
-        </button>
       </div>
     </div>
 
@@ -494,6 +527,7 @@ const emit = defineEmits<{
   (e: 'reorder', characters: Character[]): void
   (e: 'toggleShare', character: Character): void
   (e: 'pageChange', page: number): void
+  (e: 'pageSizeChange', pageSize: number): void
   (e: 'search', query: string): void
   (e: 'sortChange', sortBy: string): void
   (e: 'batchDelete', ids: string[]): void
@@ -506,6 +540,7 @@ const localSortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'
 const viewMode = ref<'grid' | 'list'>('grid')
 const batchMode = ref(false)
 const selectedIds = ref<string[]>([])
+const localPageSize = ref((props.pageSize ?? 10).toString())
 
 const total = computed(() => props.total ?? props.characters.length)
 const page = computed(() => props.page ?? 1)
@@ -548,6 +583,37 @@ function handleSearchSubmit() {
 
 function handleSortChange() {
   emit('sortChange', localSortBy.value)
+}
+
+function handlePageSizeChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const newPageSize = parseInt(target.value, 10)
+  localPageSize.value = newPageSize.toString()
+  emit('pageSizeChange', newPageSize)
+}
+
+function handlePageSizeInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  localPageSize.value = target.value
+}
+
+function handlePageSizeBlur() {
+  let newPageSize = parseInt(localPageSize.value, 10)
+  if (isNaN(newPageSize) || newPageSize < 1) {
+    newPageSize = 1
+  } else if (newPageSize > 1000) {
+    newPageSize = 1000
+  }
+  localPageSize.value = newPageSize.toString()
+  if (newPageSize !== props.pageSize) {
+    emit('pageSizeChange', newPageSize)
+  }
+}
+
+function handlePageSizeKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    handlePageSizeBlur()
+  }
 }
 
 function handleDragStart(event: DragEvent, index: number) {

@@ -42,6 +42,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :total="total"
+        :page-size="pageSize"
         :action-character-id="actionCharacterId"
         :show-add-button="true"
         :show-friend-status="true"
@@ -49,6 +50,7 @@
         empty-subtext="创建你的第一个角色吧"
         friend-status-title="已召回"
         @page-change="loadPage"
+        @page-size-change="handlePageSizeChange"
         @select="viewCharacterDetail"
         @action="toggleFriend"
       />
@@ -86,7 +88,7 @@ const userStore = useUserStore()
 const characters = ref<Character[]>([])
 const searchQuery = ref('')
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = ref(10)
 const total = ref(0)
 const totalPages = ref(1)
 const isLoading = ref(false)
@@ -151,6 +153,12 @@ const loadPage = async (pageNum: number) => {
   await fetchCharacters()
 }
 
+const handlePageSizeChange = async (newPageSize: number) => {
+  pageSize.value = newPageSize
+  currentPage.value = 1
+  await fetchCharacters()
+}
+
 const debounceSearch = (() => {
   let timer: ReturnType<typeof setTimeout> | null = null
   return async (_query: string) => {
@@ -179,7 +187,7 @@ const fetchCharacters = async () => {
     
     const params: Record<string, string> = {
       page: currentPage.value.toString(),
-      pageSize: pageSize.toString(),
+      pageSize: pageSize.value.toString(),
       own: 'true',
       userId
     }
