@@ -146,7 +146,7 @@
 import type { Character } from '@/types'
 import AvatarImage from './AvatarImage.vue'
 
-const props = withDefaults(defineProps<{
+interface Props {
   characters: Character[]
   isLoading: boolean
   currentPage: number
@@ -162,7 +162,9 @@ const props = withDefaults(defineProps<{
   emptyText?: string
   emptySubtext?: string
   friendStatusTitle?: string
-}>({
+}
+
+const props = withDefaults(defineProps<Props>(), {
   pageSize: 10,
   showAddButton: true,
   showFriendStatus: true,
@@ -172,7 +174,7 @@ const props = withDefaults(defineProps<{
   emptyText: '暂无角色',
   emptySubtext: '',
   friendStatusTitle: '已添加'
-}))
+})
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void

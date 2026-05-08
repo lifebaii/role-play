@@ -805,7 +805,6 @@ function handleCreate() {
 async function handleReorder(characters: any[]) {
   try {
     const ids = characters.map(c => getCharacterId(c))
-    return
     adminStore.characters = characters
   } catch (err) {
     console.error('Failed to save order:', err)

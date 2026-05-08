@@ -563,12 +563,12 @@ async function handleDelete() {
 }
 
 function handleUpdateToServerWithClose() {
-  showMoreActions = false;
+  showMoreActions.value = false;
   handleUpdateToServer();
 }
 
 function handleUpdateFromServerWithClose() {
-  showMoreActions = false;
+  showMoreActions.value = false;
   handleUpdateFromServer();
 }
 
