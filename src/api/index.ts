@@ -1039,4 +1039,46 @@ export const chatSyncApi = {
   getStatus: (characterId: string) => api.get<SyncStatus>(`/chat-sync/status?characterId=${characterId}`),
   
   cancel: (characterId: string) => api.delete<{ success: boolean }>(`/chat-sync/cancel?characterId=${characterId}`)
+};
+
+// 流浪角色管理 API
+export interface OrphanedCharacter {
+  id: string;
+  name: string;
+  description: string;
+  thumbnailUrl: string | null;
+  avatarUrl: string | null;
+  hasDataFile: boolean;
+  hasThumbnail: boolean;
+  createdAt: number;
+  fileSize: number;
+  fileType: string;
 }
+
+export interface OrphanedCharactersResponse {
+  characters: OrphanedCharacter[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const orphanedCharactersApi = {
+  list: (params?: { page?: number; pageSize?: number; search?: string }) =>
+    adminApiClient.get<OrphanedCharactersResponse>('/admin/orphaned-characters', params),
+  
+  assign: (characterId: string, userId: string) =>
+    adminApiClient.post<{ success: boolean; characterId: string; userId: string }>(`/admin/orphaned-characters/${characterId}/assign`, { userId }),
+  
+  delete: (characterId: string) =>
+    adminApiClient.delete<{ success: boolean; deletedFiles: string[]; errors: any[] }>(`/admin/orphaned-characters/${characterId}`),
+  
+  regenerateThumbnail: (characterId: string) =>
+    adminApiClient.post<{ success: boolean; thumbnailPath: string; thumbnailUrl: string }>(`/admin/orphaned-characters/${characterId}/regenerate-thumbnail`),
+  
+  batchAssign: (ids: string[], userId: string) =>
+    adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number; userId: string }>('/admin/orphaned-characters/batch-assign', { ids, userId }),
+  
+  batchDelete: (ids: string[]) =>
+    adminApiClient.post<{ success: boolean; results: any[]; successCount: number; totalCount: number }>('/admin/orphaned-characters/batch-delete', { ids })
+};

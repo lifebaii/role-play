@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Model, Character, AdminSettings, User } from '@/types'
-import { adminApi, charactersApi, modelsApi } from '@/api'
+import { adminApi, charactersApi, modelsApi, orphanedCharactersApi } from '@/api'
+import type { OrphanedCharacter } from '@/api'
 import { eventBus } from '@/utils/eventBus'
 
 // 辅助函数
@@ -55,6 +56,13 @@ export const useAdminStore = defineStore('admin', () => {
   const saveButtonVisible = ref(false)
   const saveButtonLoading = ref(false)
   let saveCallback: (() => Promise<void>) | null = null
+
+  // 流浪角色相关状态
+  const orphanedCharacters = ref<OrphanedCharacter[]>([])
+  const orphanedCharactersTotal = ref(0)
+  const orphanedCharactersPage = ref(1)
+  const orphanedCharactersPageSize = ref(20)
+  const orphanedCharactersTotalPages = ref(1)
 
   async function login(password: string): Promise<boolean> {
     isLoading.value = true
@@ -408,6 +416,69 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  // 流浪角色相关方法
+  async function loadOrphanedCharacters(params?: { page?: number; pageSize?: number; search?: string }): Promise<void> {
+    try {
+      const result = await orphanedCharactersApi.list(params)
+      orphanedCharacters.value = result.characters || []
+      orphanedCharactersTotal.value = result.total || 0
+      orphanedCharactersPage.value = result.page || 1
+      orphanedCharactersPageSize.value = result.pageSize || 20
+      orphanedCharactersTotalPages.value = result.totalPages || 1
+    } catch (error) {
+      console.error('Failed to load orphaned characters:', error)
+      orphanedCharacters.value = []
+      orphanedCharactersTotal.value = 0
+      orphanedCharactersPage.value = 1
+      orphanedCharactersTotalPages.value = 1
+    }
+  }
+
+  async function assignOrphanedCharacter(characterId: string, userId: string): Promise<void> {
+    try {
+      await orphanedCharactersApi.assign(characterId, userId)
+    } catch (error) {
+      console.error('Failed to assign orphaned character:', error)
+      throw error
+    }
+  }
+
+  async function deleteOrphanedCharacter(characterId: string): Promise<void> {
+    try {
+      await orphanedCharactersApi.delete(characterId)
+    } catch (error) {
+      console.error('Failed to delete orphaned character:', error)
+      throw error
+    }
+  }
+
+  async function regenerateOrphanedCharacterThumbnail(characterId: string): Promise<void> {
+    try {
+      await orphanedCharactersApi.regenerateThumbnail(characterId)
+    } catch (error) {
+      console.error('Failed to regenerate thumbnail:', error)
+      throw error
+    }
+  }
+
+  async function batchAssignOrphanedCharacters(ids: string[], userId: string): Promise<any> {
+    try {
+      return await orphanedCharactersApi.batchAssign(ids, userId)
+    } catch (error) {
+      console.error('Failed to batch assign orphaned characters:', error)
+      throw error
+    }
+  }
+
+  async function batchDeleteOrphanedCharacters(ids: string[]): Promise<any> {
+    try {
+      return await orphanedCharactersApi.batchDelete(ids)
+    } catch (error) {
+      console.error('Failed to batch delete orphaned characters:', error)
+      throw error
+    }
+  }
+
   return {
     isLoggedIn,
     isLoading,
@@ -422,6 +493,12 @@ export const useAdminStore = defineStore('admin', () => {
     settings,
     saveButtonVisible,
     saveButtonLoading,
+    // 流浪角色状态
+    orphanedCharacters,
+    orphanedCharactersTotal,
+    orphanedCharactersPage,
+    orphanedCharactersPageSize,
+    orphanedCharactersTotalPages,
     login,
     verify,
     checkAuth,
@@ -453,5 +530,12 @@ export const useAdminStore = defineStore('admin', () => {
     showSaveButton,
     hideSaveButton,
     triggerSave,
+    // 流浪角色方法
+    loadOrphanedCharacters,
+    assignOrphanedCharacter,
+    deleteOrphanedCharacter,
+    regenerateOrphanedCharacterThumbnail,
+    batchAssignOrphanedCharacters,
+    batchDeleteOrphanedCharacters,
   }
 })
