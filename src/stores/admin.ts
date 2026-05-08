@@ -148,6 +148,15 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function testSingleModel(params: { model_id: string; model: string }) {
+    try {
+      return await modelsApi.testSingle(params)
+    } catch (error: any) {
+      console.error('Failed to test single model:', error)
+      throw { message: error.message, duration: error.duration || 0 }
+    }
+  }
+
   async function testAllModels(params: { modelId: string; modelIds: string[]; concurrency?: number }) {
     try {
       const result = await modelsApi.testAll(params)
@@ -384,6 +393,7 @@ export const useAdminStore = defineStore('admin', () => {
     saveModels,
     loadUniqueModels,
     testModel,
+    testSingleModel,
     testAllModels,
     fetchModelList,
     deleteModel,

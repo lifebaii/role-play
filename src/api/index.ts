@@ -732,6 +732,11 @@ export const modelsApi = {
       api_url: params.apiUrl, 
       provider: params.provider 
     }),
+  testSingle: (params: { model_id: string; model: string }) => 
+    adminApiClient.post<{ success: boolean; response?: any; duration: number }>('/models/test', {
+      model_id: params.model_id,
+      model: params.model
+    }),
   testAll: (params: { modelId: string; modelIds: string[]; concurrency?: number }) => 
     adminApiClient.post<{ results: Array<{ modelId: string; success: boolean; error?: string; duration: number }> }>('/models/test-all', { 
       modelId: params.modelId,

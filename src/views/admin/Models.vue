@@ -68,7 +68,7 @@
             <label class="block text-sm font-medium text-theme-text-primary mb-1">API 类型</label>
             <select
               v-model="model.provider"
-              class="w-full px-4 py-2.5 select-field border border-theme-border rounded-xl text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none transition-all"
+              class="w-full px-4 py-2.5 select-field border border-theme-border rounded-xl text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none transition-all"
               @change="handleProviderChange(index)"
             >
               <option value="openai">OpenAI 兼容（GPT、DeepSeek 等）</option>
@@ -151,17 +151,23 @@
                   <button
                     @click="testAllModels(index)"
                     class="px-3 py-1 text-xs bg-gradient-to-r from-[var(--theme-success)] to-[var(--theme-success-light)] text-white rounded-lg hover:opacity-90 transition-all font-medium disabled:opacity-50"
-                    :disabled="testingAllIndex === index || !model.selected_models || model.selected_models.length === 0"
+                    :disabled="testingAllIndex === index || !model.available_models || model.available_models.length === 0"
                   >
-                    {{ testingAllIndex === index ? `测试中... ${testedCount[index] || 0}/${model.selected_models?.length || 0}` : '🧪 测试所有模型' }}
+                    {{ testingAllIndex === index ? `测试中... ${testedCount[index] || 0}/${getFilteredModels(index).length || 0}` : '🧪 测试所有模型' }}
                   </button>
                 </div>
               </div>
-              <div class="max-h-48 overflow-y-auto border border-theme-border rounded-xl">
+              <div class="max-h-96 overflow-y-auto border border-theme-border rounded-xl">
                 <div
                   v-for="m in getFilteredModels(index)"
                   :key="m.id"
-                  class="flex items-center justify-between gap-2 px-3 py-2 hover:bg-[var(--theme-card-hover)] border-b last:border-b-0 border-theme-border transition-colors"
+                  class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 border-theme-border transition-colors"
+                  :class="{
+                    'bg-green-50 dark:bg-green-900/20': testResults[model.id]?.[m.id]?.success,
+                    'bg-red-50 dark:bg-red-900/20': testResults[model.id]?.[m.id]?.success === false,
+                    'bg-blue-50 dark:bg-blue-900/20': (testingAllIndex === index || testingModels[model.id]?.[m.id]) && !testResults[model.id]?.[m.id],
+                    'hover:bg-[var(--theme-card-hover)]': !testResults[model.id]?.[m.id] && !(testingAllIndex === index || testingModels[model.id]?.[m.id])
+                  }"
                 >
                   <div class="flex items-center gap-2 flex-1">
                     <input
@@ -172,16 +178,25 @@
                     />
                     <span class="text-sm text-theme-text-primary">{{ m.name }}</span>
                   </div>
-                  <div v-if="testResults[model.id] && testResults[model.id][m.id]" class="text-sm">
-                    <span v-if="testResults[model.id][m.id].success" class="text-green-500">
-                      ✓ {{ testResults[model.id][m.id].duration }}ms
-                    </span>
-                    <span v-else class="text-red-500" :title="testResults[model.id][m.id].error">
-                      ✗ {{ testResults[model.id][m.id].error?.substring(0, 30) }}{{ testResults[model.id][m.id].error?.length > 30 ? '...' : '' }}
-                    </span>
-                  </div>
-                  <div v-else-if="testingAllIndex === index && isModelSelected(index, m.id)" class="text-sm text-theme-text-secondary">
-                    <span class="animate-pulse">...</span>
+                  <div class="flex items-center gap-2">
+                    <div v-if="testResults[model.id] && testResults[model.id][m.id]" class="text-sm">
+                      <span v-if="testResults[model.id][m.id].success" class="text-green-500">
+                        ✓ {{ testResults[model.id][m.id].duration }}ms
+                      </span>
+                      <span v-else class="text-red-500" :title="testResults[model.id][m.id].error">
+                        ✗ {{ testResults[model.id][m.id].error?.substring(0, 30) }}{{ testResults[model.id][m.id].error?.length > 30 ? '...' : '' }}
+                      </span>
+                    </div>
+                    <div v-else-if="(testingAllIndex === index || testingModels[model.id]?.[m.id])" class="text-sm text-theme-text-secondary">
+                      <span class="animate-pulse">...</span>
+                    </div>
+                    <button
+                      @click="testSingleModel(index, m.id)"
+                      class="px-2 py-0.5 text-xs bg-[var(--theme-accent)]/10 text-theme-text-accent rounded hover:bg-[var(--theme-accent)]/20 transition-all"
+                      :disabled="testingModels[model.id]?.[m.id]"
+                    >
+                      测试
+                    </button>
                   </div>
                 </div>
                 <div v-if="getFilteredModels(index).length === 0" class="px-3 py-4 text-center text-theme-text-secondary">
@@ -192,16 +207,6 @@
                 已选择 {{ getSelectedCount(index) }} 个模型
               </div>
             </div>
-          </div>
-
-          <div class="sm:col-span-2">
-            <button
-              @click="testModel(model.id)"
-              class="w-full sm:w-auto px-4 py-2 chat-card border border-theme-border text-theme-text-primary rounded-xl hover:bg-[var(--theme-card-hover)] disabled:opacity-50 font-medium transition-all"
-              :disabled="testingId === model.id"
-            >
-              {{ testingId === model.id ? '测试中...' : '测试连接' }}
-            </button>
           </div>
         </div>
       </div>
@@ -246,11 +251,12 @@ const isCopying = ref<number | null>(null)
 const testingId = ref<string | null>(null)
 const testingAllIndex = ref<number | null>(null)
 const fetchingIndex = ref<number | null>(null)
-const modelSearch = reactive<Record<number, string>>({})
-const showApiKey = reactive<Record<number, boolean>>({})
-const testResults = reactive<Record<string, Record<string, { success: boolean; error?: string; duration: number }>>>({})
-const testedCount = reactive<Record<number, number>>({})
-const testConcurrency = reactive<Record<number, number>>({})
+const modelSearch = reactive({})
+const showApiKey = reactive({})
+const testResults = reactive({})
+const testedCount = reactive({})
+const testConcurrency = reactive({})
+const testingModels = reactive({})
 
 onMounted(async () => {
   await adminStore.loadModels()
@@ -388,13 +394,10 @@ function getFilteredModels(index: number): { id: string; name: string }[] {
   if (!model.available_models) return []
 
   const search = modelSearch[index]?.toLowerCase() || ''
-  return model.available_models.filter(m =>
-    m.name.toLowerCase().includes(search)
-  )
+  return model.available_models.filter(m => m.name.toLowerCase().includes(search))
 }
 
-function filterModels(index: number) {
-}
+function filterModels(index: number) {}
 
 function isModelSelected(index: number, modelId: string): boolean {
   const model = models.value[index]
@@ -467,33 +470,112 @@ async function testModel(id: string) {
   }
 }
 
-async function testAllModels(index: number) {
-  const model = models.value[index]
-  if (!model.selected_models || model.selected_models.length === 0) {
+async function testSingleModel(providerIndex: number, modelId: string) {
+  const providerModel = models.value[providerIndex]
+  if (!providerModel) return
+
+  if (!testingModels[providerModel.id]) {
+    testingModels[providerModel.id] = {}
+  }
+  testingModels[providerModel.id][modelId] = true
+
+  try {
+    const result = await adminStore.testSingleModel({
+      model_id: providerModel.id,
+      model: modelId
+    })
+
+    if (!testResults[providerModel.id]) {
+      testResults[providerModel.id] = {}
+    }
+    testResults[providerModel.id][modelId] = {
+      success: true,
+      duration: result.duration
+    }
+  } catch (e: any) {
+    if (!testResults[providerModel.id]) {
+      testResults[providerModel.id] = {}
+    }
+    testResults[providerModel.id][modelId] = {
+      success: false,
+      error: e.message,
+      duration: e.duration || 0
+    }
+  } finally {
+    testingModels[providerModel.id][modelId] = false
+  }
+}
+
+async function testAllModels(providerIndex: number) {
+  const model = models.value[providerIndex]
+  if (!model.available_models || model.available_models.length === 0) {
     return
   }
 
-  testingAllIndex.value = index
-  testedCount[index] = 0
+  testingAllIndex.value = providerIndex
+  testedCount[providerIndex] = 0
   testResults[model.id] = {}
+  if (!testingModels[model.id]) {
+    testingModels[model.id] = {}
+  }
 
-  try {
-    const concurrency = testConcurrency[index] || 5
-    const results = await adminStore.testAllModels({
-      modelId: model.id,
-      modelIds: model.selected_models,
-      concurrency: concurrency
-    })
+  const concurrency = testConcurrency[providerIndex] || 5
+  const modelIds = getFilteredModels(providerIndex).map(m => m.id)
 
-    for (const result of results) {
-      testResults[model.id][result.modelId] = {
-        success: result.success,
-        error: result.error,
-        duration: result.duration
+  async function concurrencyControl() {
+    const executing: Promise<void>[] = []
+    const results: { modelId: string; success: boolean; error?: string; duration: number }[] = []
+    let index = 0
+
+    async function next() {
+      if (index >= modelIds.length) return
+      const mid = modelIds[index++]
+
+      testingModels[model.id][mid] = true
+
+      try {
+        const result = await adminStore.testSingleModel({
+          model_id: model.id,
+          model: mid
+        })
+        testResults[model.id][mid] = {
+          success: true,
+          duration: result.duration
+        }
+        results.push({
+          modelId: mid,
+          success: true,
+          duration: result.duration
+        })
+      } catch (e: any) {
+        testResults[model.id][mid] = {
+          success: false,
+          error: e.message,
+          duration: e.duration || 0
+        }
+        results.push({
+          modelId: mid,
+          success: false,
+          error: e.message,
+          duration: e.duration || 0
+        })
+      } finally {
+        testingModels[model.id][mid] = false
+        testedCount[providerIndex]++
+        await next()
       }
-      testedCount[index]++
     }
 
+    for (let i = 0; i < concurrency; i++) {
+      executing.push(next())
+    }
+
+    await Promise.all(executing)
+    return results
+  }
+
+  try {
+    const results = await concurrencyControl()
     const successCount = results.filter(r => r.success).length
     await showAlert(`测试完成: ${successCount}/${results.length} 成功`)
   } catch (e: any) {
