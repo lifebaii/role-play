@@ -141,6 +141,8 @@ export interface Model {
   is_default: boolean
   available_models?: { id: string; name: string }[]
   selected_models?: string[]
+  // key是原始模型ID，value是该模型的别名数组
+  model_id_mapping?: Record<string, string[]>
 }
 
 export interface CustomModelConfig {

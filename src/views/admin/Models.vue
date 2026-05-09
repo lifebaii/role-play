@@ -161,7 +161,7 @@
                 <div
                   v-for="m in getFilteredModels(index)"
                   :key="m.id"
-                  class="flex items-center justify-between gap-2 px-3 py-2 border-b last:border-b-0 border-theme-border transition-colors"
+                  class="px-3 py-2 border-b last:border-b-0 border-theme-border transition-colors"
                   :class="{
                     'bg-green-50 dark:bg-green-900/20': testResults[model.id]?.[m.id]?.success,
                     'bg-red-50 dark:bg-red-900/20': testResults[model.id]?.[m.id]?.success === false,
@@ -169,34 +169,69 @@
                     'hover:bg-[var(--theme-card-hover)]': !testResults[model.id]?.[m.id] && !(testingAllIndex === index || testingModels[model.id]?.[m.id])
                   }"
                 >
-                  <div class="flex items-center gap-2 flex-1">
-                    <input
-                      type="checkbox"
-                      :checked="isModelSelected(index, m.id)"
-                      @change="toggleModel(index, m.id)"
-                      class="rounded border-theme-border w-4 h-4 text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
-                    />
-                    <span class="text-sm text-theme-text-primary">{{ m.name }}</span>
+                  <div class="flex items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2 flex-1">
+                      <input
+                        type="checkbox"
+                        :checked="isModelSelected(index, m.id)"
+                        @change="toggleModel(index, m.id)"
+                        class="rounded border-theme-border w-4 h-4 text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
+                      />
+                      <span class="text-sm text-theme-text-primary">{{ m.name }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <div v-if="testResults[model.id] && testResults[model.id][m.id]" class="text-sm">
+                        <span v-if="testResults[model.id][m.id].success" class="text-green-500">
+                          ✓ {{ testResults[model.id][m.id].duration }}ms
+                        </span>
+                        <span v-else class="text-red-500" :title="testResults[model.id][m.id].error">
+                          ✗ {{ testResults[model.id][m.id].error?.substring(0, 30) }}{{ testResults[model.id][m.id].error?.length > 30 ? '...' : '' }}
+                        </span>
+                      </div>
+                      <div v-else-if="(testingAllIndex === index || testingModels[model.id]?.[m.id])" class="text-sm text-theme-text-secondary">
+                        <span class="animate-pulse">...</span>
+                      </div>
+                      <button
+                        @click="openMappingModal(index, m.id)"
+                        class="px-2 py-0.5 text-xs bg-[var(--theme-primary)]/10 text-theme-text-accent rounded hover:bg-[var(--theme-primary)]/20 transition-all"
+                      >
+                        添加别名
+                      </button>
+                      <button
+                        @click="testSingleModel(index, m.id)"
+                        class="px-2 py-0.5 text-xs bg-[var(--theme-accent)]/10 text-theme-text-accent rounded hover:bg-[var(--theme-accent)]/20 transition-all"
+                        :disabled="testingModels[model.id]?.[m.id]"
+                      >
+                        测试
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <div v-if="testResults[model.id] && testResults[model.id][m.id]" class="text-sm">
-                      <span v-if="testResults[model.id][m.id].success" class="text-green-500">
-                        ✓ {{ testResults[model.id][m.id].duration }}ms
-                      </span>
-                      <span v-else class="text-red-500" :title="testResults[model.id][m.id].error">
-                        ✗ {{ testResults[model.id][m.id].error?.substring(0, 30) }}{{ testResults[model.id][m.id].error?.length > 30 ? '...' : '' }}
-                      </span>
-                    </div>
-                    <div v-else-if="(testingAllIndex === index || testingModels[model.id]?.[m.id])" class="text-sm text-theme-text-secondary">
-                      <span class="animate-pulse">...</span>
-                    </div>
-                    <button
-                      @click="testSingleModel(index, m.id)"
-                      class="px-2 py-0.5 text-xs bg-[var(--theme-accent)]/10 text-theme-text-accent rounded hover:bg-[var(--theme-accent)]/20 transition-all"
-                      :disabled="testingModels[model.id]?.[m.id]"
+                  
+                  <!-- 显示该模型的所有别名 -->
+                  <div v-if="model.model_id_mapping && model.model_id_mapping[m.id] && model.model_id_mapping[m.id].length > 0" class="ml-6 space-y-1">
+                    <div
+                      v-for="alias in model.model_id_mapping[m.id]"
+                      :key="alias"
+                      class="flex items-center justify-between gap-2 text-xs"
                     >
-                      测试
-                    </button>
+                      <div class="flex items-center gap-1">
+                        <span class="text-theme-text-secondary">别名：</span>
+                        <span
+                          class="text-theme-text-accent cursor-pointer hover:underline"
+                          @click="editModelAlias(index, m.id, alias)"
+                        >
+                          {{ alias }}
+                        </span>
+                        <span class="text-theme-text-secondary">→</span>
+                        <span class="text-theme-text-primary">{{ m.id }}</span>
+                      </div>
+                      <button
+                        @click="removeModelAlias(index, m.id, alias)"
+                        class="px-1.5 py-0.5 text-[var(--theme-danger)] hover:text-[var(--theme-danger)] rounded hover:bg-[var(--theme-danger-bg)] transition-all"
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div v-if="getFilteredModels(index).length === 0" class="px-3 py-4 text-center text-theme-text-secondary">
@@ -205,6 +240,45 @@
               </div>
               <div class="mt-2 text-sm text-theme-text-secondary">
                 已选择 {{ getSelectedCount(index) }} 个模型
+              </div>
+            </div>
+            
+            <!-- 模型别名概览 -->
+            <div class="mt-4 p-4 bg-[var(--theme-card-hover)] rounded-xl border border-theme-border">
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-medium text-theme-text-primary">所有模型别名概览</h4>
+              </div>
+              <div class="space-y-2">
+                <div
+                  v-for="(aliases, originalModelId) in model.model_id_mapping"
+                  :key="originalModelId"
+                >
+                  <div
+                    v-for="alias in aliases"
+                    :key="alias"
+                    class="flex items-center justify-between gap-2 px-3 py-2 bg-[var(--theme-card)] rounded-lg border border-theme-border"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="text-sm text-theme-text-accent cursor-pointer hover:underline"
+                        @click="editModelAlias(index, originalModelId, alias)"
+                      >
+                        {{ alias }}
+                      </span>
+                      <span class="text-theme-text-secondary">→</span>
+                      <span class="text-sm text-theme-text-primary">{{ originalModelId }}</span>
+                    </div>
+                    <button
+                      @click="removeModelAlias(index, originalModelId, alias)"
+                      class="px-2 py-1 text-xs text-[var(--theme-danger)] hover:text-[var(--theme-danger)] rounded hover:bg-[var(--theme-danger-bg)] transition-all"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </div>
+                <div v-if="!model.model_id_mapping || Object.values(model.model_id_mapping).flat().length === 0" class="text-sm text-theme-text-secondary text-center py-2">
+                  暂无别名配置，请在模型列表中点击「添加别名」按钮配置
+                </div>
               </div>
             </div>
           </div>
@@ -229,6 +303,62 @@
         >
           {{ isSaving ? '保存中...' : '保存配置' }}
         </button>
+      </div>
+    </div>
+
+    <!-- 添加模型别名模态框 -->
+    <div v-if="mappingModal.show" class="fixed inset-0 bg-black/70 backdrop-blur-xl flex items-center justify-center z-[99999] p-4">
+      <div class="chat-card rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-theme-border">
+        <div class="p-4 sm:p-6 border-b border-theme-border bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)]">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-theme-text-primary">{{ mappingModal.isEdit ? '编辑模型别名' : '添加模型别名' }}</h3>
+          </div>
+        </div>
+        
+        <div class="p-4 sm:p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">原始模型</label>
+            <input
+              type="text"
+              :value="mappingModal.originalModelId"
+              readonly
+              class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-secondary bg-[var(--theme-card-hover)]"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">新别名</label>
+            <input
+              v-model="mappingModal.newAlias"
+              type="text"
+              class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
+              placeholder="请输入新的别名"
+              @keydown.enter="saveModelMapping"
+            />
+            <p class="text-xs text-theme-text-secondary mt-1">这个别名会映射到上面的原始模型</p>
+          </div>
+        </div>
+        
+        <div class="p-4 border-t border-theme-border flex gap-3">
+          <button
+            @click="mappingModal.show = false"
+            class="flex-1 px-4 py-2.5 chat-card text-theme-text-primary rounded-xl hover:bg-[var(--theme-card-hover)] transition-all duration-200 font-medium border border-theme-border text-sm"
+          >
+            取消
+          </button>
+          <button
+            @click="saveModelMapping"
+            class="flex-1 px-4 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-xl hover:opacity-90 transition-all duration-200 font-medium text-sm"
+            :disabled="!mappingModal.newAlias"
+          >
+            {{ mappingModal.isEdit ? '保存' : '添加' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -257,16 +387,45 @@ const testResults = reactive({})
 const testedCount = reactive({})
 const testConcurrency = reactive({})
 const testingModels = reactive({})
+const mappingModal = reactive({
+  show: false,
+  modelIndex: 0,
+  originalModelId: '',
+  newAlias: '',
+  oldAlias: '',
+  isEdit: false
+})
 
 onMounted(async () => {
   await adminStore.loadModels()
   models.value = JSON.parse(JSON.stringify(adminStore.models))
   globalDefaultModel.value = adminStore.globalDefaultModel
 
-  models.value.forEach((_, index) => {
+  models.value.forEach((model, index) => {
     modelSearch[index] = ''
     showApiKey[index] = false
     testConcurrency[index] = 5
+    // 确保每个模型都有 model_id_mapping 字段
+    if (!model.model_id_mapping) {
+      model.model_id_mapping = {}
+    }
+    
+    // 如果有可用模型列表，清理已选择的模型和默认模型
+    if (model.available_models && model.available_models.length > 0) {
+      const availableModelIds = new Set(model.available_models.map(m => m.id))
+      
+      // 清理已选择的模型
+      if (model.selected_models) {
+        model.selected_models = model.selected_models.filter(id => availableModelIds.has(id))
+      } else {
+        model.selected_models = []
+      }
+      
+      // 清理默认模型
+      if (model.default_model && !availableModelIds.has(model.default_model)) {
+        model.default_model = ''
+      }
+    }
   })
 
   await loadUniqueModels()
@@ -291,7 +450,8 @@ function addNewModel() {
     default_model: '',
     is_default: models.value.length === 0,
     available_models: [],
-    selected_models: []
+    selected_models: [],
+    model_id_mapping: {}
   }
 
   models.value.push(newModel)
@@ -299,6 +459,70 @@ function addNewModel() {
   modelSearch[newIndex] = ''
   showApiKey[newIndex] = false
   testConcurrency[newIndex] = 5
+}
+
+function openMappingModal(index: number, originalModelId: string) {
+  mappingModal.modelIndex = index
+  mappingModal.originalModelId = originalModelId
+  mappingModal.newAlias = ''
+  mappingModal.oldAlias = ''
+  mappingModal.isEdit = false
+  mappingModal.show = true
+}
+
+function editModelAlias(index: number, originalModelId: string, oldAlias: string) {
+  mappingModal.modelIndex = index
+  mappingModal.originalModelId = originalModelId
+  mappingModal.newAlias = oldAlias
+  mappingModal.oldAlias = oldAlias
+  mappingModal.isEdit = true
+  mappingModal.show = true
+}
+
+function saveModelMapping() {
+  const model = models.value[mappingModal.modelIndex]
+  if (!model.model_id_mapping) {
+    model.model_id_mapping = {}
+  }
+  
+  if (!model.model_id_mapping[mappingModal.originalModelId]) {
+    model.model_id_mapping[mappingModal.originalModelId] = []
+  }
+  
+  if (mappingModal.isEdit) {
+    // 编辑模式：替换旧别名为新别名
+    if (mappingModal.oldAlias && mappingModal.newAlias) {
+      const idx = model.model_id_mapping[mappingModal.originalModelId].indexOf(mappingModal.oldAlias)
+      if (idx !== -1) {
+        // 检查新别名是否已存在（除了旧的）
+        const otherAliases = model.model_id_mapping[mappingModal.originalModelId].filter(a => a !== mappingModal.oldAlias)
+        if (!otherAliases.includes(mappingModal.newAlias)) {
+          model.model_id_mapping[mappingModal.originalModelId][idx] = mappingModal.newAlias
+        }
+      }
+    }
+  } else {
+    // 添加模式：添加新别名
+    if (mappingModal.newAlias && !model.model_id_mapping[mappingModal.originalModelId].includes(mappingModal.newAlias)) {
+      model.model_id_mapping[mappingModal.originalModelId].push(mappingModal.newAlias)
+    }
+  }
+  
+  mappingModal.show = false
+}
+
+function removeModelAlias(index: number, originalModelId: string, alias: string) {
+  const model = models.value[index]
+  if (model.model_id_mapping && model.model_id_mapping[originalModelId]) {
+    const idx = model.model_id_mapping[originalModelId].indexOf(alias)
+    if (idx !== -1) {
+      model.model_id_mapping[originalModelId].splice(idx, 1)
+      // 如果该模型没有别名了，删除这个键
+      if (model.model_id_mapping[originalModelId].length === 0) {
+        delete model.model_id_mapping[originalModelId]
+      }
+    }
+  }
 }
 
 function copyModelItem(index: number) {
@@ -309,7 +533,8 @@ function copyModelItem(index: number) {
     ...JSON.parse(JSON.stringify(originalModel)),
     id: newId,
     name: originalModel.name ? originalModel.name + ' (副本)' : '未命名 (副本)',
-    is_default: false
+    is_default: false,
+    model_id_mapping: JSON.parse(JSON.stringify(originalModel.model_id_mapping || {}))
   }
 
   models.value.push(copiedModel)
@@ -373,12 +598,27 @@ async function fetchModels(index: number) {
       provider: model.provider
     })
     models.value[index].available_models = modelList
+    
     if (!models.value[index].selected_models) {
       models.value[index].selected_models = []
+    } else {
+      // 从已选择的模型中移除不再在新列表中的模型
+      const availableModelIds = new Set(modelList.map(m => m.id))
+      models.value[index].selected_models = models.value[index].selected_models.filter(
+        id => availableModelIds.has(id)
+      )
+      
+      // 检查默认模型是否还在可用列表中，如果不在就清空
+      if (models.value[index].default_model && !availableModelIds.has(models.value[index].default_model)) {
+        models.value[index].default_model = ''
+      }
+      
+      // 如果默认模型存在但不在已选择列表中，添加进去
+      if (models.value[index].default_model && !models.value[index].selected_models.includes(models.value[index].default_model)) {
+        models.value[index].selected_models.push(models.value[index].default_model)
+      }
     }
-    if (models.value[index].default_model && !models.value[index].selected_models.includes(models.value[index].default_model)) {
-      models.value[index].selected_models.push(models.value[index].default_model)
-    }
+    
     if (testResults[model.id]) {
       delete testResults[model.id]
     }
