@@ -20,7 +20,7 @@ export const cleanConfig = {
 
 export function createIframe(rawHtml: string): string {
   const hudCSS = '.sinan-hud{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding:12px;background:linear-gradient(to bottom right,rgba(255,255,255,0.9),rgba(255,255,255,0.6));border-radius:12px;border:1px solid rgba(0,0,0,0.08);backdrop-filter:blur(4px)}.char-card{flex:1 1 140px;background:#fff;padding:10px;border-radius:8px;border-left:4px solid #ddd;box-shadow:0 2px 6px rgba(0,0,0,0.04);display:flex;flex-direction:column;gap:4px;font-size:12px;position:relative;overflow:hidden;transition:transform 0.2s}.char-card:hover{transform:translateY(-2px);box-shadow:0 4px 8px rgba(0,0,0,0.1)}.char-name{font-weight:700;font-size:14px;color:#374151;display:flex;justify-content:space-between;align-items:center}.char-mood{color:#6b7280;font-size:12px}.char-loc{color:#9ca3af;font-size:11px;margin-top:auto;padding-top:4px}.bar-bg{height:4px;background:#f3f4f6;border-radius:2px;overflow:hidden;margin-top:6px}.bar-fill{height:100%;background:#10b981;border-radius:2px}.c-tongqiu{border-left-color:#f59e0b}.c-tongqiu .bar-fill{background:#f59e0b}.c-yufan{border-left-color:#3b82f6}.c-yufan .bar-fill{background:#3b82f6}.c-linghu{border-left-color:#8b5cf6}.c-linghu .bar-fill{background:#8b5cf6}.c-chongtian{border-left-color:#ef4444}.c-chongtian .bar-fill{background:#ef4444}'
-  const resetStyle = '<style>html,body{margin:0 !important;padding:0 !important;width:100% !important;height:auto !important;min-height:auto !important;word-wrap:break-word !important;box-sizing:border-box !important;overflow:hidden !important;} ::-webkit-scrollbar{display:none;} *,*::before,*::after{box-sizing:inherit !important;} img,video,canvas,svg{max-width:100% !important;height:auto !important;} table{display:block !important;overflow-x:auto !important;max-width:100% !important;} pre{white-space:pre-wrap !important;word-wrap:break-word !important;max-width:100% !important;} .container, .reality-panel, .app-container {max-width:100% !important; width:100% !important; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; border: none !important; height: auto !important; min-height: 0 !important;} body > div:first-child { margin: 0 !important; max-width: 100% !important; height: auto !important; min-height: 0 !important; } #app { height: auto !important; min-height: auto !important; }' + hudCSS + '</style>';
+  const resetStyle = '<style>html,body{margin:0 !important;padding:0 !important;width:100% !important;height:auto !important;min-height:auto !important;word-wrap:break-word !important;box-sizing:border-box !important;overflow:hidden !important;} ::-webkit-scrollbar{display:none;} *,*::before,*::after{box-sizing:inherit !important;} img,video,canvas,svg{max-width:100% !important;height:auto !important;} table{display:block !important;overflow-x:auto !important;max-width:100% !important;} pre{white-space:pre-wrap !important;word-wrap:break-word !important;max-width:100% !important;} .container, .reality-panel, .app-container {max-width:100% !important; width:100% !important; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; border: none !important; height: auto !important; min-height: 0 !important;} body > div:first-child { margin: 0 !important; max-width: 100% !important; height: auto !important; min-height: 0 !important; } #app { height: auto !important; min-height: auto !important;}' + hudCSS + '</style>';
   const metaViewport = '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">';
   const scriptShim = `
         <script>
@@ -133,32 +133,59 @@ export function createIframe(rawHtml: string): string {
   const isStandardDoc = /^\s*(<!doctype|<html)/i.test(trimmedHtml);
 
   if (isStandardDoc) {
+    // 如果是完整的 HTML 文档
+    // 提取 body 内容，或者保留完整文档但注入我们的脚本
+    let modifiedHtml = trimmedHtml;
+    
+    // 注入我们的样式和脚本到 head 中
     const headRegex = /<head(\s[^>]*)?>/i;
-    const htmlRegex = /<html(\s[^>]*)?>/i;
-
-    if (headRegex.test(content)) {
-      content = content.replace(headRegex, (match) => match + metaViewport + resetStyle + scriptShim);
-    } else if (htmlRegex.test(content)) {
-      content = content.replace(htmlRegex, (match) => match + '<head>' + metaViewport + resetStyle + scriptShim + '</head>');
+    if (headRegex.test(modifiedHtml)) {
+      modifiedHtml = modifiedHtml.replace(headRegex, (match) => {
+        // 检查是否已经有 viewport meta 标签
+        if (!/viewport/i.test(modifiedHtml)) {
+          return match + metaViewport + resetStyle;
+        }
+        return match + resetStyle;
+      });
     } else {
-      content = metaViewport + resetStyle + scriptShim + content;
+      // 如果没有 head 标签，尝试在 html 标签后添加
+      const htmlRegex = /<html(\s[^>]*)?>/i;
+      if (htmlRegex.test(modifiedHtml)) {
+        modifiedHtml = modifiedHtml.replace(htmlRegex, (match) => match + '<head>' + metaViewport + resetStyle + '</head>');
+      } else {
+        // 如果连 html 标签都没有，创建完整文档
+        modifiedHtml = `<!DOCTYPE html><html><head>${metaViewport}${resetStyle}</head><body>${modifiedHtml}</body></html>`;
+      }
     }
+    
+    // 注入脚本到 body 结束前
+    const bodyEndRegex = /<\/body>/i;
+    if (bodyEndRegex.test(modifiedHtml)) {
+      modifiedHtml = modifiedHtml.replace(bodyEndRegex, scriptShim + '</body>');
+    } else {
+      // 如果没有 body 结束标签，添加到最后
+      modifiedHtml = modifiedHtml + scriptShim;
+    }
+    
+    content = modifiedHtml;
   } else {
+    // 如果是 HTML 片段，创建完整文档
     content = `<!DOCTYPE html>
 <html>
 <head>
 ${metaViewport}
 ${resetStyle}
-${scriptShim}
 </head>
 <body>
 ${rawHtml}
+${scriptShim}
 </body>
 </html>`;
   }
 
+  // 转义 srcdoc 内容
   const escapedContent = content.split('"').join('&quot;');
-  return `<iframe srcdoc="${escapedContent}" style="width:100%;border:none;border-radius:12px;margin-top:8px;min-height:100px;overflow:hidden;" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin" scrolling="no"></iframe>`;
+  return `<iframe srcdoc="${escapedContent}" onload="this.style.height=this.contentDocument.body.scrollHeight+'px'" style="width:100%;border:none;border-radius:12px;margin-top:8px;min-height:100px;overflow:hidden;" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin" scrolling="no"></iframe>`;
 }
 
 export function renderMessage(options: RenderMessageOptions): string {
@@ -206,10 +233,18 @@ export function renderMessage(options: RenderMessageOptions): string {
 
   const trimmed = processed.trim();
 
-  const htmlDocPattern = /(<!doctype html>|<html\b[^>]*>)/i;
-  const htmlMatch = trimmed.match(htmlDocPattern);
+  // 查找完整的 HTML 文档（从 DOCTYPE 或 html 标签开始）
+  // 这个完整文档可能在内容的中间或后面
+  const htmlDocPattern = /(<!doctype\s+html>|<html\b[^>]*>)/gi;
+  let htmlMatches: RegExpExecArray[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = htmlDocPattern.exec(trimmed)) !== null) {
+    htmlMatches.push(match);
+  }
 
-  if (htmlMatch && !trimmed.includes('```')) {
+  if (htmlMatches.length > 0 && !trimmed.includes('```')) {
+    // 取最后一个完整HTML文档，因为通常最后一个才是真正要iframe的
+    const htmlMatch = htmlMatches[htmlMatches.length - 1];
     const startIndex = htmlMatch.index!;
     const closeTag = '</html>';
     const closeIndex = trimmed.toLowerCase().lastIndexOf(closeTag);
@@ -229,10 +264,18 @@ export function renderMessage(options: RenderMessageOptions): string {
 
     let resultHtml = '';
 
+    // 前面的内容直接用 v-html 渲染
     if (preText.trim()) {
-      resultHtml += DOMPurify.sanitize(marked(preText) as string, cleanConfig);
+      const preTrimmed = preText.trim();
+      const preContainsHtml = /<[^>]+>/i.test(preTrimmed);
+      if (preContainsHtml) {
+        resultHtml += DOMPurify.sanitize(preTrimmed, cleanConfig);
+      } else {
+        resultHtml += DOMPurify.sanitize(marked(preTrimmed) as string, cleanConfig);
+      }
     }
 
+    // 完整HTML文档用 iframe 包裹
     const container = document.createElement('div');
     container.className = 'html-card-container';
     container.style.width = '100%';
@@ -242,15 +285,34 @@ export function renderMessage(options: RenderMessageOptions): string {
     container.innerHTML = createIframe(htmlContent);
     resultHtml += container.outerHTML;
 
+    // 后面的内容直接用 v-html 渲染
     if (postText.trim()) {
-      resultHtml += DOMPurify.sanitize(marked(postText) as string, cleanConfig);
+      const postTrimmed = postText.trim();
+      const postContainsHtml = /<[^>]+>/i.test(postTrimmed);
+      if (postContainsHtml) {
+        resultHtml += DOMPurify.sanitize(postTrimmed, cleanConfig);
+      } else {
+        resultHtml += DOMPurify.sanitize(marked(postTrimmed) as string, cleanConfig);
+      }
     }
 
     return resultHtml;
   }
 
+  // 如果没有找到完整HTML文档，按原来的逻辑处理
   const containsHtml = /<[^>]+>/i.test(processed);
   if (containsHtml && !trimmed.includes('```')) {
+    const hasScriptOrComplex = /<script|<style|<iframe|<svg|<canvas/i.test(trimmed);
+    if (hasScriptOrComplex) {
+      const container = document.createElement('div');
+      container.className = 'html-card-container';
+      container.style.width = '100%';
+      container.style.margin = '0';
+      container.style.paddingBottom = '0';
+      container.style.marginBottom = '-1px';
+      container.innerHTML = createIframe(trimmed);
+      return container.outerHTML;
+    }
     return DOMPurify.sanitize(processed, cleanConfig);
   }
 
@@ -263,14 +325,6 @@ export function renderMessage(options: RenderMessageOptions): string {
         }
       }
     }
-  }
-
-  const lowerTrimmed = trimmed.toLowerCase();
-  if (lowerTrimmed.includes('<html') || lowerTrimmed.includes('<!doctype')) {
-    processed = processed.replace(/<!DOCTYPE html>/gi, '')
-      .replace(/<\/?html[^>]*>/gi, '')
-      .replace(/<\/?head[^>]*>/gi, '')
-      .replace(/<\/?body[^>]*>/gi, '');
   }
 
   let html = DOMPurify.sanitize(marked(processed) as string, cleanConfig);
