@@ -18,6 +18,52 @@ export const cleanConfig = {
   FORCE_BODY: true
 }
 
+const renderMarkdownCache = new Map<string, string>()
+const htmlFrameDetectionCache = new Map<string, boolean>()
+
+let lastRegexScriptsHash = ''
+let lastRegexScriptsLength = 0
+
+function clearCaches() {
+  renderMarkdownCache.clear()
+  htmlFrameDetectionCache.clear()
+}
+
+const contentUsesHtmlFrame = (text: string, role: 'user' | 'assistant' = 'assistant', skipRegex = false): boolean => {
+  if (!text) return false
+  const cacheKey = `${role}_${skipRegex}_${text}`
+  if (htmlFrameDetectionCache.has(cacheKey)) {
+    return htmlFrameDetectionCache.get(cacheKey)!
+  }
+
+  const trimmed = text.trim()
+  let usesFrame = false
+
+  const codeFencePattern = /```([^\n`]*)\n?([\s\S]*?)```/g
+  let codeMatch: RegExpExecArray | null
+  while ((codeMatch = codeFencePattern.exec(trimmed)) !== null) {
+    const lang = codeMatch[1] || ''
+    const blockContent = codeMatch[2] || ''
+    if (/\b(html|xml)\b/i.test(lang) || /^\s*<(!doctype|html|head|body|div|span|style|script|table|img)/i.test(blockContent)) {
+      usesFrame = true
+      break
+    }
+  }
+
+  if (!usesFrame && !trimmed.includes('```')) {
+    usesFrame = /(<!doctype html>|<html\b[^>]*>)/i.test(trimmed)
+  }
+
+  htmlFrameDetectionCache.set(cacheKey, usesFrame)
+  if (htmlFrameDetectionCache.size > 2000) {
+    const firstKey = htmlFrameDetectionCache.keys().next().value
+    if (firstKey !== undefined) {
+      htmlFrameDetectionCache.delete(firstKey)
+    }
+  }
+  return usesFrame
+}
+
 const htmlIframeSandbox = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-same-origin allow-downloads allow-pointer-lock allow-presentation allow-top-navigation-by-user-activation';
 
 const buildExecutableHtmlDocument = (rawHtml: string) => {
@@ -177,12 +223,17 @@ const createExecutableHtmlIframe = (rawHtml: string, extraClass = '') => {
 export function createIframe(rawHtml: string): string {
   const container = document.createElement('div');
   container.className = 'html-card-container';
+  container.style.width = '100%';
   container.style.margin = '0';
   container.style.paddingBottom = '0';
   container.style.marginBottom = '-1px';
   container.style.overflow = 'hidden';
   container.appendChild(createExecutableHtmlIframe(rawHtml, ''));
   return container.outerHTML;
+}
+
+function getRegexScriptsHash(compiledRegexScripts: CompiledRegexScript[]): string {
+  return compiledRegexScripts.map(s => s.find + s.replace + JSON.stringify(s.condition)).join('|');
 }
 
 export function renderMessage(options: RenderMessageOptions): string {
@@ -196,9 +247,21 @@ export function renderMessage(options: RenderMessageOptions): string {
 
   if (!content) return '';
 
+  const regexHash = getRegexScriptsHash(compiledRegexScripts);
+  if (lastRegexScriptsHash !== regexHash || lastRegexScriptsLength !== compiledRegexScripts.length) {
+    lastRegexScriptsHash = regexHash;
+    lastRegexScriptsLength = compiledRegexScripts.length;
+    clearCaches();
+  }
+
+  const cacheKey = `${role}_${content}_${isStreaming}_${regexHash}`;
+
+  if (!isStreaming && renderMarkdownCache.has(cacheKey)) {
+    return renderMarkdownCache.get(cacheKey)!;
+  }
+
   let processed = content.trim();
 
-  // 替换 {{user}} 占位符
   processed = processed.replace(/\{\{user\}\}/gi, userName);
 
   const isUser = role === 'user';
@@ -207,7 +270,6 @@ export function renderMessage(options: RenderMessageOptions): string {
   const beforeRegex = processed;
   let hasRegexChange = false;
 
-  // 应用正则替换，但不影响HTML标签
   const processedWithRegex = applyRegexScriptsToHtml(processed, compiledRegexScripts, isUser, isAssistant);
   hasRegexChange = processedWithRegex !== processed;
   processed = processedWithRegex;
@@ -230,8 +292,6 @@ export function renderMessage(options: RenderMessageOptions): string {
 
   const trimmed = processed.trim();
 
-  // 查找完整的 HTML 文档（从 DOCTYPE 或 html 标签开始）
-  // 这个完整文档可能在内容的中间或后面
   const htmlDocPattern = /(<!doctype html>|<html\b[^>]*>)/i;
   const htmlMatch = trimmed.match(htmlDocPattern);
   const containsHtmlDoc = !!htmlMatch;
@@ -239,7 +299,6 @@ export function renderMessage(options: RenderMessageOptions): string {
   if (containsHtmlDoc && !trimmed.includes('```')) {
     const startIndex = htmlMatch.index!;
 
-    // Find end index to preserve text AFTER the HTML
     const closeTag = '</html>';
     const closeIndex = trimmed.toLowerCase().lastIndexOf(closeTag);
 
@@ -251,7 +310,6 @@ export function renderMessage(options: RenderMessageOptions): string {
       preText = trimmed.substring(0, startIndex);
       postText = trimmed.substring(endIndex);
     } else {
-      // Fallback: Take everything from start match to end
       htmlContent = trimmed.substring(startIndex);
       preText = trimmed.substring(0, startIndex);
       postText = '';
@@ -259,7 +317,6 @@ export function renderMessage(options: RenderMessageOptions): string {
 
     let resultHtml = '';
 
-    // 前面的内容直接用 v-html 渲染
     if (preText.trim()) {
       const preTrimmed = preText.trim();
       const preContainsHtml = /<[^>]+>/i.test(preTrimmed);
@@ -270,7 +327,6 @@ export function renderMessage(options: RenderMessageOptions): string {
       }
     }
 
-    // 完整HTML文档用 iframe 包裹
     const container = document.createElement('div');
     container.className = 'html-card-container';
     container.style.width = '100%';
@@ -281,7 +337,6 @@ export function renderMessage(options: RenderMessageOptions): string {
     container.appendChild(createExecutableHtmlIframe(htmlContent, ''));
     resultHtml += container.outerHTML;
 
-    // 后面的内容直接用 v-html 渲染
     if (postText.trim()) {
       const postTrimmed = postText.trim();
       const postContainsHtml = /<[^>]+>/i.test(postTrimmed);
@@ -292,36 +347,40 @@ export function renderMessage(options: RenderMessageOptions): string {
       }
     }
 
-    return resultHtml;
-  }
-
-  // 如果没有找到完整HTML文档，按原来的逻辑处理
-  const containsHtml = /<[^>]+>/i.test(processed);
-  if (containsHtml && !trimmed.includes('```')) {
-    const hasScriptOrComplex = /<script|<style|<iframe|<svg|<canvas/i.test(trimmed);
-    if (hasScriptOrComplex) {
-      const container = document.createElement('div');
-      container.className = 'html-card-container';
-      container.style.width = '100%';
-      container.style.margin = '0';
-      container.style.paddingBottom = '0';
-      container.style.marginBottom = '-1px';
-      container.style.overflow = 'hidden';
-      container.appendChild(createExecutableHtmlIframe(trimmed, ''));
-      return container.outerHTML;
-    }
-    return DOMPurify.sanitize(processed, cleanConfig);
-  }
-
-  if (trimmed.includes('```')) {
-    const codeBlockMatch = trimmed.match(/```[\s\S]*?```/g);
-    if (codeBlockMatch) {
-      for (const block of codeBlockMatch) {
-        if (/<[^>]+>/i.test(block)) {
-          return DOMPurify.sanitize(processed, cleanConfig);
+    if (!isStreaming) {
+      renderMarkdownCache.set(cacheKey, resultHtml);
+      if (renderMarkdownCache.size > 2000) {
+        const firstKey = renderMarkdownCache.keys().next().value;
+        if (firstKey !== undefined) {
+          renderMarkdownCache.delete(firstKey);
         }
       }
     }
+
+    return resultHtml;
+  }
+
+  const startsWithBlockHtml = /^\s*<(div|table|section|article|aside|header|footer|style|script)/i.test(trimmed);
+  if (startsWithBlockHtml && !trimmed.includes('```')) {
+    const result = DOMPurify.sanitize(processed, cleanConfig);
+    if (!isStreaming) {
+      renderMarkdownCache.set(cacheKey, result);
+      if (renderMarkdownCache.size > 2000) {
+        const firstKey = renderMarkdownCache.keys().next().value;
+        if (firstKey !== undefined) {
+          renderMarkdownCache.delete(firstKey);
+        }
+      }
+    }
+    return result;
+  }
+
+  const lowerTrimmed = trimmed.toLowerCase();
+  if (lowerTrimmed.includes('<html') || lowerTrimmed.includes('<!doctype')) {
+    processed = processed.replace(/<!DOCTYPE html>/gi, '')
+      .replace(/<\/?html[^>]*>/gi, '')
+      .replace(/<\/?head[^>]*>/gi, '')
+      .replace(/<\/?body[^>]*>/gi, '');
   }
 
   let html = DOMPurify.sanitize(marked(processed) as string, cleanConfig);
@@ -340,6 +399,7 @@ export function renderMessage(options: RenderMessageOptions): string {
       if (isHtmlClass || looksLikeHtml) {
         const iframeContainer = document.createElement('div');
         iframeContainer.className = 'html-card-container';
+        iframeContainer.style.width = '100%';
         iframeContainer.style.margin = '0';
         iframeContainer.style.paddingBottom = '0';
         iframeContainer.style.marginBottom = '-1px';
@@ -360,6 +420,7 @@ export function renderMessage(options: RenderMessageOptions): string {
         if (/^\s*<(!doctype|html|head|body|div|span|style|script|table|img)/i.test(rawHtml)) {
           const iframeContainer = document.createElement('div');
           iframeContainer.className = 'html-card-container';
+          iframeContainer.style.width = '100%';
           iframeContainer.style.margin = '0';
           iframeContainer.style.paddingBottom = '0';
           iframeContainer.style.marginBottom = '-1px';
@@ -373,11 +434,50 @@ export function renderMessage(options: RenderMessageOptions): string {
       }
     });
 
+    const complexDivs = doc.querySelectorAll('div[style*="position"], div[style*="background"], div[class*="panel"]');
+    complexDivs.forEach(div => {
+      if (div.querySelector('script')) {
+        const rawHtml = div.outerHTML;
+        const iframeContainer = document.createElement('div');
+        iframeContainer.className = 'html-card-container';
+        iframeContainer.style.width = '100%';
+        iframeContainer.style.margin = '0';
+        iframeContainer.style.paddingBottom = '0';
+        iframeContainer.style.marginBottom = '-1px';
+        iframeContainer.style.overflow = 'hidden';
+        iframeContainer.appendChild(createExecutableHtmlIframe(rawHtml, ''));
+        if (div.parentNode) {
+          div.parentNode.replaceChild(iframeContainer, div);
+          modified = true;
+        }
+      }
+    });
+
     if (modified) {
-      return doc.body.innerHTML;
+      const result = doc.body.innerHTML;
+      if (!isStreaming) {
+        renderMarkdownCache.set(cacheKey, result);
+        if (renderMarkdownCache.size > 2000) {
+          const firstKey = renderMarkdownCache.keys().next().value;
+          if (firstKey !== undefined) {
+            renderMarkdownCache.delete(firstKey);
+          }
+        }
+      }
+      return result;
     }
   } catch (e) {
     console.error('Error processing HTML:', e);
+  }
+
+  if (!isStreaming) {
+    renderMarkdownCache.set(cacheKey, html);
+    if (renderMarkdownCache.size > 2000) {
+      const firstKey = renderMarkdownCache.keys().next().value;
+      if (firstKey !== undefined) {
+        renderMarkdownCache.delete(firstKey);
+      }
+    }
   }
 
   return html;
