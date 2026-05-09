@@ -135,7 +135,7 @@
                 </svg>
                 {{ expandedSections.firstMessagePreview ? '收起预览' : '显示预览' }}
               </button>
-              <div v-show="expandedSections.firstMessagePreview" class="mt-3">
+              <div v-if="expandedSections.firstMessagePreview" class="mt-3">
                 <div class="rounded-xl border border-theme-border bg-[var(--theme-card-hover)] p-4">
                   <div class="flex items-start gap-3">
                     <AvatarImage
