@@ -52,19 +52,6 @@
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-theme-text-primary mb-2">角色描述</label>
-            <textarea
-              ref="descriptionTextarea"
-              v-model="form.description"
-              class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
-              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-              placeholder="简短描述这个角色..."
-              :disabled="viewOnly"
-              @input="autoResize($event.target as HTMLTextAreaElement)"
-            ></textarea>
-          </div>
-          
-          <div>
             <label class="block text-sm font-medium text-theme-text-primary mb-2">标签</label>
             <div class="space-y-3">
               <div v-if="form.tags.length > 0" class="flex flex-wrap gap-2">
@@ -101,6 +88,70 @@
                 >
                   添加
                 </button>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">角色描述</label>
+            <textarea
+              ref="descriptionTextarea"
+              v-model="form.description"
+              class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
+              placeholder="简短描述这个角色..."
+              :disabled="viewOnly"
+              @input="autoResize($event.target as HTMLTextAreaElement)"
+            ></textarea>
+          </div>
+          
+          <div>
+            <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
+              开场白
+            </label>
+            <textarea
+              ref="first_mesTextarea"
+              v-model="form.first_mes"
+              class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
+              :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
+              placeholder="角色初次见面时说的话..."
+              :disabled="viewOnly"
+              @input="autoResize($event.target as HTMLTextAreaElement)"
+            ></textarea>
+            <div v-if="form.first_mes" class="mt-3">
+              <button
+                type="button"
+                @click="expandedSections.firstMessagePreview = !expandedSections.firstMessagePreview"
+                class="flex items-center gap-2 text-sm font-medium text-theme-text-accent hover:text-[var(--theme-primary)] transition-colors"
+              >
+                <svg
+                  class="w-4 h-4 transition-transform duration-300"
+                  :class="{ 'rotate-180': expandedSections.firstMessagePreview }"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                {{ expandedSections.firstMessagePreview ? '收起预览' : '显示预览' }}
+              </button>
+              <div v-show="expandedSections.firstMessagePreview" class="mt-3">
+                <div class="rounded-xl border border-theme-border bg-[var(--theme-card-hover)] p-4">
+                  <div class="flex items-start gap-3">
+                    <AvatarImage
+                      :src="form.avatar"
+                      :name="form.name || '角色'"
+                      size="md"
+                      rounded="full"
+                      gradient="primary"
+                      class="flex-shrink-0"
+                    />
+                    <div class="flex-1 min-w-0">
+                      <div class="text-sm font-medium text-theme-text-primary mb-1">{{ form.name || '角色' }}</div>
+                      <div v-html="renderedFirstMessage" class="text-theme-text-secondary prose prose-sm max-w-none"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -182,22 +233,6 @@
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-accent)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
             :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
             placeholder="描述角色所处的场景和环境..."
-            :disabled="viewOnly"
-            @input="autoResize($event.target as HTMLTextAreaElement)"
-          ></textarea>
-        </div>
-        
-        <div>
-          <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
-            <span class="w-6 h-6 rounded-full bg-[var(--theme-primary)]/15 flex items-center justify-center text-xs font-bold text-theme-text-accent">3</span>
-            开场白
-          </label>
-          <textarea
-            ref="first_mesTextarea"
-            v-model="form.first_mes"
-            class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
-            :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-            placeholder="角色初次见面时说的话..."
             :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
@@ -494,13 +529,18 @@ import WorldInfoEditor from './WorldInfoEditor.vue'
 import RegexEditor from './RegexEditor.vue'
 import ExportFormatModal from './ExportFormatModal.vue'
 import CharacterImageEditor from './CharacterImageEditor.vue'
+import AvatarImage from './AvatarImage.vue'
 import { exportCharacterFile, getCharacterSourceType, getCharacterBlob, saveCharacterImage } from '@/utils/localFriendStorage'
 import { exportCharacterAsPng, parseCharacterFromPng, downloadBlob } from '@/utils/characterImport'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
 import { debugPrintBlob, debugPrintFile } from '@/utils/debugCharacterFile'
+import { renderMessage } from '@/utils/messageRenderer'
+import { compileRegexScripts } from '@/utils/regexUtils'
+import { useUserStore } from '@/stores/user'
 
 const { showDangerConfirm, showErrorAlert } = useDialog()
+const userStore = useUserStore()
 
 interface CharacterFormData {
   id?: string
@@ -541,11 +581,27 @@ const emit = defineEmits<{
 
 const isLoading = computed(() => props.saving ?? false)
 
+const compiledRegexScripts = computed(() => {
+  return compileRegexScripts([], form.value.regex_scripts, [])
+})
+
+const renderedFirstMessage = computed(() => {
+  if (!form.value.first_mes) return ''
+  return renderMessage({
+    content: form.value.first_mes,
+    role: 'assistant',
+    userName: userStore.effectiveUserName,
+    compiledRegexScripts: compiledRegexScripts.value,
+    isStreaming: false
+  })
+})
+
 const expandedSections = reactive({
   basic: true,
   character: false,
   worldInfo: false,
-  regex: false
+  regex: false,
+  firstMessagePreview: false
 })
 
 const showWorldInfoEditor = ref(false)

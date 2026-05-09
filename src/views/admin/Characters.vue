@@ -905,7 +905,7 @@ async function handleBatchShare(ids: string[], shared: boolean) {
 }
 
 async function handleBatchUpdate(ids: string[]) {
-  const confirmed = await showDangerConfirm(`确定要更新选中的 ${ids.length} 个角色的元数据吗？此操作将从 Hugging Face 下载原文件并更新本地元数据。`)
+  const confirmed = await showDangerConfirm(`确定要更新选中的 ${ids.length} 个角色的元数据吗？此操作将从 文件服务器 下载原文件并更新本地元数据。`)
   if (confirmed) {
     isLoading.value = true
     try {
@@ -1062,7 +1062,7 @@ async function handleBatchDeleteOrphans() {
 }
 
 async function handleBatchUpdateOrphans() {
-  const confirmed = await showDangerConfirm(`确定要更新选中的 ${selectedIds.value.length} 个角色的元数据吗？此操作将从 Hugging Face 下载原文件并更新本地元数据。`)
+  const confirmed = await showDangerConfirm(`确定要更新选中的 ${selectedIds.value.length} 个角色的元数据吗？此操作将从 文件服务器 下载原文件并更新本地元数据。`)
   if (confirmed) {
     isLoading.value = true
     try {
