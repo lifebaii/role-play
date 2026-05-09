@@ -15,7 +15,7 @@
     >
       <div
         v-if="message.role === 'assistant' && chatStore.isStreaming && index === messages.length - 1 && !message.content && !chatStore.streamingContent"
-        class="max-w-[90%] sm:max-w-[80%] p-0 rounded-2xl bubble-assistant text-theme-text-primary shadow-xl shadow-[var(--theme-shadow-light)]"
+        class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl bubble-assistant text-theme-text-primary shadow-xl shadow-[var(--theme-shadow-light)]"
       >
         <div class="px-6 py-4 flex items-center justify-center gap-4">
           <div class="typing-indicator">
@@ -28,10 +28,10 @@
       </div>
       <div
         v-else
-        class="max-w-[90%] sm:max-w-[80%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200"
+        class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200"
         :class="message.role === 'user'
           ? 'bubble-user text-theme-text-primary shadow-lg shadow-[var(--theme-primary)]/25'
-          : 'bubble-assistant text-theme-text-primary'"
+          : 'bubble-assistant text-theme-text-primary w-[90%] sm:w-[90%]'"
       >
         <div :class="['mes_text flex items-center', message.role === 'user' ? 'user-bubble' : '']" v-html="renderedMessages[index]"></div>
       </div>
