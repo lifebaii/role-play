@@ -517,7 +517,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useUserDataStore } from '@/stores/userData'
@@ -1104,8 +1104,13 @@ async function sendSuggestion(suggestion: string) {
     return
   }
   
-  await chatStore.sendMessage(suggestion)
+  const success = await chatStore.sendMessage(suggestion)
   chatStore.showSuggestions = false
+  if (success) {
+    nextTick(() => {
+      chatMessagesRef.value?.scrollToBottom()
+    })
+  }
 }
 
 async function handleSubmit(text: string, clearInput: () => void) {
@@ -1120,6 +1125,10 @@ async function handleSubmit(text: string, clearInput: () => void) {
   const success = await chatStore.sendMessage(text)
   if (success) {
     clearInput()
+    // 发送消息后立即滚动到底部
+    nextTick(() => {
+      chatMessagesRef.value?.scrollToBottom()
+    })
   }
 }
 

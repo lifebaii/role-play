@@ -66,6 +66,18 @@ const messagesContainer = ref<HTMLElement | null>(null)
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null
 let isRestoringScroll = false
 
+// 滚动到最底部（带平滑动画）
+function scrollToBottom() {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+  })
+}
+
 // 保存滚动位置（防抖）
 function handleScroll() {
   if (isRestoringScroll || !messagesContainer.value || !chatStore.currentCharacter) return
@@ -113,6 +125,24 @@ watch(() => chatStore.currentCharacter?.id, (newId, oldId) => {
   }
 })
 
+// 监听消息变化，当有新消息时滚动到最底部
+watch(() => props.messages.length, (newLen, oldLen) => {
+  if (newLen > oldLen) {
+    scrollToBottom()
+  }
+})
+
+// 监听 streamingContent 变化，流式输出时保持在底部
+watch(() => chatStore.streamingContent, () => {
+  if (chatStore.isStreaming && messagesContainer.value) {
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+    // 如果已经接近底部，就自动滚动到底部
+    if (scrollTop + clientHeight >= scrollHeight - 100) {
+      scrollToBottom()
+    }
+  }
+})
+
 onMounted(() => {
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', handleScroll, { passive: true })
@@ -133,6 +163,7 @@ onUnmounted(() => {
 })
 
 defineExpose({
-  messagesContainer
+  messagesContainer,
+  scrollToBottom
 })
 </script>
