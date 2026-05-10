@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import type { Character, Message, CustomModelConfig, SyncStatus } from '@/types'
 import { getChatHistory, saveChatHistory, clearChatHistory, exportChatHistory, importChatHistory } from '@/utils/db'
 import { useUserStore } from './user'
@@ -113,7 +113,7 @@ export const useChatStore = defineStore('chat', () => {
   }
   
   const currentCharacter = ref<Character | null>(null)
-  const messages = ref<Message[]>([])
+  const messages = shallowRef<Message[]>([])
   const isLoading = ref(false)
   const isUpdatingInBackground = ref(false)
   const isUpdatingCharactersList = ref(false)

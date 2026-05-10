@@ -14,9 +14,27 @@ export interface RenderMessageOptions {
 
 export const cleanConfig = {
   ADD_TAGS: ['details', 'summary', 'iframe', 'svg', 'path', 'g', 'circle', 'rect', 'defs', 'linearGradient', 'stop', 'style', 'div', 'span', 'script', 'button', 'input', 'textarea', 'select', 'option', 'label', 'form'],
-  ADD_ATTR: ['style', 'open', 'srcdoc', 'sandbox', 'frameborder', 'allow', 'allowfullscreen', 'class', 'id', 'viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'stroke-linecap', 'stroke-linejoin', 'x1', 'y1', 'x2', 'y2', 'offset', 'stop-color', 'stop-opacity', 'width', 'height', 'onclick', 'onchange', 'oninput', 'onsubmit', 'type', 'value', 'checked', 'placeholder', 'rows', 'name', 'for', 'action', 'method', 'disabled', 'readonly', 'min', 'max', 'step', 'data-slash'],
+  ADD_ATTR: ['style', 'open', 'srcdoc', 'sandbox', 'frameborder', 'allow', 'allowfullscreen', 'class', 'id', 'viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'stroke-linecap', 'stroke-linejoin', 'x1', 'y1', 'x2', 'y2', 'offset', 'stop-color', 'stop-opacity', 'width', 'height', 'onclick', 'onchange', 'oninput', 'onsubmit', 'type', 'value', 'checked', 'placeholder', 'rows', 'name', 'for', 'action', 'method', 'disabled', 'readonly', 'min', 'max', 'step', 'data-slash', 'loading'],
   FORBID_ATTR: ['onmouseover', 'onload'],
   FORCE_BODY: true
+}
+
+function addLazyLoading(html: string): string {
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    const images = doc.querySelectorAll('img')
+    
+    images.forEach(img => {
+      if (!img.hasAttribute('loading')) {
+        img.setAttribute('loading', 'lazy')
+      }
+    })
+    
+    return doc.body.innerHTML
+  } catch (e) {
+    return html
+  }
 }
 
 const renderMarkdownCache = new Map<string, string>()
@@ -290,12 +308,12 @@ export function renderMessage(options: RenderMessageOptions): string {
   }
 
   if (isStreaming) {
-    const trimmed = processed.trim();
-    const containsHtml = /<[^>]+>/i.test(processed);
+    const trimmed = processed.trim()
+    const containsHtml = /<[^>]+>/i.test(processed)
     if (containsHtml && !trimmed.includes('```')) {
-      return DOMPurify.sanitize(processed, cleanConfig);
+      return addLazyLoading(DOMPurify.sanitize(processed, cleanConfig))
     }
-    return DOMPurify.sanitize(marked(processed) as string, cleanConfig);
+    return addLazyLoading(DOMPurify.sanitize(marked(processed) as string, cleanConfig))
   }
 
   const trimmed = processed.trim();
@@ -329,9 +347,9 @@ export function renderMessage(options: RenderMessageOptions): string {
       const preTrimmed = preText.trim();
       const preContainsHtml = /<[^>]+>/i.test(preTrimmed);
       if (preContainsHtml) {
-        resultHtml += DOMPurify.sanitize(preTrimmed, cleanConfig);
+        resultHtml += addLazyLoading(DOMPurify.sanitize(preTrimmed, cleanConfig));
       } else {
-        resultHtml += DOMPurify.sanitize(marked(preTrimmed) as string, cleanConfig);
+        resultHtml += addLazyLoading(DOMPurify.sanitize(marked(preTrimmed) as string, cleanConfig));
       }
     }
 
@@ -349,9 +367,9 @@ export function renderMessage(options: RenderMessageOptions): string {
       const postTrimmed = postText.trim();
       const postContainsHtml = /<[^>]+>/i.test(postTrimmed);
       if (postContainsHtml) {
-        resultHtml += DOMPurify.sanitize(postTrimmed, cleanConfig);
+        resultHtml += addLazyLoading(DOMPurify.sanitize(postTrimmed, cleanConfig));
       } else {
-        resultHtml += DOMPurify.sanitize(marked(postTrimmed) as string, cleanConfig);
+        resultHtml += addLazyLoading(DOMPurify.sanitize(marked(postTrimmed) as string, cleanConfig));
       }
     }
 
@@ -368,19 +386,19 @@ export function renderMessage(options: RenderMessageOptions): string {
     return resultHtml;
   }
 
-  const startsWithBlockHtml = /^\s*<(div|table|section|article|aside|header|footer|style|script)/i.test(trimmed);
+  const startsWithBlockHtml = /^\s*<(div|table|section|article|aside|header|footer|style|script)/i.test(trimmed)
   if (startsWithBlockHtml && !trimmed.includes('```')) {
-    const result = DOMPurify.sanitize(processed, cleanConfig);
+    const result = addLazyLoading(DOMPurify.sanitize(processed, cleanConfig))
     if (!isStreaming) {
-      renderMarkdownCache.set(cacheKey, result);
+      renderMarkdownCache.set(cacheKey, result)
       if (renderMarkdownCache.size > 2000) {
-        const firstKey = renderMarkdownCache.keys().next().value;
+        const firstKey = renderMarkdownCache.keys().next().value
         if (firstKey !== undefined) {
-          renderMarkdownCache.delete(firstKey);
+          renderMarkdownCache.delete(firstKey)
         }
       }
     }
-    return result;
+    return result
   }
 
   const lowerTrimmed = trimmed.toLowerCase();
@@ -462,31 +480,32 @@ export function renderMessage(options: RenderMessageOptions): string {
     });
 
     if (modified) {
-      const result = doc.body.innerHTML;
+      const result = addLazyLoading(doc.body.innerHTML)
       if (!isStreaming) {
-        renderMarkdownCache.set(cacheKey, result);
+        renderMarkdownCache.set(cacheKey, result)
         if (renderMarkdownCache.size > 2000) {
-          const firstKey = renderMarkdownCache.keys().next().value;
+          const firstKey = renderMarkdownCache.keys().next().value
           if (firstKey !== undefined) {
-            renderMarkdownCache.delete(firstKey);
+            renderMarkdownCache.delete(firstKey)
           }
         }
       }
-      return result;
+      return result
     }
   } catch (e) {
     console.error('Error processing HTML:', e);
   }
 
   if (!isStreaming) {
-    renderMarkdownCache.set(cacheKey, html);
+    html = addLazyLoading(html)
+    renderMarkdownCache.set(cacheKey, html)
     if (renderMarkdownCache.size > 2000) {
-      const firstKey = renderMarkdownCache.keys().next().value;
+      const firstKey = renderMarkdownCache.keys().next().value
       if (firstKey !== undefined) {
-        renderMarkdownCache.delete(firstKey);
+        renderMarkdownCache.delete(firstKey)
       }
     }
   }
 
-  return html;
+  return html
 }

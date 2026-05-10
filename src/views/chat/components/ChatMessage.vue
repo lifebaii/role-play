@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="messageRef"
     class="flex flex-col group"
     :class="message.role === 'user' ? 'items-end' : 'items-start'"
   >
@@ -30,7 +31,7 @@
     </div>
 
     <div
-      v-if="message.isGreeting && editingIndex !== index && !chatStore.isLoading && !(chatStore.isStreaming && isLastMessage)"
+      v-if="isVisible && message.isGreeting && editingIndex !== index && !chatStore.isLoading && !(chatStore.isStreaming && isLastMessage)"
       class="flex gap-1 mt-1"
       :class="message.role === 'user' ? 'justify-end' : 'justify-start'"
     >
@@ -73,7 +74,7 @@
     </div>
 
     <div
-      v-if="!message.isGreeting && editingIndex !== index && !chatStore.isLoading && !(chatStore.isStreaming && isLastMessage)"
+      v-if="isVisible && !message.isGreeting && editingIndex !== index && !chatStore.isLoading && !(chatStore.isStreaming && isLastMessage)"
       class="flex gap-1 mt-1"
       :class="message.role === 'user' ? 'justify-end' : 'justify-start'"
     >
@@ -162,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import type { Message } from '@/types'
 import type { CompiledRegexScript } from '@/composables/useChat'
@@ -195,6 +196,38 @@ const emit = defineEmits<{
 }>()
 
 const chatStore = useChatStore()
+
+const isVisible = ref(false)
+const messageRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (messageRef.value) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            isVisible.value = true
+          } else {
+            isVisible.value = false
+          }
+        })
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0
+      }
+    )
+    observer.observe(messageRef.value)
+  }
+})
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect()
+  }
+})
 
 const renderedContent = computed(() => {
   let content = props.message.content
