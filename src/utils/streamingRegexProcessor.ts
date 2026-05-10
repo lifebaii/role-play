@@ -2,8 +2,8 @@ import type { CompiledRegexScript } from '@/composables/useChat'
 import { applyRegexScriptsToHtml } from './regexUtils'
 
 export const STREAMING_REGEX_CONFIG = {
-  throttleMs: 2000,
-  cacheMaxSize: 100,
+  throttleMs: 1000,
+  cacheMaxSize: 50,
   enableDebugLog: false
 }
 

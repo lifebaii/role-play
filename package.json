@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tanstack/vue-virtual": "^3.13.24",
     "dexie": "^3.2.4",
     "dompurify": "^3.0.6",
     "marked": "^9.1.2",
