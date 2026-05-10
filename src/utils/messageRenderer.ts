@@ -2,6 +2,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import { applyRegexScriptsToHtml } from '@/utils/regexUtils'
+import { getStreamingProcessor, resetStreamingProcessor } from '@/utils/streamingRegexProcessor'
 
 export interface RenderMessageOptions {
   content: string
@@ -270,7 +271,14 @@ export function renderMessage(options: RenderMessageOptions): string {
   const beforeRegex = processed;
   let hasRegexChange = false;
 
-  const processedWithRegex = applyRegexScriptsToHtml(processed, compiledRegexScripts, isUser, isAssistant);
+  let processedWithRegex: string;
+  if (isStreaming) {
+    const processor = getStreamingProcessor('streaming');
+    processedWithRegex = processor.process(processed, compiledRegexScripts, isUser, isAssistant, true);
+  } else {
+    resetStreamingProcessor('streaming');
+    processedWithRegex = applyRegexScriptsToHtml(processed, compiledRegexScripts, isUser, isAssistant);
+  }
   hasRegexChange = processedWithRegex !== processed;
   processed = processedWithRegex;
 
