@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import ChatMessage from './ChatMessage.vue'
@@ -63,18 +63,73 @@ const emit = defineEmits<{
 
 const chatStore = useChatStore()
 const messagesContainer = ref<HTMLElement | null>(null)
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null
+let isRestoringScroll = false
 
-watch(() => props.messages.length, () => {
-  setTimeout(() => {
+// 保存滚动位置（防抖）
+function handleScroll() {
+  if (isRestoringScroll || !messagesContainer.value || !chatStore.currentCharacter) return
+  
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout)
+  }
+  
+  scrollTimeout = setTimeout(() => {
+    if (messagesContainer.value && chatStore.currentCharacter) {
+      const characterId = chatStore.currentCharacter.id
+      const scrollTop = messagesContainer.value.scrollTop
+      chatStore.saveScrollPosition(characterId, scrollTop)
+    }
+  }, 300)
+}
+
+// 恢复滚动位置
+function restoreScrollPosition() {
+  if (!messagesContainer.value || !chatStore.currentCharacter) return
+  
+  const characterId = chatStore.currentCharacter.id
+  const savedPosition = chatStore.getScrollPosition(characterId)
+  
+  if (savedPosition !== undefined) {
+    isRestoringScroll = true
     nextTick(() => {
       if (messagesContainer.value) {
-        messagesContainer.value.scrollTo({
-          top: messagesContainer.value.scrollHeight,
-          behavior: 'smooth'
-        })
+        messagesContainer.value.scrollTop = savedPosition
+        setTimeout(() => {
+          isRestoringScroll = false
+        }, 100)
       }
     })
-  }, 1000)
+  }
+}
+
+// 监听角色切换，恢复滚动位置
+watch(() => chatStore.currentCharacter?.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    // 延迟恢复滚动位置，确保消息已加载
+    setTimeout(() => {
+      restoreScrollPosition()
+    }, 100)
+  }
+})
+
+onMounted(() => {
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', handleScroll, { passive: true })
+  }
+  // 组件挂载时尝试恢复滚动位置
+  setTimeout(() => {
+    restoreScrollPosition()
+  }, 100)
+})
+
+onUnmounted(() => {
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', handleScroll)
+  }
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout)
+  }
 })
 
 defineExpose({

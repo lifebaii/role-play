@@ -41,6 +41,7 @@
         placeholder="输入消息..."
         class="flex-1 min-w-0 px-3 py-2 sm:px-5 sm:py-3 rounded-2xl border-2 chat-input-field shadow-lg transition-all duration-200"
         :disabled="isStreaming"
+        :style="{ visibility: isStreaming ? 'hidden' : 'visible' }"
       />
       <button
         v-if="isStreaming"

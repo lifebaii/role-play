@@ -161,6 +161,24 @@ const globalDefaultModel = ref('')
   const isGeneratingSuggestions = ref(false)
   const lastSuggestionsMessagesSnapshot = ref('')
   
+  // 滚动位置存储（从 localStorage 加载）
+  const scrollPositions = ref<Map<string, number>>(new Map())
+  
+  // 初始化时从 localStorage 加载滚动位置
+  try {
+    const savedPositions = localStorage.getItem('role_play_scroll_positions')
+    if (savedPositions) {
+      const positionsObj = JSON.parse(savedPositions)
+      const positionsMap = new Map<string, number>()
+      for (const [key, value] of Object.entries(positionsObj)) {
+        positionsMap.set(key, value as number)
+      }
+      scrollPositions.value = positionsMap
+    }
+  } catch (e) {
+    console.error('Failed to load scroll positions from localStorage:', e)
+  }
+  
   // 建议请求的取消控制器
   let suggestionsAbortController: AbortController | null = null
   let currentGeneratingCharacterId: string | null = null
@@ -263,6 +281,46 @@ const globalDefaultModel = ref('')
   function setSuggestionsAbortController(controller: AbortController, characterId: string) {
     suggestionsAbortController = controller
     currentGeneratingCharacterId = characterId
+  }
+
+  // 保存滚动位置
+  function saveScrollPosition(characterId: string, scrollTop: number) {
+    const newMap = new Map(scrollPositions.value).set(characterId, scrollTop)
+    scrollPositions.value = newMap
+    
+    // 同步到 localStorage
+    try {
+      const positionsObj: Record<string, number> = {}
+      newMap.forEach((value, key) => {
+        positionsObj[key] = value
+      })
+      localStorage.setItem('role_play_scroll_positions', JSON.stringify(positionsObj))
+    } catch (e) {
+      console.error('Failed to save scroll positions to localStorage:', e)
+    }
+  }
+
+  // 获取滚动位置
+  function getScrollPosition(characterId: string): number | undefined {
+    return scrollPositions.value.get(characterId)
+  }
+
+  // 清除滚动位置
+  function clearScrollPosition(characterId: string) {
+    const newMap = new Map(scrollPositions.value)
+    newMap.delete(characterId)
+    scrollPositions.value = newMap
+    
+    // 同步到 localStorage
+    try {
+      const positionsObj: Record<string, number> = {}
+      newMap.forEach((value, key) => {
+        positionsObj[key] = value
+      })
+      localStorage.setItem('role_play_scroll_positions', JSON.stringify(positionsObj))
+    } catch (e) {
+      console.error('Failed to save scroll positions to localStorage:', e)
+    }
   }
 
   function isJailbreakEnabled(): boolean {
@@ -1113,6 +1171,9 @@ const globalDefaultModel = ref('')
     restoreSuggestionsState,
     cancelSuggestions,
     setSuggestionsAbortController,
+    saveScrollPosition,
+    getScrollPosition,
+    clearScrollPosition,
     loadLocalCharacters,
     loadCharacters,
     loadUserCharacters,
