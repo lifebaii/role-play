@@ -10,11 +10,25 @@ const removeManifestPlugin = (): Plugin => ({
   }
 })
 
+function getBeijingTime(): string {
+  const now = new Date()
+  const beijingOffset = 8 * 60
+  const utcOffset = now.getTimezoneOffset()
+  const beijingTime = new Date(now.getTime() + (beijingOffset + utcOffset) * 60 * 1000)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${beijingTime.getFullYear()}-${pad(beijingTime.getMonth() + 1)}-${pad(beijingTime.getDate())} ${pad(beijingTime.getHours())}:${pad(beijingTime.getMinutes())}:${pad(beijingTime.getSeconds())}`
+}
+
+const buildTime = getBeijingTime()
+
 export default defineConfig(({ command, mode }) => {
   const isDev = mode === 'development'
 
   return {
     base: './',
+    define: {
+      __APP_BUILD_TIME__: JSON.stringify(buildTime)
+    },
     plugins: [
       vue(),
       ...(isDev ? [removeManifestPlugin()] : []),

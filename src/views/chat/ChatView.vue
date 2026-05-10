@@ -450,7 +450,7 @@
           </div>
           
           <div class="text-xs text-theme-text-secondary mb-3 sm:mb-4">
-            版本 1.0.0
+            版本 1.0.0 ({{ buildTime }})
           </div>
           
           <a
@@ -639,6 +639,7 @@ const showUserSettings = ref(false)
 const showUserDataSettings = ref(false)
 const showChatSync = ref(false)
 const showAbout = ref(false)
+const buildTime = __APP_BUILD_TIME__
 const backgroundImageUrl = ref<string | null>(null)
 let currentBgObjectUrl: string | null = null
 const characterLimit = ref<{ currentCount: number; baseLimit: number; bonusSlots: number; totalLikes: number; maxLimit: number } | null>(null)
