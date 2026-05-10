@@ -87,6 +87,7 @@ export interface Character {
   isOfficial?: boolean
   thumbnailUrl?: string
   sourceUrl?: string
+  quota?: number
 }
 
 export interface WorldInfo {

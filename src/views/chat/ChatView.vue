@@ -257,7 +257,7 @@
           :editing-index="editingIndex"
           :edit-content="editContent"
           :compiled-regex-scripts="compiledRegexScripts"
-          @click="showSuggestions = false; showMenuDropdown = false"
+          @click="chatStore.showSuggestions = false; showMenuDropdown = false"
           @copy="copyMessage"
           @edit="startEdit"
           @delete="deleteMessage"
@@ -272,13 +272,14 @@
 
         <ChatInput
           :is-streaming="chatStore.isStreaming"
-          :show-suggestions="showSuggestions"
-          :suggestions="suggestions"
-          :is-generating-suggestions="isGeneratingSuggestions"
+          :show-suggestions="chatStore.showSuggestions"
+          :suggestions="chatStore.suggestions"
+          :is-generating-suggestions="chatStore.isGeneratingSuggestions"
           :auto-fetch-suggestions="autoFetchSuggestions"
           @submit="handleSubmit"
           @stop="chatStore.abortStream()"
           @fetch-suggestions="fetchSuggestions"
+          @cancel-suggestions="chatStore.cancelSuggestions"
           @refresh-suggestions="fetchSuggestions({ autoShow: true, force: true })"
           @send-suggestion="sendSuggestion"
         />
@@ -665,6 +666,7 @@ const {
   isCurrentCharacterFriend,
   isCurrentCharacterUserOwned,
   isUpdatingToServer,
+  isUploadingToServer,
   isUpdatingFromServer,
   isDeletingCharacter,
   selectCharacter,
@@ -675,11 +677,11 @@ const {
   handleViewCharacter,
   handleDeleteFromEdit,
   handleToggleLikeInEdit,
-  handleUpdateShared,
   loadOriginalCharacterData: originalLoadOriginalCharacterData,
   loadLikedCharacters,
   handleImportUserCharacter,
   updateToServer,
+  handleUploadToServer,
   updateFromServer
 } = useCharacter()
 
@@ -776,12 +778,8 @@ const {
 const messages = computed(() => chatStore.messages)
 
 const editingIndex = ref(-1)
-const editContent = ref('')
-const showSuggestions = ref(false)
-const suggestions = ref<string[]>([])
-const isGeneratingSuggestions = ref(false)
-const autoFetchSuggestions = ref(localStorage.getItem('role_play_auto_suggestions') === 'true')
-let lastSuggestionsMessagesSnapshot: string = ''
+  const editContent = ref('')
+  const autoFetchSuggestions = ref(localStorage.getItem('role_play_auto_suggestions') === 'true')
 
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
@@ -829,9 +827,9 @@ function cancelEdit() {
 function saveEdit(index: number) {
   chatStore.editMessage(index, editContent.value)
   cancelEdit()
-  suggestions.value = []
-  lastSuggestionsMessagesSnapshot = ''
-  showSuggestions.value = false
+  chatStore.suggestions = []
+  chatStore.lastSuggestionsMessagesSnapshot = ''
+  chatStore.showSuggestions = false
 }
 
 function sendEdit(index: number) {
@@ -840,9 +838,9 @@ function sendEdit(index: number) {
   
   chatStore.editMessage(index, content)
   cancelEdit()
-  suggestions.value = []
-  lastSuggestionsMessagesSnapshot = ''
-  showSuggestions.value = false
+  chatStore.suggestions = []
+  chatStore.lastSuggestionsMessagesSnapshot = ''
+  chatStore.showSuggestions = false
   
   chatStore.regenerateFrom(index)
 }
@@ -851,18 +849,18 @@ async function deleteMessage(index: number) {
   const confirmed = await showDangerConfirm('确定要删除这条消息吗？')
   if (confirmed) {
     chatStore.deleteMessage(index)
-    suggestions.value = []
-    lastSuggestionsMessagesSnapshot = ''
-    showSuggestions.value = false
+    chatStore.suggestions = []
+    chatStore.lastSuggestionsMessagesSnapshot = ''
+    chatStore.showSuggestions = false
   }
 }
 
 function regenerateFromAssistant(index: number) {
   if (index > 0 && chatStore.messages[index - 1].role === 'user') {
     chatStore.regenerateFrom(index - 1)
-    suggestions.value = []
-    lastSuggestionsMessagesSnapshot = ''
-    showSuggestions.value = false
+    chatStore.suggestions = []
+    chatStore.lastSuggestionsMessagesSnapshot = ''
+    chatStore.showSuggestions = false
   }
 }
 
@@ -922,7 +920,10 @@ async function handleImportChat(event: Event) {
 }
 
 async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean } = {}) {
-  if (isGeneratingSuggestions.value) return
+  // 如果正在生成，则取消之前的请求
+  if (chatStore.isGeneratingSuggestions) {
+    chatStore.cancelSuggestions()
+  }
   
   // 检查自定义模型配置
   if (chatStore.useCustomModel) {
@@ -935,18 +936,28 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
   
   const { autoShow = true, force = false } = options
   
+  // 获取当前角色ID
+  const currentCharacterId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
+  if (!currentCharacterId) {
+    return
+  }
+  
   const currentMessagesSnapshot = JSON.stringify(chatStore.messages.slice(-6))
-  if (!force && suggestions.value.length > 0 && lastSuggestionsMessagesSnapshot === currentMessagesSnapshot) {
+  if (!force && chatStore.suggestions.length > 0 && chatStore.lastSuggestionsMessagesSnapshot === currentMessagesSnapshot) {
     if (autoShow) {
-      showSuggestions.value = true
+      chatStore.showSuggestions = true
     }
     return
   }
   
-  isGeneratingSuggestions.value = true
+  chatStore.isGeneratingSuggestions = true
   if (autoShow) {
-    showSuggestions.value = false
+    chatStore.showSuggestions = false
   }
+  
+  // 创建新的AbortController
+  const abortController = new AbortController()
+  chatStore.setSuggestionsAbortController(abortController, currentCharacterId)
   
   try {
     // 在前端构建上下文（不添加用户新消息）
@@ -1000,6 +1011,17 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
       })
     }
     
+    // 检查请求是否已被取消，或角色是否已切换
+    if (abortController.signal.aborted) {
+      return
+    }
+    
+    // 检查角色是否还是原来的角色
+    const currentId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
+    if (currentId !== currentCharacterId) {
+      return
+    }
+    
     let content = response
     content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     
@@ -1019,12 +1041,23 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
       parsedSuggestions = lines.slice(0, 5).map(line => line.replace(/^[\d\.\-\*]+\s*/, '').trim()).filter(s => s)
     }
     
-    suggestions.value = parsedSuggestions
-    if (autoShow) {
-      showSuggestions.value = parsedSuggestions.length > 0
+    // 再次检查角色是否还是原来的角色
+    const finalCharacterId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
+    if (finalCharacterId !== currentCharacterId) {
+      return
     }
-    lastSuggestionsMessagesSnapshot = JSON.stringify(chatStore.messages.slice(-6))
+    
+    chatStore.suggestions = parsedSuggestions
+    if (autoShow) {
+      chatStore.showSuggestions = parsedSuggestions.length > 0
+    }
+    chatStore.lastSuggestionsMessagesSnapshot = JSON.stringify(chatStore.messages.slice(-6))
   } catch (error: any) {
+    // 如果是abort错误，不显示错误提示
+    if (error.name === 'AbortError') {
+      return
+    }
+    
     console.error('Failed to fetch suggestions:', error)
     if (error.message === 'Insufficient quota') {
       setTimeout(() => {
@@ -1032,7 +1065,11 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
       }, 100)
     }
   } finally {
-    isGeneratingSuggestions.value = false
+    // 检查角色是否还是原来的角色，只有在角色未切换时才更新状态
+    const finalCharacterId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
+    if (finalCharacterId === currentCharacterId) {
+      chatStore.isGeneratingSuggestions = false
+    }
   }
 }
 
@@ -1068,7 +1105,7 @@ async function sendSuggestion(suggestion: string) {
   }
   
   await chatStore.sendMessage(suggestion)
-  showSuggestions.value = false
+  chatStore.showSuggestions = false
 }
 
 async function handleSubmit(text: string, clearInput: () => void) {
@@ -1221,11 +1258,13 @@ watch(() => chatStore.isStreaming, (isStreaming) => {
       if (chatStore.error) return
       
       const lastMessage = chatStore.messages[chatStore.messages.length - 1]
-      if (lastMessage && lastMessage.role === 'assistant') {
-        const content = lastMessage.content || ''
-        if (!content.trim() || content.startsWith('[Error:')) {
-          return
-        }
+      // 只有当最后一条消息是助手消息且内容不为空时，才触发自动建议
+      if (!lastMessage || lastMessage.role !== 'assistant') {
+        return
+      }
+      const content = lastMessage.content || ''
+      if (!content.trim() || content.startsWith('[Error:')) {
+        return
       }
       
       fetchSuggestions({ autoShow: false })

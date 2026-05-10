@@ -468,6 +468,7 @@ const props = defineProps<{
   showCommentSection: boolean
   characterData: any
   isUpdatingToServer: boolean
+  isUploadingToServer?: boolean // For backward compatibility
   isUpdatingFromServer: boolean
   isDeletingCharacter: boolean
   thumbnailUrl: string | null
@@ -485,6 +486,7 @@ const emit = defineEmits<{
   (e: 'update:shared', value: boolean): void
   (e: 'avatarUpdated', characterId: string): void
   (e: 'updateToServer', data: any): void
+  (e: 'uploadToServer', data: any): void // For backward compatibility
   (e: 'updateFromServer'): void
 }>()
 
@@ -545,6 +547,7 @@ function handleImageSaved(characterId: string) {
 async function handleUpdateToServer() {
   if (!props.characterData) return
   emit('updateToServer', props.characterData)
+  emit('uploadToServer', props.characterData) // For backward compatibility
 }
 
 async function handleUpdateFromServer() {

@@ -209,11 +209,16 @@ const renderedMessages = computed(() => {
 })
 
 watch(() => props.messages.length, () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
+  setTimeout(() => {
+    nextTick(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTo({
+          top: messagesContainer.value.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    })
+  }, 1000)
 })
 
 defineExpose({

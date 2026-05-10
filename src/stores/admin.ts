@@ -64,6 +64,7 @@ export const useAdminStore = defineStore('admin', () => {
   const orphanedCharactersPage = ref(1)
   const orphanedCharactersPageSize = ref(20)
   const orphanedCharactersTotalPages = ref(1)
+  const orphanedCharactersSortBy = ref<string>('quota_desc')
 
   async function login(password: string): Promise<boolean> {
     isLoading.value = true
@@ -418,7 +419,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   // 流浪角色相关方法
-  async function loadOrphanedCharacters(params?: { page?: number; pageSize?: number; search?: string }): Promise<void> {
+  async function loadOrphanedCharacters(params?: { page?: number; pageSize?: number; search?: string; sortBy?: string }): Promise<void> {
     try {
       const result = await orphanedCharactersApi.list(params)
       orphanedCharacters.value = result.characters || []
@@ -510,6 +511,7 @@ export const useAdminStore = defineStore('admin', () => {
     orphanedCharactersPage,
     orphanedCharactersPageSize,
     orphanedCharactersTotalPages,
+    orphanedCharactersSortBy,
     login,
     verify,
     checkAuth,

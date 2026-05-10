@@ -268,11 +268,13 @@ export function useChat(globalRegex: any[] = []) {
         if (chatStore.error) return
         
         const lastMessage = chatStore.messages[chatStore.messages.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant') {
-          const content = lastMessage.content || ''
-          if (!content.trim() || content.startsWith('[Error:')) {
-            return
-          }
+        // 只有当最后一条消息是助手消息且内容不为空时，才触发自动建议
+        if (!lastMessage || lastMessage.role !== 'assistant') {
+          return
+        }
+        const content = lastMessage.content || ''
+        if (!content.trim() || content.startsWith('[Error:')) {
+          return
         }
         
         fetchSuggestions({ autoShow: false })

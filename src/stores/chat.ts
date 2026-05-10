@@ -66,6 +66,17 @@ interface StreamContext {
   currentWaitTime: string
 }
 
+interface CharacterSuggestionsState {
+  suggestions: string[]
+  showSuggestions: boolean
+  isGeneratingSuggestions: boolean
+  lastSuggestionsMessagesSnapshot: string
+}
+
+interface SuggestionsState {
+  [characterId: string]: CharacterSuggestionsState
+}
+
 export const useChatStore = defineStore('chat', () => {
   const characters = ref<Character[]>([])
   const userCharacters = ref<Character[]>([])
@@ -141,6 +152,17 @@ const globalDefaultModel = ref('')
   }
 
   const backgroundStreams = ref<Map<string, StreamContext>>(new Map())
+  const characterSuggestionsState = ref<SuggestionsState>({})
+
+  // 当前激活的建议状态
+  const suggestions = ref<string[]>([])
+  const showSuggestions = ref(false)
+  const isGeneratingSuggestions = ref(false)
+  const lastSuggestionsMessagesSnapshot = ref('')
+  
+  // 建议请求的取消控制器
+  let suggestionsAbortController: AbortController | null = null
+  let currentGeneratingCharacterId: string | null = null
 
   const isStreaming = computed(() => {
     if (!currentCharacter.value) return false
@@ -182,6 +204,64 @@ const globalDefaultModel = ref('')
 
   function setCurrentCharacter(character: Character | null) {
     currentCharacter.value = character
+  }
+
+  // 保存当前角色的建议状态
+  function saveCurrentSuggestionsState() {
+    if (!currentCharacter.value) return
+    const charId = currentCharacter.value.role_play?.id || currentCharacter.value.id
+    if (!charId) return
+    characterSuggestionsState.value[charId] = {
+      suggestions: [...suggestions.value],
+      showSuggestions: showSuggestions.value,
+      isGeneratingSuggestions: isGeneratingSuggestions.value,
+      lastSuggestionsMessagesSnapshot: lastSuggestionsMessagesSnapshot.value
+    }
+  }
+
+  // 恢复角色的建议状态
+  function restoreSuggestionsState(characterId: string) {
+    const savedState = characterSuggestionsState.value[characterId]
+    if (savedState) {
+      suggestions.value = [...savedState.suggestions]
+      showSuggestions.value = savedState.showSuggestions
+      // 恢复时不应该显示正在加载状态
+      isGeneratingSuggestions.value = false
+      lastSuggestionsMessagesSnapshot.value = savedState.lastSuggestionsMessagesSnapshot
+    } else {
+      // 没有保存的状态，重置为默认
+      suggestions.value = []
+      showSuggestions.value = false
+      isGeneratingSuggestions.value = false
+      lastSuggestionsMessagesSnapshot.value = ''
+    }
+  }
+
+  // 取消建议请求
+  function cancelSuggestions() {
+    if (suggestionsAbortController) {
+      suggestionsAbortController.abort()
+      suggestionsAbortController = null
+    }
+    // 清除当前正在生成的角色ID
+    if (currentGeneratingCharacterId) {
+      // 保存该角色的状态，清除正在生成标志
+      const savedState = characterSuggestionsState.value[currentGeneratingCharacterId]
+      if (savedState) {
+        characterSuggestionsState.value[currentGeneratingCharacterId] = {
+          ...savedState,
+          isGeneratingSuggestions: false
+        }
+      }
+      currentGeneratingCharacterId = null
+    }
+    isGeneratingSuggestions.value = false
+  }
+
+  // 设置建议的取消控制器（供外部使用）
+  function setSuggestionsAbortController(controller: AbortController, characterId: string) {
+    suggestionsAbortController = controller
+    currentGeneratingCharacterId = characterId
   }
 
   function isJailbreakEnabled(): boolean {
@@ -358,7 +438,13 @@ const globalDefaultModel = ref('')
 
   async function selectCharacter(character: Character) {
     const flatCharacter = flattenCharacter(character)
-    const characterId = flatCharacter.id
+    const characterId = flatCharacter.role_play?.id || flatCharacter.id
+    
+    // 1. 取消当前正在生成的建议请求
+    cancelSuggestions()
+    
+    // 2. 保存当前角色的建议状态
+    saveCurrentSuggestionsState()
     
     isLoading.value = true
     error.value = null
@@ -366,6 +452,11 @@ const globalDefaultModel = ref('')
     messages.value = []
     streamingContent.value = ''
     currentWaitTime.value = '0.0'
+    
+    // 3. 恢复新角色的建议状态
+    if (characterId) {
+      restoreSuggestionsState(characterId)
+    }
 
     try {
       let fullCharacter: Character | null = null
@@ -1000,6 +1091,15 @@ const globalDefaultModel = ref('')
     isAnonymous,
     canUseBuiltInModel,
     mustUseCustomModel,
+    // 建议相关状态
+    suggestions,
+    showSuggestions,
+    isGeneratingSuggestions,
+    lastSuggestionsMessagesSnapshot,
+    saveCurrentSuggestionsState,
+    restoreSuggestionsState,
+    cancelSuggestions,
+    setSuggestionsAbortController,
     loadLocalCharacters,
     loadCharacters,
     loadUserCharacters,

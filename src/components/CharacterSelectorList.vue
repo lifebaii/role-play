@@ -30,14 +30,22 @@
         :class="{ 'pointer-events-none opacity-75': actionCharacterId === getCharacterId(character) }"
         @click="$emit('select', character)"
       >
-        <AvatarImage
-          :src="getCharacterAvatar(character)"
-          :name="getCharacterName(character)"
-          size="md"
-          rounded="lg"
-          :gradient="getCharacterIsOfficial(character) ? 'primary' : 'secondary'"
-          class="flex-shrink-0 shadow-lg"
-        />
+        <div class="relative flex-shrink-0">
+          <AvatarImage
+            :src="getCharacterAvatar(character)"
+            :name="getCharacterName(character)"
+            size="md"
+            rounded="lg"
+            :gradient="getCharacterIsOfficial(character) ? 'primary' : 'secondary'"
+            class="shadow-lg"
+          />
+          <div
+            v-if="hasQuota(character)"
+            class="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold text-white rounded-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-md border-2 border-[var(--theme-card-bg)]"
+          >
+            {{ getCharacterQuota(character) }}
+          </div>
+        </div>
         <div class="flex-1 min-w-0">
           <div class="font-medium text-theme-text-primary truncate">{{ getCharacterName(character) }}</div>
           <div v-if="showTags || showLikeCount" class="flex gap-1 mt-1 items-center overflow-x-auto scrollbar-hide">
@@ -217,5 +225,13 @@ function getCharacterIsFriend(character: Character): boolean {
 
 function getCharacterIsOfficial(character: Character): boolean {
   return character.isOfficial !== false
+}
+
+function hasQuota(character: Character): boolean {
+  return typeof character.quota === 'number' && character.quota > 0
+}
+
+function getCharacterQuota(character: Character): number {
+  return character.quota || 0
 }
 </script>

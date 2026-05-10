@@ -130,6 +130,15 @@
               />
             </div>
             <div class="flex gap-3">
+              <select
+                v-model="localOrphanSortBy"
+                @change="handleOrphanSortChange"
+                class="px-4 py-3 chat-input-field border border-theme-border rounded-xl text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200"
+              >
+                <option value="">默认排序</option>
+                <option value="quota_desc">热度最高</option>
+                <option value="quota_asc">热度最低</option>
+              </select>
               <button
                 @click="toggleBatchMode"
                 :class="[
@@ -277,6 +286,12 @@
                       {{ character.name }}
                     </h3>
                     <div class="flex items-center gap-1">
+                      <span 
+                        v-if="character.quota !== undefined" 
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded-full text-xs font-medium border border-[var(--theme-primary)]/20"
+                      >
+                        🔥 热度: {{ character.quota }}
+                      </span>
                       <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--theme-warning)]/10 text-[var(--theme-warning)] rounded-full text-xs font-medium border border-[var(--theme-warning)]/20">
                         无归属
                       </span>
@@ -596,6 +611,7 @@ const batchMode = ref(false)
 const selectedIds = ref<string[]>([])
 const localSearchQuery = ref('')
 const localOrphanPageSize = ref(adminStore.orphanedCharactersPageSize.toString())
+const localOrphanSortBy = ref(adminStore.orphanedCharactersSortBy || 'quota_desc')
 const showAssignDialog = ref(false)
 const selectedUserId = ref<string>('')
 const usersList = ref<User[]>([
@@ -641,7 +657,8 @@ async function loadCharacters(page = 1) {
       await adminStore.loadOrphanedCharacters({
         page,
         pageSize: adminStore.orphanedCharactersPageSize,
-        search: searchQuery.value || undefined
+        search: searchQuery.value || undefined,
+        sortBy: localOrphanSortBy.value || undefined
       })
     } else {
       await adminStore.loadCharacters({
@@ -667,6 +684,14 @@ function handleSourceChange(source: 'admin' | 'user' | 'orphan') {
   characterSource.value = source
   searchQuery.value = ''
   localSearchQuery.value = ''
+  if (source === 'orphan') {
+    // 切换到流浪角色时，保持或设置默认排序为热度最高
+    localOrphanSortBy.value = adminStore.orphanedCharactersSortBy || 'quota_desc'
+    adminStore.orphanedCharactersSortBy = 'quota_desc'
+  } else {
+    localOrphanSortBy.value = ''
+    adminStore.orphanedCharactersSortBy = ''
+  }
   batchMode.value = false
   selectedIds.value = []
   adminStore.charactersSharedFilter = undefined
@@ -732,6 +757,11 @@ function handleSearch(query: string) {
 
 function handleOrphanSearchSubmit() {
   searchQuery.value = localSearchQuery.value
+  loadCharacters(1)
+}
+
+function handleOrphanSortChange() {
+  adminStore.orphanedCharactersSortBy = localOrphanSortBy.value
   loadCharacters(1)
 }
 

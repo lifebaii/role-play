@@ -771,6 +771,7 @@ export function useCharacter() {
   }
   
   const isUpdatingToServer = ref(false)
+  const isUploadingToServer = isUpdatingToServer // Alias for backward compatibility
   const isUpdatingFromServer = ref(false)
   const isDeletingCharacter = ref(false)
   
@@ -887,6 +888,8 @@ export function useCharacter() {
     }
   }
   
+  const handleUploadToServer = updateToServer // Alias for backward compatibility
+  
   return {
     showCreateCharacterModal,
     isLoadingCharacterDetail,
@@ -913,6 +916,7 @@ export function useCharacter() {
     isCurrentCharacterUserOwned,
     isCurrentCharacterLocal,
     isUpdatingToServer,
+    isUploadingToServer,
     isUpdatingFromServer,
     isDeletingCharacter,
     selectCharacter,
@@ -929,6 +933,7 @@ export function useCharacter() {
     loadLikedCharacters,
     handleImportUserCharacter,
     updateToServer,
+    handleUploadToServer,
     updateFromServer
   }
 }

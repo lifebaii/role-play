@@ -1064,6 +1064,7 @@ export interface OrphanedCharacter {
   createdAt: number;
   fileSize: number;
   fileType: string;
+  quota?: number;
 }
 
 export interface OrphanedCharactersResponse {
@@ -1075,7 +1076,7 @@ export interface OrphanedCharactersResponse {
 }
 
 export const orphanedCharactersApi = {
-  list: (params?: { page?: number; pageSize?: number; search?: string }) =>
+  list: (params?: { page?: number; pageSize?: number; search?: string; sortBy?: string }) =>
     adminApiClient.get<OrphanedCharactersResponse>('/admin/orphaned-characters', params),
   
   assign: (characterId: string, userId: string) =>

@@ -55,12 +55,15 @@
       <template v-else>
         <button
           type="button"
-          @click="$emit('fetchSuggestions')"
-          :disabled="isGeneratingSuggestions"
-          class="chat-btn rounded-2xl flex-shrink-0 font-semibold flex items-center justify-center gap-2 transition-all duration-200 btn-fixed"
-          :class="autoFetchSuggestions && suggestions.length > 0 ? 'chat-btn-success' : ''"
+          @click="isGeneratingSuggestions ? $emit('cancelSuggestions') : $emit('fetchSuggestions')"
+          class="rounded-2xl flex-shrink-0 font-semibold flex items-center justify-center gap-2 transition-all duration-200 btn-fixed"
+          :class="isGeneratingSuggestions ? 'chat-btn-stop' : (autoFetchSuggestions && suggestions.length > 0 ? 'chat-btn-success' : 'chat-btn')"
         >
-          <div v-if="isGeneratingSuggestions" class="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+          <div v-if="isGeneratingSuggestions" class="w-5 h-5 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6h12v12H6z"/>
+            </svg>
+          </div>
           <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
@@ -95,6 +98,7 @@ const emit = defineEmits<{
   (e: 'submit', text: string, clearInput: () => void): void
   (e: 'stop'): void
   (e: 'fetchSuggestions'): void
+  (e: 'cancelSuggestions'): void
   (e: 'refreshSuggestions'): void
   (e: 'sendSuggestion', suggestion: string): void
 }>()

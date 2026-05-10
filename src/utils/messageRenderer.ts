@@ -274,7 +274,7 @@ export function renderMessage(options: RenderMessageOptions): string {
   hasRegexChange = processedWithRegex !== processed;
   processed = processedWithRegex;
 
-  if (!isStreaming && hasRegexChange) {
+  if (!isStreaming && hasRegexChange && import.meta.env.DEV) {
     console.log('%c[正则替换对比]', 'color: #4CAF50; font-weight: bold; font-size: 14px;');
     console.log('%c替换前:', 'color: #2196F3; font-weight: bold;', beforeRegex);
     console.log('%c替换后:', 'color: #FF9800; font-weight: bold;', processed);

@@ -51,9 +51,11 @@
               class="px-3 py-2 chat-input-field border border-theme-border rounded-xl text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
             >
               <option value="updatedAt">最新更新</option>
+              <option value="quota_desc">热度最高</option>
               <option value="likeCount">点赞数</option>
               <option value="commentCount">评论数</option>
               <option value="createdAt">创建日期</option>
+              <option value="quota_asc">热度最低</option>
             </select>
           </div>
         </div>
@@ -114,7 +116,7 @@ const userStore = useUserStore()
 
 const characters = ref<Character[]>([])
 const searchQuery = ref('')
-const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt'>('updatedAt')
+const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt' | 'quota_desc' | 'quota_asc'>('updatedAt')
 const currentPage = ref(1)
 const pageSize = 10
 const total = ref(0)
@@ -236,7 +238,8 @@ const fetchCharacters = async () => {
         isFriend: metaData.isFriend || false,
         shared: metaData.shared || false,
         thumbnailUrl: metaData.thumbnailUrl || null,
-        sourceUrl: metaData.sourceUrl || null
+        sourceUrl: metaData.sourceUrl || null,
+        quota: metaData.quota
       }
     })
     total.value = response.total
