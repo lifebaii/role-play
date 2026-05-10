@@ -8,6 +8,7 @@ import { buildContext } from '@/utils/contextBuilder'
 import { streamChat } from '@/utils/llmClient'
 import { getLocalFriends, isLocalFriend, getLocalFriend, pinFriendToTop } from '@/utils/localFriendStorage'
 import { modelsApi, v1Api, chatSyncApi } from '@/api'
+import { generateId } from '@/utils/uuid'
 
 function useCustomModelConfig(): CustomModelConfig {
   try {
@@ -492,23 +493,27 @@ const globalDefaultModel = ref('')
 
       const history = await getChatHistory(currentCharacter.value.id)
 
-      const filteredHistory = history.filter(msg => {
-        const content = msg.content || ''
-        return !content.includes('[测试内容]') && !content.includes('STA2N')
-      })
+    const filteredHistory = history.filter(msg => {
+      const content = msg.content || ''
+      return !content.includes('[测试内容]') && !content.includes('STA2N')
+    }).map(msg => ({
+      ...msg,
+      id: (msg as any).id || generateId()
+    }))
 
-      messages.value = [...filteredHistory]
+    messages.value = [...filteredHistory]
 
-      if (currentCharacter.value.first_mes && messages.value.length === 0) {
-        const greetingMessage: Message = {
-          role: 'assistant',
-          name: currentCharacter.value.name,
-          content: currentCharacter.value.first_mes,
-          isGreeting: true,
-          avatar: currentCharacter.value.avatar
-        }
-        messages.value = [greetingMessage]
+    if (currentCharacter.value.first_mes && messages.value.length === 0) {
+      const greetingMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        name: currentCharacter.value.name,
+        content: currentCharacter.value.first_mes,
+        isGreeting: true,
+        avatar: currentCharacter.value.avatar
       }
+      messages.value = [greetingMessage]
+    }
     }
     isLoading.value = false
   }
@@ -534,25 +539,29 @@ const globalDefaultModel = ref('')
       }
       
       const history = await getChatHistory(characterId)
-      const filteredHistory = history.filter(msg => {
-        const content = msg.content || ''
-        return !content.includes('[测试内容]') && !content.includes('STA2N')
-      })
-      
-      if (currentCharacter.value?.id === characterId) {
-        messages.value = [...filteredHistory]
-        
-        if (currentCharacter.value.first_mes && messages.value.length === 0) {
-          const greetingMessage: Message = {
-            role: 'assistant',
-            name: currentCharacter.value.name,
-            content: currentCharacter.value.first_mes,
-            isGreeting: true,
-            avatar: currentCharacter.value.avatar
-          }
-          messages.value = [greetingMessage]
+    const filteredHistory = history.filter(msg => {
+      const content = msg.content || ''
+      return !content.includes('[测试内容]') && !content.includes('STA2N')
+    }).map(msg => ({
+      ...msg,
+      id: (msg as any).id || generateId()
+    }))
+
+    if (currentCharacter.value?.id === characterId) {
+      messages.value = [...filteredHistory]
+
+      if (currentCharacter.value.first_mes && messages.value.length === 0) {
+        const greetingMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          name: currentCharacter.value.name,
+          content: currentCharacter.value.first_mes,
+          isGreeting: true,
+          avatar: currentCharacter.value.avatar
         }
+        messages.value = [greetingMessage]
       }
+    }
     } catch (e) {
       console.error('后台更新角色数据失败:', e)
     } finally {
@@ -758,6 +767,7 @@ const globalDefaultModel = ref('')
 
     // 立即添加用户消息和空的助手消息
     const userMessage: Message = {
+      id: generateId(),
       role: 'user',
       content,
       isSelf: true
@@ -766,6 +776,7 @@ const globalDefaultModel = ref('')
     error.value = null
 
     const assistantMessage: Message = {
+      id: generateId(),
       role: 'assistant',
       name: currentCharacter.value.name,
       content: '',
@@ -869,6 +880,7 @@ const globalDefaultModel = ref('')
     const newMessages = [...messages.value.slice(0, userMessageIndex + 1)]
 
     const assistantMessage: Message = {
+      id: generateId(),
       role: 'assistant',
       name: currentCharacter.value.name,
       content: '',
@@ -921,6 +933,7 @@ const globalDefaultModel = ref('')
 
     if (currentCharacter.value.first_mes) {
       messages.value = [{
+        id: generateId(),
         role: 'assistant',
         name: currentCharacter.value.name,
         content: currentCharacter.value.first_mes,

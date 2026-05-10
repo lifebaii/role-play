@@ -122,6 +122,7 @@ export interface Preset {
 }
 
 export interface Message {
+  id: string
   role: 'user' | 'assistant' | 'system'
   name?: string
   content: string
