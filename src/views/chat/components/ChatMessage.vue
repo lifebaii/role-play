@@ -25,6 +25,7 @@
       : 'bubble-assistant text-theme-text-primary w-[90%] sm:w-[90%]'
   ">
       <div
+        ref="contentRef"
         :class="['mes_text flex items-center', message.role === 'user' ? 'user-bubble' : '']"
         v-html="renderedContent"
       ></div>
@@ -199,6 +200,7 @@ const chatStore = useChatStore()
 
 const isVisible = ref(false)
 const messageRef = ref<HTMLElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
 onMounted(() => {
@@ -206,11 +208,7 @@ onMounted(() => {
     observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            isVisible.value = true
-          } else {
-            isVisible.value = false
-          }
+          isVisible.value = entry.isIntersecting
         })
       },
       {

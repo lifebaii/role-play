@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useUserDataStore } from '@/stores/userData'
@@ -21,7 +21,6 @@ export function useChat(globalRegex: any[] = []) {
   const userDataStore = useUserDataStore()
   const { showConfirm, showDangerConfirm, showErrorAlert } = useDialog()
   
-  const messagesContainer = ref<HTMLElement | null>(null)
   const editingIndex = ref(-1)
   const editContent = ref('')
   const inputText = ref('')
@@ -40,12 +39,6 @@ export function useChat(globalRegex: any[] = []) {
     const userRegexList = userDataStore.enabledRegexScripts || []
     return compileRegexScripts(globalRegexList, charRegexList, userRegexList)
   })
-
-  function scrollToBottom() {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  }
 
   function getMessageContent(message: any, index: number) {
     if (message.role === 'assistant' && 
@@ -253,14 +246,6 @@ export function useChat(globalRegex: any[] = []) {
     localStorage.setItem('role_play_auto_suggestions', autoFetchSuggestions.value.toString())
   }
 
-  watch(() => messages.value.length, () => {
-    nextTick(() => {
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-      }
-    })
-  })
-
   let previousIsStreaming = chatStore.isStreaming
   watch(() => chatStore.isStreaming, (isStreaming) => {
     if (previousIsStreaming && !isStreaming && autoFetchSuggestions.value) {
@@ -284,7 +269,6 @@ export function useChat(globalRegex: any[] = []) {
   })
 
   return {
-    messagesContainer,
     editingIndex,
     editContent,
     inputText,
@@ -294,7 +278,6 @@ export function useChat(globalRegex: any[] = []) {
     autoFetchSuggestions,
     messages,
     compiledRegexScripts,
-    scrollToBottom,
     getMessageContent,
     renderMarkdown,
     handleSubmit,
