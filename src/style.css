@@ -324,6 +324,19 @@ body {
 }
 
 .chat-input-area {
+  position: fixed !important;
+  transform-origin: bottom;
+}
+
+/* Improve compatibility with Android keyboards */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific styles already handled */
+}
+
+/* Android-specific adjustments */
+html, body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chat-input-field {

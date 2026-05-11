@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 chat-input-area" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem + (100vh - 100dvh));">
+  <div class="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 chat-input-area" :style="inputAreaStyle">
     <div v-if="showSuggestions && suggestions.length > 0" class="mb-2 sm:mb-4 p-2 sm:p-4 bg-[var(--theme-bg-start)]/70 rounded-2xl border border-theme-border" style="backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
       <div class="text-xs font-semibold text-theme-text-secondary mb-2 sm:mb-3 uppercase tracking-wider flex items-center justify-between">
         <div class="flex items-center gap-1.5 sm:gap-2">
@@ -11,10 +11,10 @@
         <button
           @click.stop="$emit('refreshSuggestions')"
           :disabled="isGeneratingSuggestions"
-          class="p-1 sm:p-1.5 rounded-lg hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent disabled:opacity-50"
+          class="px-3 py-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent disabled:opacity-50"
           title="刷新建议"
         >
-          <div v-if="isGeneratingSuggestions" class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+          <div v-if="isGeneratingSuggestions" class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-current border-top-transparent rounded-full animate-spin"></div>
           <svg v-else class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -36,12 +36,15 @@
     </div>
     <form @submit.prevent="handleSubmit" class="flex gap-2 sm:gap-3">
       <input
+        ref="inputRef"
         v-model="inputText"
         type="text"
         placeholder="输入消息..."
         class="flex-1 min-w-0 px-3 py-2 sm:px-5 sm:py-3 rounded-2xl border-2 chat-input-field shadow-lg transition-all duration-200"
         :disabled="isStreaming"
         :style="{ visibility: isStreaming ? 'hidden' : 'visible' }"
+        @focus="handleFocus"
+        @blur="handleBlur"
       />
       <button
         v-if="isStreaming"
@@ -49,7 +52,7 @@
         @click="$emit('stop')"
         class="chat-btn chat-btn-stop rounded-2xl flex-shrink-0 font-semibold transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center btn-fixed"
       >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6h12v12H6z"/>
         </svg>
       </button>
@@ -85,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const props = defineProps<{
   isStreaming: boolean
@@ -105,6 +108,32 @@ const emit = defineEmits<{
 }>()
 
 const inputText = ref('')
+const inputRef = ref<HTMLInputElement | null>(null)
+const isInputFocused = ref(false)
+
+// Calculate dynamic padding style
+const inputAreaStyle = computed(() => {
+  let basePadding = 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)'
+  if (isInputFocused.value) {
+    // For Android, add extra padding when focused
+    basePadding = 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem + 8px)'
+  }
+  return {
+    paddingBottom: basePadding
+  }
+})
+
+function handleFocus() {
+  isInputFocused.value = true
+  // Ensure the input stays in viewport
+  setTimeout(() => {
+    inputRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, 100)
+}
+
+function handleBlur() {
+  isInputFocused.value = false
+}
 
 function handleSubmit() {
   if (!inputText.value.trim()) return

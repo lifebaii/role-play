@@ -14,9 +14,7 @@ function setViewportHeight() {
 
 setViewportHeight()
 window.addEventListener('resize', () => {
-  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-    return
-  }
+  // Always update viewport height on resize, even for input/textarea
   setViewportHeight()
 })
 
@@ -25,9 +23,41 @@ if (window.visualViewport) {
     const vh = window.visualViewport!.height * 0.01
     document.documentElement.style.setProperty('--vh', `${vh}px`)
     document.documentElement.style.setProperty('--app-height', `${window.visualViewport!.height}px`)
+    // Ensure input field stays visible when keyboard is open
+    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+      setTimeout(() => {
+        document.activeElement!.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
   })
   window.visualViewport.addEventListener('scroll', setViewportHeight)
 }
+
+// Additional fix for Android devices: handle focus events
+document.addEventListener('focusin', (e) => {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    // Update viewport height when input is focused
+    setTimeout(() => {
+      if (window.visualViewport) {
+        const vh = window.visualViewport.height * 0.01
+        document.documentElement.style.setProperty('--vh', `${vh}px`)
+        document.documentElement.style.setProperty('--app-height', `${window.visualViewport.height}px`)
+      } else {
+        setViewportHeight()
+      }
+      // Scroll the input into view
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+})
+
+document.addEventListener('focusout', () => {
+  // Reset viewport height when input loses focus
+  setTimeout(() => {
+    setViewportHeight()
+  }, 200)
+})
 
 let touchStartY = 0
 document.addEventListener('touchstart', (e) => {

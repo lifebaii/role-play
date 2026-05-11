@@ -56,25 +56,26 @@
       </div>
 
       <template v-else>
-        <div class="absolute top-0 left-0 right-0 z-20 overflow-hidden chat-header" style="padding-top: env(safe-area-inset-top, 0px);">
+        <div class="absolute top-0 left-0 right-0 z-20 overflow-hidden chat-header bg-white/10 dark:bg-black/10" style="padding-top: env(safe-area-inset-top, 0px);">
           <div class="h-14 px-2 sm:px-4 flex items-center justify-between">
             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
               @click="sidebarOpen = true"
-              class="lg:hidden p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-theme-text-secondary flex-shrink-0 rounded-xl transition-all bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15"
+              class="lg:hidden w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-theme-text-primary dark:text-gray-200 flex-shrink-0 rounded-xl transition-all bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 hover:bg-white/85 dark:hover:bg-black/70"
+              style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);"
             >
-              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
             </button>
             </div>
-            <div class="flex items-center gap-2 sm:gap-3 min-w-0 justify-center px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg cursor-pointer hover:bg-white/15 transition-all mx-2 sm:mx-4" @click="openCharacterInfoFromCurrent">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 justify-center px-3 py-1 rounded-2xl bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 cursor-pointer hover:bg-white/85 dark:hover:bg-black/70 transition-all mx-2 sm:mx-4" @click="openCharacterInfoFromCurrent" style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);">
               <div class="flex items-center gap-1 sm:gap-2 min-w-0">
                 <div v-if="chatStore.isUpdatingInBackground" class="w-4 h-4 flex-shrink-0">
                   <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <span
-                  class="text-base sm:text-lg font-semibold text-theme-text-primary truncate transition-colors"
+                  class="text-base sm:text-lg font-semibold text-theme-text-primary dark:text-gray-200 truncate transition-colors"
                 >
                   {{ chatStore.currentCharacter?.name || '未知角色' }}
                 </span>
@@ -83,14 +84,14 @@
             <button
               ref="menuButtonRef"
               @click="showMenuDropdown = !showMenuDropdown"
-              class="px-2 py-1.5 sm:px-3 sm:py-2 text-sm text-theme-text-secondary rounded-xl flex items-center gap-1 sm:gap-2 flex-shrink-0 transition-all bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15"
+              class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-theme-text-primary dark:text-gray-200 rounded-xl flex-shrink-0 transition-all bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 hover:bg-white/85 dark:hover:bg-black/70"
+              style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="1"/>
                 <circle cx="12" cy="5" r="1"/>
                 <circle cx="12" cy="19" r="1"/>
               </svg>
-              <span class="hidden sm:inline">菜单</span>
             </button>
             </div>
         </div>
