@@ -24,10 +24,11 @@ Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
 <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/pc-home-light.jpg?raw=true" alt="PC端主页" width="800" />
 
 ### 移动端
-<p float="left">
+<div align="center">
   <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-list.jpg?raw=true" alt="移动端列表" width="300" />
+  &nbsp;&nbsp;&nbsp;
   <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-chat.jpg?raw=true" alt="移动端聊天" width="300" />
-</p>
+</div>
 
 ## 在线体验
 
@@ -115,6 +116,10 @@ VITE_SHOW_AUTH_ENTRY=false
 ### iOS 沉浸式体验
 
 iOS 用户可通过 Safari 的"添加到主屏幕"功能将应用添加到桌面。从主屏幕启动后，应用将以全屏模式运行，隐藏 Safari 地址栏和工具栏，提供类似原生 App 的沉浸式体验。
+
+<div align="center">
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-ios-pwa?raw=true" alt="ios app" width="300" />
+</div>
 
 ## 主要依赖
 
