@@ -1,8 +1,9 @@
 <template>
   <div
-    class="fixed lg:relative w-72 chat-sidebar border-r border-theme-border flex flex-col z-30 transition-all duration-300 lg:translate-x-0 shadow-2xl"
+    class="fixed lg:relative w-72 chat-sidebar border-r border-theme-border flex flex-col z-30 transition-all duration-300 shadow-2xl"
     style="height: var(--app-height, 100vh); height: calc(var(--vh, 1vh) * 100);"
-    :class="modelValue ? 'translate-x-0' : '-translate-x-full'">
+    :class="modelValue ? 'translate-x-0' : '-translate-x-full lg:-translate-x-full lg:w-0 lg:overflow-hidden'"
+  >
     <div class="border-b border-theme-border bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0" style="padding-top: var(--safe-area-inset-top);">
       <div class="px-2 sm:px-4 h-14 flex items-center justify-between">
         <h1 @click="$emit('openAbout')" class="text-lg sm:text-xl font-bold gradient-text cursor-pointer hover:opacity-80 transition-opacity">ROLE PLAY</h1>
@@ -18,7 +19,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
           </button>
-          <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all">
+          <button @click="$emit('update:modelValue', false)" class="hidden lg:flex p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" title="折叠侧边栏">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" title="关闭侧边栏">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -355,7 +361,10 @@ function getFriendMeta(character: any) {
 
 function selectCharacter(character: any) {
   emit('selectCharacter', character)
-  emit('update:modelValue', false)
+  // 只在移动端自动关闭侧边栏，桌面端保持打开状态
+  if (window.innerWidth < 1024) {
+    emit('update:modelValue', false)
+  }
 }
 
 async function handleDragEnd() {

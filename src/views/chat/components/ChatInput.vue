@@ -1,6 +1,7 @@
 <template>
   <div class="absolute bottom-0 w-full z-20 p-2 sm:p-4 chat-input-area" :style="inputAreaStyle">
-    <div v-if="showSuggestions && suggestions.length > 0" class="mb-2 sm:mb-4 p-2 sm:p-4 bg-[var(--theme-bg-start)]/70 rounded-2xl border border-theme-border" style="backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
+    <div class="max-w-4xl mx-auto">
+      <div v-if="showSuggestions && suggestions.length > 0" class="mb-2 sm:mb-4 p-2 sm:p-4 bg-[var(--theme-bg-start)]/70 rounded-2xl border border-theme-border" style="backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
       <div class="text-xs font-semibold text-theme-text-secondary mb-2 sm:mb-3 uppercase tracking-wider flex items-center justify-between">
         <div class="flex items-center gap-1.5 sm:gap-2">
           <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,6 +85,7 @@
         </button>
       </template>
     </form>
+    </div>
   </div>
 </template>
 
@@ -96,6 +98,7 @@ const props = defineProps<{
   suggestions: string[]
   isGeneratingSuggestions: boolean
   autoFetchSuggestions: boolean
+  sidebarOpen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -110,6 +113,19 @@ const emit = defineEmits<{
 const inputText = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const isInputFocused = ref(false)
+const windowWidth = ref(window.innerWidth)
+
+function updateWindowWidth() {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWindowWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowWidth)
+})
 
 // Calculate dynamic padding style
 const inputAreaStyle = computed(() => {
@@ -118,9 +134,19 @@ const inputAreaStyle = computed(() => {
     // For Android, add extra padding when focused
     basePadding = 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem + 8px)'
   }
-  return {
+  
+  const isPC = windowWidth.value >= 1024
+  const sidebarWidth = 320
+  
+  const style: Record<string, string> = {
     paddingBottom: basePadding
   }
+  
+  if (isPC && props.sidebarOpen) {
+    style.paddingRight = `${sidebarWidth}px`
+  }
+  
+  return style
 })
 
 function handleFocus() {
@@ -144,6 +170,10 @@ function handleSubmit() {
 </script>
 
 <style scoped>
+.chat-input-area {
+  transition: padding-right 300ms ease-in-out;
+}
+
 .btn-fixed {
   width: 44px;
   height: 44px;

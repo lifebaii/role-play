@@ -7,31 +7,33 @@
     @click="$emit('click')"
   >
     <div class="h-0"></div>
-    <ChatMessage
-      v-for="(message, index) in messages"
-      :key="message.id"
-      v-memo="[message.content, message.id, editingIndex === index, index === messages.length - 1 && chatStore.isStreaming]"
-      :message="message"
-      :index="index"
-      :messages="messages"
-      :editing-index="editingIndex"
-      :edit-content="editContent"
-      :compiled-regex-scripts="compiledRegexScripts"
-      :is-last-message="index === messages.length - 1"
-      :is-streaming="chatStore.isStreaming"
-      :streaming-content="chatStore.streamingContent"
-      :current-wait-time="chatStore.currentWaitTime"
-      @copy="$emit('copy', $event)"
-      @edit="$emit('edit', $event)"
-      @delete="$emit('delete', $event)"
-      @regenerate-greeting="$emit('regenerate-greeting')"
-      @regenerate-from-assistant="$emit('regenerate-from-assistant', $event)"
-      @regenerate-user="$emit('regenerate-user', $event)"
-      @save-edit="$emit('save-edit', $event)"
-      @send-edit="$emit('send-edit', $event)"
-      @cancel-edit="$emit('cancel-edit')"
-      @update:editContent="$emit('update:editContent', $event)"
-    />
+    <div class="max-w-4xl mx-auto">
+      <ChatMessage
+        v-for="(message, index) in messages"
+        :key="message.id"
+        v-memo="[message.content, message.id, editingIndex === index, index === messages.length - 1 && chatStore.isStreaming]"
+        :message="message"
+        :index="index"
+        :messages="messages"
+        :editing-index="editingIndex"
+        :edit-content="editContent"
+        :compiled-regex-scripts="compiledRegexScripts"
+        :is-last-message="index === messages.length - 1"
+        :is-streaming="chatStore.isStreaming"
+        :streaming-content="chatStore.streamingContent"
+        :current-wait-time="chatStore.currentWaitTime"
+        @copy="$emit('copy', $event)"
+        @edit="$emit('edit', $event)"
+        @delete="$emit('delete', $event)"
+        @regenerate-greeting="$emit('regenerate-greeting')"
+        @regenerate-from-assistant="$emit('regenerate-from-assistant', $event)"
+        @regenerate-user="$emit('regenerate-user', $event)"
+        @save-edit="$emit('save-edit', $event)"
+        @send-edit="$emit('send-edit', $event)"
+        @cancel-edit="$emit('cancel-edit')"
+        @update:editContent="$emit('update:editContent', $event)"
+      />
+    </div>
   </div>
 </template>
 

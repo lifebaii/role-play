@@ -47,10 +47,10 @@
           <h2 class="text-2xl font-bold gradient-text mb-2">开始你的故事</h2>
           <p class="text-theme-text-secondary mb-6">选择一个角色开始聊天</p>
           <button
-            @click="sidebarOpen = true"
-            class="px-6 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] text-white rounded-xl font-semibold shadow-lg shadow-[var(--theme-primary)]/25 hover:shadow-xl hover:shadow-[var(--theme-primary)]/30 transition-all duration-200 transform hover:-translate-y-0.5 lg:hidden"
+            @click="sidebarOpen = !sidebarOpen"
+            class="px-6 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] text-white rounded-xl font-semibold shadow-lg shadow-[var(--theme-primary)]/25 hover:shadow-xl hover:shadow-[var(--theme-primary)]/30 transition-all duration-200 transform hover:-translate-y-0.5"
           >
-            查看角色列表
+            {{ sidebarOpen ? '隐藏角色列表' : '查看角色列表' }}
           </button>
         </div>
       </div>
@@ -60,14 +60,18 @@
           <div class="h-14 px-2 sm:px-4 flex items-center justify-between">
             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
-              @click="sidebarOpen = true"
-              class="lg:hidden w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-theme-text-primary dark:text-gray-200 flex-shrink-0 rounded-xl transition-all bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 hover:bg-white/85 dark:hover:bg-black/70"
-              style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
+                @click="sidebarOpen = !sidebarOpen"
+                class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-theme-text-primary dark:text-gray-200 flex-shrink-0 rounded-xl transition-all bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 hover:bg-white/85 dark:hover:bg-black/70"
+                style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);"
+                :title="sidebarOpen ? '关闭侧边栏' : '打开侧边栏'"
+              >
+                <svg v-if="sidebarOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+              </button>
             </div>
             <div class="flex items-center gap-2 sm:gap-3 min-w-0 justify-center px-3 py-1 rounded-2xl bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 cursor-pointer hover:bg-white/85 dark:hover:bg-black/70 transition-all mx-2 sm:mx-4" @click="openCharacterInfoFromCurrent" style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);">
               <div class="flex items-center gap-1 sm:gap-2 min-w-0">
@@ -271,6 +275,7 @@
           :suggestions="chatStore.suggestions"
           :is-generating-suggestions="chatStore.isGeneratingSuggestions"
           :auto-fetch-suggestions="autoFetchSuggestions"
+          :sidebar-open="sidebarOpen"
           @submit="handleSubmit"
           @stop="chatStore.abortStream()"
           @fetch-suggestions="fetchSuggestions"
@@ -621,7 +626,14 @@ const compiledRegexScripts = computed<CompiledRegexScript[]>(() => {
   return compileRegexScripts(globalRegexList, charRegexList, userRegexList)
 })
 
-const sidebarOpen = ref(false)
+// 从 localStorage 读取侧边栏状态，如果没有则根据屏幕宽度判断
+const savedSidebarState = localStorage.getItem('sidebarOpen')
+const sidebarOpen = ref(savedSidebarState !== null ? savedSidebarState === 'true' : window.innerWidth >= 1024)
+
+// 监听侧边栏状态变化，保存到 localStorage
+watch(sidebarOpen, (newValue) => {
+  localStorage.setItem('sidebarOpen', newValue.toString())
+})
 const showMenuDropdown = ref(false)
 const showUserNameDialog = ref(false)
 const editingUserName = ref('')
