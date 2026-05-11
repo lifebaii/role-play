@@ -773,19 +773,28 @@ const globalDefaultModel = ref('')
         }
         syncStreamToView(characterId)
       } else {
-        ctx.messages = ctx.messages.slice(0, -1)
+        if (!ctx.streamingContent) {
+          ctx.messages = ctx.messages.slice(0, -1)
+        } else {
+          const msgIndex = ctx.messages.length - 1
+          if (msgIndex !== -1) {
+            ctx.messages = [
+              ...ctx.messages.slice(0, msgIndex),
+              { ...ctx.messages[msgIndex], content: ctx.streamingContent }
+            ]
+          }
+          const messagesToSave = ctx.messages.filter(m => {
+            if (m.role === 'system') return false
+            const content = m.content || ''
+            if (content.includes('[测试内容]') || content.includes('STA2N')) return false
+            return true
+          })
+          await saveChatHistory(characterId, messagesToSave)
+        }
         
         if (currentCharacter.value?.id === characterId) {
           error.value = e.message
         }
-        
-        const messagesToSave = ctx.messages.filter(m => {
-          if (m.role === 'system') return false
-          const content = m.content || ''
-          if (content.includes('[测试内容]') || content.includes('STA2N')) return false
-          return true
-        })
-        await saveChatHistory(characterId, messagesToSave)
         
         syncStreamToView(characterId)
       }
