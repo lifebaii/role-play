@@ -118,7 +118,7 @@ VITE_SHOW_AUTH_ENTRY=false
 iOS 用户可通过 Safari 的"添加到主屏幕"功能将应用添加到桌面。从主屏幕启动后，应用将以全屏模式运行，隐藏 Safari 地址栏和工具栏，提供类似原生 App 的沉浸式体验。
 
 <div align="center">
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-ios-pwa?raw=true" alt="ios app" width="300" />
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-ios-pwa.jpg?raw=true" alt="ios app" width="300" />
 </div>
 
 ## 主要依赖
