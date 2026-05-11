@@ -22,7 +22,7 @@
  class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200"
     :class="message.role === 'user'
       ? 'bubble-user text-theme-text-primary shadow-lg shadow-[var(--theme-primary)]/25'
-      : 'bubble-assistant text-theme-text-primary w-[90%] sm:w-[90%]'
+      : 'bubble-assistant text-theme-text-primary'
   ">
       <div
         :class="['mes_text flex items-center', message.role === 'user' ? 'user-bubble' : '']"

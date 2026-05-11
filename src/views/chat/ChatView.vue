@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-container flex bg-[var(--theme-bg-start)]">
+  <div class="chat-container flex bg-[var(--theme-bg-start)]" style="height: 100vh;">
     <div
       v-if="backgroundImageUrl"
       class="chat-background-image"
@@ -31,7 +31,7 @@
       @friend-characters-updated="handleFriendCharactersUpdated"
     />
 
-    <div class="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+    <div class="flex-1 flex flex-col min-w-0 relative overflow-hidden" style="height: 100%">
       <div v-if="chatStore.isLoading" class="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
         <div class="flex flex-col items-center gap-3 bg-[var(--theme-card-bg)] p-8 rounded-2xl shadow-xl border border-theme-border">
           <div class="w-12 h-12 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin shadow-lg shadow-[var(--theme-primary)]/30"></div>
@@ -56,49 +56,43 @@
       </div>
 
       <template v-else>
-        <div class="absolute top-0 left-0 right-0 z-20 border-b border-theme-border overflow-hidden shadow-sm chat-header" style="padding-top: var(--safe-area-inset-top);">
-          <div class="h-14 px-2 sm:px-4 flex items-center gap-2 sm:gap-3">
-            <button
-            @click="sidebarOpen = true"
-            class="lg:hidden p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-theme-text-secondary flex-shrink-0 hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all"
-          >
-            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-          <AvatarImage
-            :src="currentAvatarUrl"
-            :name="chatStore.currentCharacter?.name || '?'"
-            size="nav"
-            rounded="lg"
-            gradient="primary"
-            class="flex-shrink-0 shadow-lg cursor-pointer hover:scale-105 transition-transform"
-            @click="openCharacterInfoFromCurrent"
-          />
-          <div class="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
-            <div v-if="chatStore.isUpdatingInBackground" class="w-4 h-4 flex-shrink-0">
-              <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <span 
-              @click="openCharacterInfoFromCurrent"
-              class="text-base sm:text-lg font-semibold text-theme-text-primary truncate cursor-pointer hover:text-theme-text-accent transition-colors"
+        <div class="absolute top-0 left-0 right-0 z-20 overflow-hidden chat-header" style="padding-top: env(safe-area-inset-top, 0px);">
+          <div class="h-14 px-2 sm:px-4 flex items-center justify-between">
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <button
+              @click="sidebarOpen = true"
+              class="lg:hidden p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-theme-text-secondary flex-shrink-0 rounded-xl transition-all bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15"
             >
-              {{ chatStore.currentCharacter?.name || '未知角色' }}
-            </span>
-          </div>
-          <button
-            ref="menuButtonRef"
-            @click="showMenuDropdown = !showMenuDropdown"
-            class="px-2 py-1.5 sm:px-3 sm:py-2 text-sm text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-xl flex items-center gap-1 sm:gap-2 flex-shrink-0 transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="1"/>
-              <circle cx="12" cy="5" r="1"/>
-              <circle cx="12" cy="19" r="1"/>
-            </svg>
-            <span class="hidden sm:inline">菜单</span>
-          </button>
-          </div>
+              <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 justify-center px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg cursor-pointer hover:bg-white/15 transition-all mx-2 sm:mx-4" @click="openCharacterInfoFromCurrent">
+              <div class="flex items-center gap-1 sm:gap-2 min-w-0">
+                <div v-if="chatStore.isUpdatingInBackground" class="w-4 h-4 flex-shrink-0">
+                  <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <span
+                  class="text-base sm:text-lg font-semibold text-theme-text-primary truncate transition-colors"
+                >
+                  {{ chatStore.currentCharacter?.name || '未知角色' }}
+                </span>
+              </div>
+            </div>
+            <button
+              ref="menuButtonRef"
+              @click="showMenuDropdown = !showMenuDropdown"
+              class="px-2 py-1.5 sm:px-3 sm:py-2 text-sm text-theme-text-secondary rounded-xl flex items-center gap-1 sm:gap-2 flex-shrink-0 transition-all bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="1"/>
+                <circle cx="12" cy="5" r="1"/>
+                <circle cx="12" cy="19" r="1"/>
+              </svg>
+              <span class="hidden sm:inline">菜单</span>
+            </button>
+            </div>
         </div>
 
         <div

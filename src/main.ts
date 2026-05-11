@@ -69,7 +69,7 @@ function removeLoading() {
 removeLoading()
 
 const isDev = import.meta.env.DEV
-if (!isDev) {
+if (!isDev || true) {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {})

@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 chat-input-area" style="padding-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));">
+  <div class="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 chat-input-area" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem + (100vh - 100dvh));">
     <div v-if="showSuggestions && suggestions.length > 0" class="mb-2 sm:mb-4 p-2 sm:p-4 bg-[var(--theme-bg-start)]/70 rounded-2xl border border-theme-border" style="backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);">
       <div class="text-xs font-semibold text-theme-text-secondary mb-2 sm:mb-3 uppercase tracking-wider flex items-center justify-between">
         <div class="flex items-center gap-1.5 sm:gap-2">

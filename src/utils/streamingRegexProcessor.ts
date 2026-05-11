@@ -3,7 +3,7 @@ import { applyRegexScriptsToHtml } from './regexUtils'
 
 export const STREAMING_REGEX_CONFIG = {
   throttleMs: 1000,
-  cacheMaxSize: 50,
+  cacheMaxSize: 20,
   enableDebugLog: false
 }
 

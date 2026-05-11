@@ -3,25 +3,27 @@
     class="fixed lg:relative w-72 chat-sidebar border-r border-theme-border flex flex-col z-30 transition-all duration-300 lg:translate-x-0 shadow-2xl"
     style="height: var(--app-height, 100vh); height: calc(var(--vh, 1vh) * 100);"
     :class="modelValue ? 'translate-x-0' : '-translate-x-full'">
-    <div class="h-14 px-2 sm:px-4 border-b border-theme-border flex items-center justify-between bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0">
-      <h1 @click="$emit('openAbout')" class="text-lg sm:text-xl font-bold gradient-text cursor-pointer hover:opacity-80 transition-opacity">ROLE PLAY</h1>
-      <div class="flex items-center gap-1 sm:gap-2">
-        <button @click="handleToggleColorMode" class="p-1.5 sm:p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" :title="colorModeTitle">
-          <svg v-if="currentColorMode === 'light'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-          </svg>
-          <svg v-else-if="currentColorMode === 'dark'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-          </svg>
-          <svg v-else class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-        </button>
-        <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all">
-          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
+    <div class="border-b border-theme-border bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0" style="padding-top: var(--safe-area-inset-top);">
+      <div class="px-2 sm:px-4 h-14 flex items-center justify-between">
+        <h1 @click="$emit('openAbout')" class="text-lg sm:text-xl font-bold gradient-text cursor-pointer hover:opacity-80 transition-opacity">ROLE PLAY</h1>
+        <div class="flex items-center gap-1 sm:gap-2">
+          <button @click="handleToggleColorMode" class="p-1.5 sm:p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" :title="colorModeTitle">
+            <svg v-if="currentColorMode === 'light'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <svg v-else-if="currentColorMode === 'dark'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+            <svg v-else class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </button>
+          <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -141,7 +143,7 @@
     
     <div class="border-t border-theme-border flex-shrink-0"></div>
     
-    <div v-if="userStore.user" class="p-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0">
+    <div v-if="userStore.user" class="p-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0" style="padding-bottom: calc(var(--safe-area-inset-bottom, 0px) + 0.75rem);">
       <div class="flex items-center gap-3">
         <div class="relative">
           <img
@@ -182,7 +184,7 @@
       </div>
     </div>
     
-    <div v-else class="p-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0">
+    <div v-else class="p-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/10 to-[var(--theme-gradient-end)]/10 flex-shrink-0" style="padding-bottom: calc(var(--safe-area-inset-bottom, 0px) + 0.75rem);">
       <div class="flex items-center gap-3">
         <div class="relative">
           <div class="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--theme-secondary)] to-[var(--theme-accent)] shadow-lg flex items-center justify-center">

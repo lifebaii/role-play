@@ -3,7 +3,7 @@
     ref="messagesContainer"
     data-scrollable="true"
     class="absolute inset-0 overflow-y-auto overflow-x-hidden px-2 sm:px-4 space-y-4 overscroll-contain"
-    style="padding-top: calc(3.5rem + var(--safe-area-inset-top)); padding-bottom: calc(5.5rem + var(--safe-area-inset-bottom)); -webkit-overflow-scrolling: touch;"
+    style="padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px) + (100vh - 100dvh)); -webkit-overflow-scrolling: touch;"
     @click="$emit('click')"
   >
     <div class="h-0"></div>
@@ -138,7 +138,7 @@ watch(() => chatStore.streamingContent, () => {
   if (chatStore.isStreaming && messagesContainer.value) {
     const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
     // 如果已经接近底部，就自动滚动到底部
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
+    if (scrollTop + clientHeight >= scrollHeight - 20) {
       scrollToBottom()
     }
   }
