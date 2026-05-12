@@ -1038,15 +1038,33 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
       content = match[0]
     }
     
+    // 替换中文引号和逗号为英文引号和逗号，确保 JSON 能正常解析
+    const originalContent = content
+    content = content.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/，/g, ',').replace(/""/g, '"')
+    
+    if (isDev) {
+      console.log('[建议回复解析] 替换前内容:', originalContent)
+      console.log('[建议回复解析] 替换后内容:', content)
+    }
+    
     let parsedSuggestions: string[] = []
     try {
       const parsed = JSON.parse(content)
       if (Array.isArray(parsed)) {
         parsedSuggestions = parsed.slice(0, 5)
       }
+      if (isDev) {
+        console.log('[建议回复解析] 解析成功:', parsedSuggestions)
+      }
     } catch (e) {
+      if (isDev) {
+        console.error('[建议回复解析] JSON 解析失败，使用备用解析方案:', e)
+      }
       const lines = content.split('\n').filter(line => line.trim())
       parsedSuggestions = lines.slice(0, 5).map(line => line.replace(/^[\d\.\-\*]+\s*/, '').trim()).filter(s => s)
+      if (isDev) {
+        console.log('[建议回复解析] 备用解析结果:', parsedSuggestions)
+      }
     }
     
     // 再次检查角色是否还是原来的角色

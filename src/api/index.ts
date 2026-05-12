@@ -69,11 +69,21 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
       url += `?${searchParams.toString()}`
     }
 
+    // 开发模式下打印请求日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Request] ${method} ${url}`, { body, params, tokenSource })
+    }
+
     const response = await fetch(url, config)
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
       const errorMessage = error.error || `HTTP ${response.status}`
+      
+      // 开发模式下打印错误响应
+      if (import.meta.env.DEV) {
+        console.error(`[API Error] ${method} ${url}`, { status: response.status, error })
+      }
       
       // 检查是否是 /auth/verify 接口
       const isVerifyEndpoint = path === '/auth/verify' || path === '/admin/verify'
@@ -103,7 +113,14 @@ function createRequest(tokenSource: 'user-only' | 'user-first' | 'admin-only') {
       throw new Error(errorMessage)
     }
 
-    return response.json()
+    const data = await response.json()
+    
+    // 开发模式下打印响应数据
+    if (import.meta.env.DEV) {
+      console.log(`[API Response] ${method} ${url}`, data)
+    }
+
+    return data
   }
 }
 
@@ -130,6 +147,11 @@ export const api = {
     Object.entries(allParams).forEach(([key, value]) => searchParams.append(key, value))
     url += `?${searchParams.toString()}`
     
+    // 开发模式下打印请求日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Request] GET ${url}`, { params })
+    }
+    
     const response = await fetch(url, {
       cache: 'no-store',
       headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -138,6 +160,11 @@ export const api = {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }))
       const errorMessage = error.error || `HTTP ${response.status}`
+      
+      // 开发模式下打印错误响应
+      if (import.meta.env.DEV) {
+        console.error(`[API Error] GET ${url}`, { status: response.status, error })
+      }
       
       if (response.status === 401) {
         const errorCode = error.code || ''
@@ -158,6 +185,12 @@ export const api = {
     
     const contentType = response.headers.get('Content-Type') || 'application/octet-stream'
     const blob = await response.blob()
+    
+    // 开发模式下打印响应日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Response] GET ${url}`, { contentType, blobSize: blob.size })
+    }
+    
     return { blob, contentType }
   }
 }
@@ -676,8 +709,14 @@ export const adminApi = {
     signal?: AbortSignal
   ): AsyncGenerator<{ content: string; accumulated?: string; error?: string; partialResult?: boolean }> {
     const token = localStorage.getItem('admin_token')
+    const url = `${API_BASE}/admin/characters/optimize`
     
-    const response = await fetch(`${API_BASE}/admin/characters/optimize`, {
+    // 开发模式下打印请求日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Request] POST ${url}`, params)
+    }
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -694,6 +733,11 @@ export const adminApi = {
         if (errorData.error) {
           errorMessage = errorData.error
         }
+        
+        // 开发模式下打印错误响应
+        if (import.meta.env.DEV) {
+          console.error(`[API Error] POST ${url}`, { status: response.status, error: errorData })
+        }
       } catch (e) {
         // ignore
       }
@@ -703,6 +747,7 @@ export const adminApi = {
     const reader = response.body?.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let firstChunk = true
 
     if (!reader) return
 
@@ -721,6 +766,13 @@ export const adminApi = {
             if (data === '[DONE]') return
             try {
               const parsed = JSON.parse(data)
+              
+              // 开发模式下打印第一个响应数据
+              if (import.meta.env.DEV && firstChunk) {
+                console.log(`[API Response] POST ${url}`, parsed)
+                firstChunk = false
+              }
+              
               yield parsed
               if (parsed.error) throw new Error(parsed.error)
             } catch (e) {
@@ -875,20 +927,27 @@ export const v1Api = {
     signal?: AbortSignal
   ): AsyncGenerator<string> {
     let token = localStorage.getItem('user_token')
+    const url = `${API_BASE}/v1/chat/completions`
+    const requestBody = {
+      messages: options.messages,
+      temperature: options.temperature,
+      model: options.model,
+      stream: true,
+      mode: options.mode || 'chat'
+    }
     
-    const response = await fetch(`${API_BASE}/v1/chat/completions`, {
+    // 开发模式下打印请求日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Request] POST ${url}`, requestBody)
+    }
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({
-        messages: options.messages,
-        temperature: options.temperature,
-        model: options.model,
-        stream: true,
-        mode: options.mode || 'chat'
-      }),
+      body: JSON.stringify(requestBody),
       signal
     })
     
@@ -901,6 +960,11 @@ export const v1Api = {
           errorMessage = errorData.error
         }
         errorCode = errorData.code || ''
+        
+        // 开发模式下打印错误响应
+        if (import.meta.env.DEV) {
+          console.error(`[API Error] POST ${url}`, { status: response.status, error: errorData })
+        }
       } catch (e) {
         // ignore
       }
@@ -923,6 +987,7 @@ export const v1Api = {
     const reader = response.body?.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let firstChunk = true
 
     if (!reader) return
 
@@ -941,6 +1006,13 @@ export const v1Api = {
             if (data === '[DONE]') return
             try {
               const parsed = JSON.parse(data)
+              
+              // 开发模式下打印第一个响应数据
+              if (import.meta.env.DEV && firstChunk) {
+                console.log(`[API Response] POST ${url}`, parsed)
+                firstChunk = false
+              }
+              
               if (parsed.content) yield parsed.content
               if (parsed.error) throw new Error(parsed.error)
             } catch (e) {
@@ -956,20 +1028,27 @@ export const v1Api = {
 
   chatCompletion: async (options: V1ChatCompletionOptions): Promise<string> => {
     let token = localStorage.getItem('user_token')
+    const url = `${API_BASE}/v1/chat/completions`
+    const requestBody = {
+      messages: options.messages,
+      temperature: options.temperature,
+      model: options.model,
+      stream: false,
+      mode: options.mode || 'suggestions'
+    }
     
-    const response = await fetch(`${API_BASE}/v1/chat/completions`, {
+    // 开发模式下打印请求日志
+    if (import.meta.env.DEV) {
+      console.log(`[API Request] POST ${url}`, requestBody)
+    }
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
-      body: JSON.stringify({
-        messages: options.messages,
-        temperature: options.temperature,
-        model: options.model,
-        stream: false,
-        mode: options.mode || 'suggestions'
-      })
+      body: JSON.stringify(requestBody)
     })
     
     if (!response.ok) {
@@ -981,6 +1060,11 @@ export const v1Api = {
           errorMessage = errorData.error
         }
         errorCode = errorData.code || ''
+        
+        // 开发模式下打印错误响应
+        if (import.meta.env.DEV) {
+          console.error(`[API Error] POST ${url}`, { status: response.status, error: errorData })
+        }
       } catch (e) {
         // ignore
       }
@@ -1001,6 +1085,12 @@ export const v1Api = {
     }
     
     const data = await response.json()
+    
+    // 开发模式下打印响应数据
+    if (import.meta.env.DEV) {
+      console.log(`[API Response] POST ${url}`, data)
+    }
+    
     return data.choices?.[0]?.message?.content || ''
   }
 }
