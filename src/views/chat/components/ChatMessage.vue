@@ -6,7 +6,7 @@
   >
     <div
       v-if="message.role === 'assistant' && isStreaming && isLastMessage && !message.content && !streamingContent"
-      class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl bubble-assistant text-theme-text-primary shadow-xl shadow-[var(--theme-shadow-light)]"
+      class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl bubble-assistant text-theme-text-primary shadow-xl shadow-[var(--theme-shadow-light)] chat-bubble-animated chat-bubble-reply"
     >
       <div class="px-6 py-4 flex items-center justify-center gap-4">
         <div class="typing-indicator">
@@ -19,13 +19,18 @@
     </div>
     <div
       v-else
- class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200"
-    :class="message.role === 'user'
-      ? 'bubble-user text-theme-text-primary shadow-lg shadow-[var(--theme-primary)]/25'
-      : 'bubble-assistant text-theme-text-primary'
-  ">
+      ref="bubbleRef"
+      class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200 chat-bubble-animated"
+      :class="[
+        message.role === 'user'
+          ? 'bubble-user text-theme-text-primary shadow-lg shadow-[var(--theme-primary)]/25'
+          : 'bubble-assistant text-theme-text-primary chat-bubble-reply',
+        message.role === 'assistant' && isStreaming && isLastMessage ? 'chat-bubble-streaming' : ''
+      ]"
+    >
       <div
-        :class="['mes_text flex items-center', message.role === 'user' ? 'user-bubble' : '']"
+        ref="contentRef"
+        :class="['mes_text flex items-center chat-bubble-content', message.role === 'user' ? 'user-bubble' : '']"
         v-html="renderedContent"
       ></div>
     </div>
@@ -163,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import type { Message } from '@/types'
 import type { CompiledRegexScript } from '@/composables/useChat'
@@ -199,7 +204,41 @@ const chatStore = useChatStore()
 
 const isVisible = ref(false)
 const messageRef = ref<HTMLElement | null>(null)
+const bubbleRef = ref<HTMLElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
+let animationFrameId: number | null = null
+
+function animateBubbleHeight(previousHeight?: number) {
+  if (props.message.role !== 'assistant' || !props.isLastMessage) return
+  const bubble = bubbleRef.value
+  if (!bubble) return
+
+  const startHeight = previousHeight ?? bubble.offsetHeight
+  bubble.style.height = `${startHeight}px`
+  bubble.style.overflow = 'hidden'
+
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+  }
+
+  animationFrameId = requestAnimationFrame(() => {
+    const nextHeight = bubble.scrollHeight
+    if (Math.abs(nextHeight - startHeight) < 2) {
+      bubble.style.height = ''
+      bubble.style.overflow = ''
+      return
+    }
+
+    bubble.style.height = `${nextHeight}px`
+    window.setTimeout(() => {
+      if (bubbleRef.value === bubble) {
+        bubble.style.height = ''
+        bubble.style.overflow = ''
+      }
+    }, 220)
+  })
+}
 
 onMounted(() => {
   if (messageRef.value) {
@@ -221,11 +260,15 @@ onMounted(() => {
     )
     observer.observe(messageRef.value)
   }
+
 })
 
 onUnmounted(() => {
   if (observer) {
     observer.disconnect()
+  }
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
   }
 })
 
@@ -247,4 +290,64 @@ const renderedContent = computed(() => {
     isStreaming: props.isStreaming && props.isLastMessage
   })
 })
+
+watch(
+  () => renderedContent.value,
+  async (_, __, onCleanup) => {
+    if (props.message.role !== 'assistant' || !props.isLastMessage || !props.isStreaming) return
+    const bubble = bubbleRef.value
+    if (!bubble) return
+
+    const startHeight = bubble.offsetHeight
+    await nextTick()
+    animateBubbleHeight(startHeight)
+
+    onCleanup(() => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
+    })
+  }
+)
 </script>
+
+<style scoped>
+.chat-bubble-animated {
+  animation: chat-bubble-enter 220ms ease-out both;
+  will-change: transform, opacity, height;
+}
+
+.chat-bubble-reply {
+  transform-origin: left bottom;
+}
+
+.chat-bubble-streaming {
+  transition: height 220ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.chat-bubble-streaming .chat-bubble-content {
+  animation: chat-stream-content 180ms ease-out both;
+}
+
+@keyframes chat-bubble-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chat-stream-content {
+  from {
+    opacity: 0.72;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

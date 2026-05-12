@@ -160,6 +160,9 @@ const globalDefaultModel = ref('')
   const showSuggestions = ref(false)
   const isGeneratingSuggestions = ref(false)
   const lastSuggestionsMessagesSnapshot = ref('')
+  const suggestionsWaitTime = ref('0.0')
+  let suggestionsStartTime = 0
+  let suggestionsTimerInterval: ReturnType<typeof setInterval> | null = null
   
   // 滚动位置存储（从 localStorage 加载）
   const scrollPositions = ref<Map<string, number>>(new Map())
@@ -275,6 +278,28 @@ const globalDefaultModel = ref('')
       currentGeneratingCharacterId = null
     }
     isGeneratingSuggestions.value = false
+    showSuggestions.value = false
+    stopSuggestionsTimer()
+  }
+
+  // 开始建议计时器
+  function startSuggestionsTimer() {
+    if (suggestionsTimerInterval) clearInterval(suggestionsTimerInterval)
+    suggestionsStartTime = Date.now()
+    suggestionsWaitTime.value = '0.0'
+    suggestionsTimerInterval = setInterval(() => {
+      const now = Date.now()
+      suggestionsWaitTime.value = ((now - suggestionsStartTime) / 1000).toFixed(1)
+    }, 100)
+  }
+
+  // 停止建议计时器
+  function stopSuggestionsTimer() {
+    if (suggestionsTimerInterval) {
+      clearInterval(suggestionsTimerInterval)
+      suggestionsTimerInterval = null
+    }
+    suggestionsWaitTime.value = '0.0'
   }
 
   // 设置建议的取消控制器（供外部使用）
@@ -1176,10 +1201,13 @@ const globalDefaultModel = ref('')
     showSuggestions,
     isGeneratingSuggestions,
     lastSuggestionsMessagesSnapshot,
+    suggestionsWaitTime,
     saveCurrentSuggestionsState,
     restoreSuggestionsState,
     cancelSuggestions,
     setSuggestionsAbortController,
+    startSuggestionsTimer,
+    stopSuggestionsTimer,
     saveScrollPosition,
     getScrollPosition,
     clearScrollPosition,

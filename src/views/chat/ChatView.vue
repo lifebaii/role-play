@@ -253,10 +253,13 @@
         <ChatMessages
           ref="chatMessagesRef"
           :messages="messages"
-          :editing-index="editingIndex"
-          :edit-content="editContent"
-          :compiled-regex-scripts="compiledRegexScripts"
-          @click="chatStore.showSuggestions = false; showMenuDropdown = false"
+          :editingIndex="editingIndex"
+          :editContent="editContent"
+          :compiledRegexScripts="compiledRegexScripts"
+          :showSuggestions="chatStore.showSuggestions"
+          :suggestions="chatStore.suggestions"
+          :isGeneratingSuggestions="chatStore.isGeneratingSuggestions"
+          @click="showMenuDropdown = false"
           @copy="copyMessage"
           @edit="startEdit"
           @delete="deleteMessage"
@@ -266,7 +269,10 @@
           @save-edit="saveEdit"
           @send-edit="sendEdit"
           @cancel-edit="cancelEdit"
-          @update:edit-content="editContent = $event"
+          @update:editContent="editContent = $event"
+          @refresh-suggestions="fetchSuggestions({ autoShow: true, force: true })"
+          @close-suggestions="chatStore.cancelSuggestions"
+          @send-suggestion="sendSuggestion"
         />
 
         <ChatInput
@@ -280,6 +286,7 @@
           @stop="chatStore.abortStream()"
           @fetch-suggestions="fetchSuggestions"
           @cancel-suggestions="chatStore.cancelSuggestions"
+          @toggle-suggestions="handleToggleSuggestions"
           @refresh-suggestions="fetchSuggestions({ autoShow: true, force: true })"
           @send-suggestion="sendSuggestion"
         />
@@ -959,6 +966,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
   }
   
   chatStore.isGeneratingSuggestions = true
+  chatStore.startSuggestionsTimer()
   if (autoShow) {
     chatStore.showSuggestions = false
   }
@@ -1095,6 +1103,23 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     const finalCharacterId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
     if (finalCharacterId === currentCharacterId) {
       chatStore.isGeneratingSuggestions = false
+    }
+    chatStore.stopSuggestionsTimer()
+  }
+}
+
+function handleToggleSuggestions() {
+  if (chatStore.showSuggestions) {
+    // 如果已经显示，则隐藏
+    chatStore.showSuggestions = false
+  } else {
+    // 如果没有显示
+    if (chatStore.suggestions.length > 0) {
+      // 如果有已有建议，直接显示
+      chatStore.showSuggestions = true
+    } else {
+      // 如果没有建议，则获取并显示
+      fetchSuggestions({ autoShow: true })
     }
   }
 }
@@ -1302,7 +1327,7 @@ watch(() => chatStore.isStreaming, (isStreaming) => {
         return
       }
       
-      fetchSuggestions({ autoShow: false })
+      fetchSuggestions({ autoShow: true })
     }, 300)
   }
   previousIsStreaming = isStreaming
