@@ -154,7 +154,7 @@ const messagesContainer = ref<HTMLElement | null>(null)
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null
 let isRestoringScroll = false
 
-// 滚动到最底部（带平滑动画）
+// 滚动到最底部，使用平滑滚动
 function scrollToBottom() {
   nextTick(() => {
     if (messagesContainer.value) {

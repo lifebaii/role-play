@@ -912,8 +912,11 @@ const globalDefaultModel = ref('')
 
     messages.value = [...allMessages]
 
-    // 新消息追加到末尾，确保用户可以看到
-    isDisplayAll.value = true
+    // 确保新消息可见，但不展开所有历史消息
+    // 只增加 displayCount 而不设置 isDisplayAll，这样不会突然显示所有历史
+    if (displayCount.value < messages.value.length) {
+      displayCount.value = messages.value.length
+    }
 
     // 立即保存到历史记录，只保存有内容的消息（此时只有用户消息有内容）
     const messagesToSave = messages.value.filter(m => {
@@ -1017,7 +1020,12 @@ const globalDefaultModel = ref('')
     newMessages.push(assistantMessage)
 
     messages.value = [...newMessages]
-    isDisplayAll.value = true
+
+    // 确保新消息可见，但不展开所有历史消息
+    if (displayCount.value < messages.value.length) {
+      displayCount.value = messages.value.length
+    }
+
     error.value = null
 
     await executeStream(
