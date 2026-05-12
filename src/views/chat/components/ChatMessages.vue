@@ -8,6 +8,17 @@
   >
     <div class="h-0"></div>
     <div class="max-w-4xl mx-auto">
+      <!-- 加载更多历史消息指示器 -->
+      <div v-if="hasMoreMessages" class="flex justify-center py-3">
+        <div v-if="isLoadingMore" class="flex items-center gap-2 text-theme-text-secondary text-sm">
+          <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+          加载中...
+        </div>
+        <button v-else @click="$emit('loadMore')" class="text-sm text-[var(--theme-primary)] hover:underline px-4 py-2">
+          ↑ 加载更多消息
+        </button>
+      </div>
+
       <ChatMessage
         v-for="(message, index) in messages"
         :key="message.id"
@@ -110,6 +121,8 @@ import ChatMessage from './ChatMessage.vue'
 
 const props = defineProps<{
   messages: any[]
+  hasMoreMessages: boolean
+  isLoadingMore: boolean
   editingIndex: number
   editContent: string
   compiledRegexScripts: CompiledRegexScript[]
@@ -120,6 +133,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'click'): void
+  (e: 'loadMore'): void
   (e: 'copy', content: string): void
   (e: 'edit', data: { index: number; content: string }): void
   (e: 'delete', index: number): void
@@ -152,9 +166,16 @@ function scrollToBottom() {
   })
 }
 
-// 保存滚动位置（防抖）
+// 保存滚动位置（防抖）+ 检测滚动到顶部
 function handleScroll() {
-  if (isRestoringScroll || !messagesContainer.value || !chatStore.currentCharacter) return
+  if (!messagesContainer.value || !chatStore.currentCharacter) return
+
+  // 检测滚动到顶部，自动加载更多历史消息
+  if (messagesContainer.value.scrollTop < 50 && props.hasMoreMessages && !props.isLoadingMore) {
+    emit('loadMore')
+  }
+
+  if (isRestoringScroll) return
 
   if (scrollTimeout) {
     clearTimeout(scrollTimeout)
@@ -176,33 +197,54 @@ function restoreScrollPosition() {
   const characterId = chatStore.currentCharacter.id
   const savedPosition = chatStore.getScrollPosition(characterId)
 
-  if (savedPosition !== undefined) {
-    isRestoringScroll = true
-    nextTick(() => {
-      if (messagesContainer.value) {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      if (savedPosition !== undefined) {
         messagesContainer.value.scrollTop = savedPosition
-        setTimeout(() => {
-          isRestoringScroll = false
-        }, 100)
+      } else {
+        // 没有保存的位置，滚动到底部显示最新消息
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
       }
-    })
-  }
+      // 保持抑制状态足够久，确保 messages.length watcher 不会随后覆盖
+      setTimeout(() => {
+        isRestoringScroll = false
+      }, 300)
+    } else {
+      isRestoringScroll = false
+    }
+  })
 }
 
-// 监听角色切换，恢复滚动位置
+// 角色切换时，立即阻止自动滚底（在消息加载之前就设标志）
 watch(() => chatStore.currentCharacter?.id, (newId, oldId) => {
   if (newId && newId !== oldId) {
-    // 延迟恢复滚动位置，确保消息已加载
-    setTimeout(() => {
-      restoreScrollPosition()
-    }, 100)
+    isRestoringScroll = true
+  }
+})
+
+// 加载状态变为 false 时恢复滚动位置（这是最可靠的时机，消息一定已加载渲染）
+watch(() => chatStore.isLoading, (loading, prevLoading) => {
+  if (!loading && chatStore.currentCharacter) {
+    restoreScrollPosition()
   }
 })
 
 // 监听消息变化，当有新消息时滚动到最底部
 watch(() => props.messages.length, (newLen, oldLen) => {
   if (newLen > oldLen) {
-    scrollToBottom()
+    // 正在恢复滚动位置时不自动滚底（避免与 restoreScrollPosition 竞争）
+    if (isRestoringScroll) return
+
+    // 加载更多历史消息时不自动滚底（由 handleLoadMore 负责保持位置）
+    if (props.isLoadingMore) return
+
+    // 只有用户已经在底部附近时才自动滚到底部
+    if (messagesContainer.value) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+      if (scrollTop + clientHeight >= scrollHeight - 50) {
+        scrollToBottom()
+      }
+    }
   }
 })
 
@@ -221,10 +263,12 @@ onMounted(() => {
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', handleScroll, { passive: true })
   }
-  // 组件挂载时尝试恢复滚动位置
-  setTimeout(() => {
+  // 如果角色已加载且不在加载中，立即恢复滚动位置
+  // （正常流程由 isLoading watcher 处理，此处处理组件重建等边界情况）
+  if (chatStore.currentCharacter && !chatStore.isLoading && props.messages.length > 0) {
+    isRestoringScroll = true
     restoreScrollPosition()
-  }, 100)
+  }
 })
 
 onUnmounted(() => {
@@ -236,9 +280,22 @@ onUnmounted(() => {
   }
 })
 
+// 加载更多消息后保持滚动位置（避免跳动）
+function preserveScrollOnLoadMore() {
+  if (!messagesContainer.value) return
+  const previousScrollHeight = messagesContainer.value.scrollHeight
+  nextTick(() => {
+    if (messagesContainer.value) {
+      const newScrollHeight = messagesContainer.value.scrollHeight
+      messagesContainer.value.scrollTop = newScrollHeight - previousScrollHeight
+    }
+  })
+}
+
 defineExpose({
   messagesContainer,
-  scrollToBottom
+  scrollToBottom,
+  preserveScrollOnLoadMore
 })
 </script>
 

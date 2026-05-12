@@ -115,6 +115,37 @@ export const useChatStore = defineStore('chat', () => {
   const currentCharacter = ref<Character | null>(null)
   const messages = shallowRef<Message[]>([])
   const isLoading = ref(false)
+
+  // 分页相关状态
+  const PAGE_SIZE = 10
+  const displayCount = ref(PAGE_SIZE)
+  const isDisplayAll = ref(true)
+
+  const displayOffset = computed(() =>
+    isDisplayAll.value ? 0 : Math.max(0, messages.value.length - displayCount.value)
+  )
+
+  const displayedMessages = computed(() =>
+    isDisplayAll.value ? messages.value : messages.value.slice(displayOffset.value)
+  )
+
+  const hasMoreMessages = computed(() =>
+    !isDisplayAll.value && displayOffset.value > 0
+  )
+
+  function loadMoreMessages() {
+    if (isDisplayAll.value) return
+    displayCount.value += PAGE_SIZE
+    if (displayCount.value >= messages.value.length) {
+      isDisplayAll.value = true
+      displayCount.value = messages.value.length
+    }
+  }
+
+  function resetPagination() {
+    displayCount.value = PAGE_SIZE
+    isDisplayAll.value = messages.value.length <= PAGE_SIZE
+  }
   const isUpdatingInBackground = ref(false)
   const isUpdatingCharactersList = ref(false)
   const isUpdatingUserCharactersList = ref(false)
@@ -570,6 +601,7 @@ const globalDefaultModel = ref('')
       messages.value = [...activeStream.messages]
       streamingContent.value = activeStream.streamingContent
       currentWaitTime.value = activeStream.currentWaitTime
+      resetPagination()
     } else {
       streamingContent.value = ''
       currentWaitTime.value = '0.0'
@@ -597,6 +629,7 @@ const globalDefaultModel = ref('')
       }
       messages.value = [greetingMessage]
     }
+    resetPagination()
     }
     isLoading.value = false
   }
@@ -879,6 +912,9 @@ const globalDefaultModel = ref('')
 
     messages.value = [...allMessages]
 
+    // 新消息追加到末尾，确保用户可以看到
+    isDisplayAll.value = true
+
     // 立即保存到历史记录，只保存有内容的消息（此时只有用户消息有内容）
     const messagesToSave = messages.value.filter(m => {
       if (m.role === 'system') return false
@@ -981,6 +1017,7 @@ const globalDefaultModel = ref('')
     newMessages.push(assistantMessage)
 
     messages.value = [...newMessages]
+    isDisplayAll.value = true
     error.value = null
 
     await executeStream(
@@ -1033,6 +1070,7 @@ const globalDefaultModel = ref('')
         avatar: currentCharacter.value.avatar
       }]
     }
+    resetPagination()
   }
 
   async function clearCharacterHistory(characterId: string) {
@@ -1040,9 +1078,10 @@ const globalDefaultModel = ref('')
       abortStream(characterId)
     }
     await clearChatHistory(characterId)
-    
+
     if (currentCharacter.value?.id === characterId) {
       messages.value = []
+      resetPagination()
     }
   }
 
@@ -1064,6 +1103,7 @@ const globalDefaultModel = ref('')
     const count = await importChatHistory(currentCharacter.value.id, content)
     const history = await getChatHistory(currentCharacter.value.id)
     messages.value = history
+    resetPagination()
     return count
   }
 
@@ -1120,6 +1160,7 @@ const globalDefaultModel = ref('')
       if (result.messages && result.messages.length > 0) {
         await saveChatHistory(currentCharacter.value.id, result.messages)
         messages.value = result.messages
+        resetPagination()
       }
       
       await loadSyncStatus()
@@ -1172,6 +1213,12 @@ const globalDefaultModel = ref('')
     setCurrentCharacter,
     messages,
     isLoading,
+    // 分页相关
+    displayOffset,
+    displayedMessages,
+    hasMoreMessages,
+    loadMoreMessages,
+    resetPagination,
     isUpdatingInBackground,
     isUpdatingCharactersList,
     isUpdatingUserCharactersList,

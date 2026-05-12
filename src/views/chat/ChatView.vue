@@ -253,13 +253,16 @@
         <ChatMessages
           ref="chatMessagesRef"
           :messages="messages"
-          :editingIndex="editingIndex"
+          :has-more-messages="chatStore.hasMoreMessages"
+          :is-loading-more="isLoadingMore"
+          :editingIndex="editingIndex >= 0 ? editingIndex - chatStore.displayOffset : -1"
           :editContent="editContent"
           :compiledRegexScripts="compiledRegexScripts"
           :showSuggestions="chatStore.showSuggestions"
           :suggestions="chatStore.suggestions"
           :isGeneratingSuggestions="chatStore.isGeneratingSuggestions"
           @click="showMenuDropdown = false"
+          @load-more="handleLoadMore"
           @copy="copyMessage"
           @edit="startEdit"
           @delete="deleteMessage"
@@ -790,11 +793,12 @@ const {
   loadCustomModelsFromStorage
 } = useCustomModel()
 
-const messages = computed(() => chatStore.messages)
+const messages = computed(() => chatStore.displayedMessages)
 
 const editingIndex = ref(-1)
   const editContent = ref('')
   const autoFetchSuggestions = ref(localStorage.getItem('role_play_auto_suggestions') === 'true')
+  const isLoadingMore = ref(false)
 
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
@@ -810,6 +814,25 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
 function toggleAutoSuggestions() {
   autoFetchSuggestions.value = !autoFetchSuggestions.value
   localStorage.setItem('role_play_auto_suggestions', autoFetchSuggestions.value.toString())
+}
+
+function handleLoadMore() {
+  if (isLoadingMore.value || !chatStore.hasMoreMessages) return
+  isLoadingMore.value = true
+
+  // 记录当前 scrollHeight，用于加载后恢复滚动位置
+  const container = chatMessagesRef.value?.messagesContainer
+  const previousScrollHeight = container?.scrollHeight || 0
+
+  chatStore.loadMoreMessages()
+
+  nextTick(() => {
+    if (container) {
+      const newScrollHeight = container.scrollHeight
+      container.scrollTop = newScrollHeight - previousScrollHeight
+    }
+    isLoadingMore.value = false
+  })
 }
 
 const chatMessagesRef = ref<InstanceType<typeof ChatMessages> | null>(null)
@@ -830,7 +853,7 @@ function copyMessage(content: string) {
 }
 
 function startEdit(data: { index: number; content: string }) {
-  editingIndex.value = data.index
+  editingIndex.value = data.index + chatStore.displayOffset
   editContent.value = data.content
 }
 
@@ -840,7 +863,7 @@ function cancelEdit() {
 }
 
 function saveEdit(index: number) {
-  chatStore.editMessage(index, editContent.value)
+  chatStore.editMessage(index + chatStore.displayOffset, editContent.value)
   cancelEdit()
   chatStore.suggestions = []
   chatStore.lastSuggestionsMessagesSnapshot = ''
@@ -850,20 +873,21 @@ function saveEdit(index: number) {
 function sendEdit(index: number) {
   const content = editContent.value.trim()
   if (!content) return
-  
-  chatStore.editMessage(index, content)
+
+  const realIndex = index + chatStore.displayOffset
+  chatStore.editMessage(realIndex, content)
   cancelEdit()
   chatStore.suggestions = []
   chatStore.lastSuggestionsMessagesSnapshot = ''
   chatStore.showSuggestions = false
-  
-  chatStore.regenerateFrom(index)
+
+  chatStore.regenerateFrom(realIndex)
 }
 
 async function deleteMessage(index: number) {
   const confirmed = await showDangerConfirm('确定要删除这条消息吗？')
   if (confirmed) {
-    chatStore.deleteMessage(index)
+    chatStore.deleteMessage(index + chatStore.displayOffset)
     chatStore.suggestions = []
     chatStore.lastSuggestionsMessagesSnapshot = ''
     chatStore.showSuggestions = false
@@ -871,8 +895,9 @@ async function deleteMessage(index: number) {
 }
 
 function regenerateFromAssistant(index: number) {
-  if (index > 0 && chatStore.messages[index - 1].role === 'user') {
-    chatStore.regenerateFrom(index - 1)
+  const realIndex = index + chatStore.displayOffset
+  if (realIndex > 0 && chatStore.messages[realIndex - 1].role === 'user') {
+    chatStore.regenerateFrom(realIndex - 1)
     chatStore.suggestions = []
     chatStore.lastSuggestionsMessagesSnapshot = ''
     chatStore.showSuggestions = false
@@ -880,9 +905,10 @@ function regenerateFromAssistant(index: number) {
 }
 
 function regenerateUserMessage(index: number) {
-  const msg = chatStore.messages[index]
+  const realIndex = index + chatStore.displayOffset
+  const msg = chatStore.messages[realIndex]
   if (!msg || msg.role !== 'user') return
-  chatStore.regenerateFrom(index)
+  chatStore.regenerateFrom(realIndex)
 }
 
 async function regenerateGreeting() {
