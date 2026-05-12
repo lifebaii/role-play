@@ -155,15 +155,23 @@ let scrollTimeout: ReturnType<typeof setTimeout> | null = null
 let isRestoringScroll = false
 
 // 滚动到最底部，使用平滑滚动
-function scrollToBottom() {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTo({
-        top: messagesContainer.value.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
-  })
+function scrollToBottom(withDelay = false) {
+  const executeScroll = () => {
+    nextTick(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTo({
+          top: messagesContainer.value.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    })
+  }
+  
+  if (withDelay) {
+    setTimeout(executeScroll, 300)
+  } else {
+    executeScroll()
+  }
 }
 
 // 保存滚动位置（防抖）+ 检测滚动到顶部
@@ -261,7 +269,7 @@ watch(() => props.messages.length, (newLen, oldLen) => {
     if (messagesContainer.value) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
       if (scrollTop + clientHeight >= scrollHeight - 50) {
-        scrollToBottom()
+        scrollToBottom(true) // 发送消息后延迟300ms滚动
       }
     }
   }
