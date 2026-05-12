@@ -67,6 +67,7 @@
         :current-page="currentPage"
         :total-pages="totalPages"
         :total="total"
+        :page-size="pageSize"
         :action-character-id="actionCharacterId"
         :show-add-button="true"
         :show-friend-status="true"
@@ -74,6 +75,7 @@
         empty-subtext="请先在管理员页面添加角色"
         friend-status-title="已添加"
         @page-change="loadPage"
+        @page-size-change="handlePageSizeChange"
         @select="viewCharacterDetail"
         @action="toggleFriend"
       />
@@ -118,7 +120,7 @@ const characters = ref<Character[]>([])
 const searchQuery = ref('')
 const sortBy = ref<'updatedAt' | 'likeCount' | 'commentCount' | 'createdAt' | 'quota_desc' | 'quota_asc'>('updatedAt')
 const currentPage = ref(1)
-const pageSize = 10
+const pageSize = ref(10)
 const total = ref(0)
 const totalPages = ref(1)
 const isLoading = ref(false)
@@ -183,8 +185,14 @@ const close = () => {
 
 const loadPage = async (pageNum: number) => {
   if (pageNum < 1 || pageNum > totalPages.value || isLoading.value) return
-  
+
   currentPage.value = pageNum
+  await fetchCharacters()
+}
+
+const handlePageSizeChange = async (newPageSize: number) => {
+  pageSize.value = newPageSize
+  currentPage.value = 1
   await fetchCharacters()
 }
 
@@ -210,7 +218,7 @@ const fetchCharacters = async () => {
     
     const params: Record<string, string> = {
       page: currentPage.value.toString(),
-      pageSize: pageSize.toString(),
+      pageSize: pageSize.value.toString(),
       sortBy: sortBy.value
     }
     if (searchQuery.value.trim()) {
