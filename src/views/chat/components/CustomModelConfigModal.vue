@@ -33,6 +33,55 @@
         
         <div class="space-y-4">
           <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-1.5">当前配置</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <select
+                :value="activeConfigId"
+                @change="$emit('selectConfig', ($event.target as HTMLSelectElement).value)"
+                :disabled="configList.length === 0"
+                class="flex-1 px-4 py-2.5 border border-theme-border rounded-xl select-field transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="" disabled>选择配置</option>
+                <option v-for="item in configList" :key="item.id" :value="item.id">
+                  {{ item.name || '未命名配置' }}
+                </option>
+              </select>
+              <div class="flex gap-2">
+                <button
+                  @click="$emit('createConfig')"
+                  class="flex-1 sm:flex-none px-4 py-2.5 bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] rounded-xl font-medium hover:bg-[var(--theme-primary)]/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  新增
+                </button>
+                <button
+                  @click="$emit('deleteConfig', activeConfigId)"
+                  :disabled="!activeConfigId"
+                  class="flex-1 sm:flex-none px-4 py-2.5 bg-[var(--theme-danger-bg)] text-[var(--theme-danger)] rounded-xl font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-theme-text-primary mb-1.5">配置名称</label>
+            <input
+              type="text"
+              :value="config?.name || ''"
+              @input="$emit('updateConfig', 'name', ($event.target as HTMLInputElement).value)"
+              placeholder="例如：OpenAI 主账号"
+              class="w-full px-4 py-2.5 border border-theme-border rounded-xl chat-input-field transition-all"
+            />
+          </div>
+
+          <div>
             <label class="block text-sm font-medium text-theme-text-primary mb-1.5">提供商</label>
             <select
               :value="config?.provider || 'openai'"
@@ -134,11 +183,20 @@ defineProps<{
   visible: boolean
   useCustomModel: boolean
   config: {
+    id?: string
+    name?: string
     provider?: string
     api_url?: string
     api_key?: string
     default_model?: string
   } | null
+  configList: {
+    id: string
+    name: string
+    provider: string
+    is_default?: boolean
+  }[]
+  activeConfigId: string
   availableModels: string[]
   isFetchingModels: boolean
   fetchModelsError: string
@@ -148,6 +206,9 @@ defineEmits<{
   (e: 'update:visible', value: boolean): void
   (e: 'toggleUseCustomModel'): void
   (e: 'updateConfig', field: string, value: string): void
+  (e: 'createConfig'): void
+  (e: 'selectConfig', id: string): void
+  (e: 'deleteConfig', id: string): void
   (e: 'fetchModels'): void
 }>()
 </script>

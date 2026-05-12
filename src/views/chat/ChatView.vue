@@ -488,12 +488,17 @@
     <CustomModelConfigModal
       v-model:visible="showCustomModelConfig"
       :use-custom-model="chatStore.useCustomModel"
-      :config="chatStore.customModelConfig"
+      :config="activeCustomModelConfig"
+      :config-list="customModelConfigs"
+      :active-config-id="activeCustomModelConfigId"
       :available-models="availableCustomModels"
       :is-fetching-models="isFetchingModels"
       :fetch-models-error="fetchModelsError"
       @toggle-use-custom-model="chatStore.setUseCustomModel(!chatStore.useCustomModel)"
       @update-config="updateCustomModelConfig"
+      @create-config="createCustomModelConfig"
+      @select-config="selectCustomModelConfig"
+      @delete-config="handleDeleteCustomModelConfig"
       @fetch-models="fetchCustomModels"
     />
 
@@ -783,12 +788,18 @@ async function handleEditUserCharacterWithErrorHandling(character: any) {
 
 const {
   showCustomModelConfig,
+  customModelConfigs,
+  activeCustomModelConfig,
+  activeCustomModelConfigId,
   isFetchingModels,
   availableCustomModels,
   fetchModelsError,
   isLoadingBuiltinModels,
   fetchCustomModels,
   updateCustomModelConfig,
+  createCustomModelConfig,
+  selectCustomModelConfig,
+  deleteCustomModelConfig,
   handleServiceSelect,
   loadCustomModelsFromStorage
 } = useCustomModel()
@@ -809,6 +820,16 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   setTimeout(() => {
     toastMessage.value = ''
   }, 3000)
+}
+
+async function handleDeleteCustomModelConfig(id: string) {
+  if (!id) return
+
+  const confirmed = await showDangerConfirm('确定要删除当前自定义模型配置吗？')
+  if (!confirmed) return
+
+  await deleteCustomModelConfig(id)
+  showToast('已删除自定义模型配置', 'success')
 }
 
 function toggleAutoSuggestions() {
