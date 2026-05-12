@@ -912,11 +912,8 @@ const globalDefaultModel = ref('')
 
     messages.value = [...allMessages]
 
-    // 确保新消息可见，但不展开所有历史消息
-    // 只增加 displayCount 而不设置 isDisplayAll，这样不会突然显示所有历史
-    if (displayCount.value < messages.value.length) {
-      displayCount.value = messages.value.length
-    }
+    // 发送新消息时，保持当前的分页状态不变
+    // 由于新消息是添加到末尾的，当前分页逻辑会自动显示最新消息
 
     // 立即保存到历史记录，只保存有内容的消息（此时只有用户消息有内容）
     const messagesToSave = messages.value.filter(m => {
@@ -1021,10 +1018,7 @@ const globalDefaultModel = ref('')
 
     messages.value = [...newMessages]
 
-    // 确保新消息可见，但不展开所有历史消息
-    if (displayCount.value < messages.value.length) {
-      displayCount.value = messages.value.length
-    }
+    // 重新生成消息时，保持当前的分页状态不变
 
     error.value = null
 
