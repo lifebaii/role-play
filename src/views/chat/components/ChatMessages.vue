@@ -175,6 +175,25 @@ function handleScroll() {
     emit('loadMore')
   }
 
+  // 检测滚动到底部，自动折叠回最新 PAGE_SIZE 条消息
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+  if (
+    scrollTop + clientHeight >= scrollHeight - 100 &&
+    props.messages.length > 10 &&
+    !props.isLoadingMore &&
+    !isRestoringScroll &&
+    !chatStore.isStreaming
+  ) {
+    const characterId = chatStore.currentCharacter.id
+    chatStore.resetPagination()
+    chatStore.saveScrollPosition(characterId, 0)
+    nextTick(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    })
+  }
+
   if (isRestoringScroll) return
 
   if (scrollTimeout) {
