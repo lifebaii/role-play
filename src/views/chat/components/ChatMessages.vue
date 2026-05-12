@@ -11,7 +11,7 @@
       <ChatMessage
         v-for="(message, index) in messages"
         :key="message.id"
-        v-memo="[message.content, message.id, editingIndex === index, index === messages.length - 1 && chatStore.isStreaming]"
+        v-memo="[message.content, message.id, editingIndex === index, index === messages.length - 1 && chatStore.isStreaming, chatStore.currentWaitTime]"
         :message="message"
         :index="index"
         :messages="messages"
