@@ -1011,7 +1011,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     const context = contextResult.messages
     
     // 添加建议生成提示
-    const prompt = "请根据上述对话上下文，生成5个符合当前语境的简短用户回复建议，用于推动对话继续。回复建议要自然、简短、符合日常对话习惯。\n\n必须以严格的 JSON 数组格式返回，不要包含任何其他内容，格式示例：[\"建议1\", \"建议2\", \"建议3\", \"建议4\", \"建议5\"]"
+    const prompt = "请根据上述对话上下文，生成5个符合当前语境的简短用户回复建议，用于推动对话继续。回复建议要自然、简短、符合日常对话习惯。\n\n必须以严格的保证每个建议使用;分割，不要包含任何其他内容，格式示例：建议1;建议2;建议3;建议4;建议5"
     context.push({ role: 'user', content: prompt })
     
     let response: string
@@ -1074,7 +1074,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     
     // 替换中文引号和逗号为英文引号和逗号，确保 JSON 能正常解析
     const originalContent = content
-    content = content.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/，/g, ',').replace(/""/g, '"')
+    content = content.replace(/[；]/g, ';')
     
     if (isDev) {
       console.log('[建议回复解析] 替换前内容:', originalContent)
@@ -1083,7 +1083,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     
     let parsedSuggestions: string[] = []
     try {
-      const parsed = JSON.parse(content)
+      const parsed = content.split(';')
       if (Array.isArray(parsed)) {
         parsedSuggestions = parsed.slice(0, 5)
       }
