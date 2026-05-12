@@ -1204,7 +1204,7 @@ async function handleSubmit(text: string, clearInput: () => void) {
     clearInput()
     // 发送消息后立即滚动到底部
     nextTick(() => {
-      chatMessagesRef.value?.scrollToBottom()
+      chatMessagesRef.value?.scrollToBottom(true)
     })
   }
 }
