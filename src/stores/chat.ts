@@ -1214,6 +1214,7 @@ const globalDefaultModel = ref('')
     messages,
     isLoading,
     // 分页相关
+    PAGE_SIZE,
     displayOffset,
     displayedMessages,
     hasMoreMessages,

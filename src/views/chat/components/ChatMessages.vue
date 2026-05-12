@@ -179,7 +179,7 @@ function handleScroll() {
   const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
   if (
     scrollTop + clientHeight >= scrollHeight - 100 &&
-    props.messages.length > 10 &&
+    props.messages.length > 3 * chatStore.PAGE_SIZE &&
     !props.isLoadingMore &&
     !isRestoringScroll &&
     !chatStore.isStreaming
