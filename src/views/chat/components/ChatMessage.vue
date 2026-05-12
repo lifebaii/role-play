@@ -202,11 +202,10 @@ const emit = defineEmits<{
 
 const chatStore = useChatStore()
 
-const isVisible = ref(false)
+const isVisible = ref(true) // 默认直接可见，避免折叠时出现空白
 const messageRef = ref<HTMLElement | null>(null)
 const bubbleRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
-let observer: IntersectionObserver | null = null
 let animationFrameId: number | null = null
 
 function animateBubbleHeight(previousHeight?: number) {
@@ -240,33 +239,7 @@ function animateBubbleHeight(previousHeight?: number) {
   })
 }
 
-onMounted(() => {
-  if (messageRef.value) {
-    observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            isVisible.value = true
-          } else {
-            isVisible.value = false
-          }
-        })
-      },
-      {
-        root: null,
-        rootMargin: '200px',
-        threshold: 0
-      }
-    )
-    observer.observe(messageRef.value)
-  }
-
-})
-
 onUnmounted(() => {
-  if (observer) {
-    observer.disconnect()
-  }
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId)
   }
