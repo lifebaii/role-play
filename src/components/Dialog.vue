@@ -25,7 +25,7 @@
                 <component :is="iconComponent" class="w-5 h-5 text-white" />
               </div>
               <h2 :id="titleId" class="text-lg font-bold text-theme-text-primary">
-                {{ title }}
+                {{ dialogTitle }}
               </h2>
             </div>
           </div>
@@ -41,7 +41,7 @@
                 v-model="inputValue"
                 type="text"
                 class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all"
-                :placeholder="inputPlaceholder"
+                :placeholder="dialogInputPlaceholder"
                 @keydown.enter="handleConfirm"
               />
             </div>
@@ -67,7 +67,7 @@
                 @click="handleCancel"
                 class="flex-1 px-4 py-2.5 chat-card text-theme-text-primary rounded-xl hover:bg-[var(--theme-card-hover)] transition-all duration-200 font-medium border border-theme-border text-sm"
               >
-                {{ cancelText }}
+                {{ dialogCancelText }}
               </button>
               <button
                 @click="handleConfirm"
@@ -76,7 +76,7 @@
                   confirmButtonClass
                 ]"
               >
-                {{ confirmText }}
+                {{ dialogConfirmText }}
               </button>
             </template>
           </div>
@@ -88,6 +88,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, shallowRef, h, type Component } from 'vue'
+import { useI18n } from '@/composables/useI18n'
+
+const { t } = useI18n()
 
 interface ButtonOption {
   text: string
@@ -122,10 +125,10 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   type: 'alert',
-  title: '提示',
-  confirmText: '确定',
-  cancelText: '取消',
-  inputPlaceholder: '请输入',
+  title: '',
+  confirmText: '',
+  cancelText: '',
+  inputPlaceholder: '',
   variant: 'default',
   buttons: () => []
 })
@@ -140,6 +143,11 @@ const emit = defineEmits<{
 const inputRef = ref<HTMLInputElement | null>(null)
 const inputValue = ref(props.inputValue || '')
 const titleId = computed(() => `dialog-title-${Date.now()}`)
+
+const dialogTitle = computed(() => props.title || t('common.details'))
+const dialogConfirmText = computed(() => props.confirmText || t('common.confirm'))
+const dialogCancelText = computed(() => props.cancelText || t('common.cancel'))
+const dialogInputPlaceholder = computed(() => props.inputPlaceholder || '...')
 
 watch(() => props.visible, (newVal) => {
   if (newVal && props.type === 'prompt') {

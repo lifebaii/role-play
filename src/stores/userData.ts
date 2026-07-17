@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { dbSet, dbGet } from '@/utils/db'
+import { userDataSyncApi, type UserDataSyncStatus } from '@/api'
 
 export interface UserWorldInfo {
   id: string
@@ -161,6 +162,8 @@ export const useUserDataStore = defineStore('userData', () => {
   const presets = ref<UserPreset[]>([])
   const regexScripts = ref<UserRegexScript[]>([])
   const isLoaded = ref(false)
+  const syncStatus = ref<UserDataSyncStatus | null>(null)
+  const isSyncing = ref(false)
 
   const enabledWorldInfo = computed(() =>
     worldInfo.value.filter(w => w.enabled)
@@ -333,7 +336,22 @@ export const useUserDataStore = defineStore('userData', () => {
     _save()
   }
 
-  function importData(data: Partial<UserData>): void {
+  function importData(data: any): void {
+    // 检查是否为直接的预设数组格式
+    if (Array.isArray(data)) {
+      // 处理直接的预设数组格式
+      presets.value = data.map((p, i) => ({
+        ...getDefaultPreset(),
+        ...p,
+        prompt: p.prompt || p.content || '',
+        order: i,
+        id: p.id || generateId()
+      }))
+      _save()
+      return
+    }
+
+    // 处理正常的用户数据格式
     if (data.worldInfo) {
       worldInfo.value = data.worldInfo.map(w => ({
         ...getDefaultWorldInfo(),
@@ -342,9 +360,11 @@ export const useUserDataStore = defineStore('userData', () => {
       }))
     }
     if (data.presets) {
-      presets.value = data.presets.map(p => ({
+      presets.value = data.presets.map((p, i) => ({
         ...getDefaultPreset(),
         ...p,
+        prompt: p.prompt || p.content || '',
+        order: i,
         id: p.id || generateId()
       }))
     }
@@ -373,6 +393,47 @@ export const useUserDataStore = defineStore('userData', () => {
     _save()
   }
 
+  async function loadSyncStatus(): Promise<void> {
+    try {
+      syncStatus.value = await userDataSyncApi.getStatus()
+    } catch (e) {
+      console.error('Failed to load sync status:', e)
+    }
+  }
+
+  async function uploadUserDataSync(): Promise<{ syncId: string; syncCode: string; expiresAt: string }> {
+    isSyncing.value = true
+    try {
+      const result = await userDataSyncApi.upload(presets.value, worldInfo.value, regexScripts.value)
+      await loadSyncStatus()
+      return result
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  async function downloadUserDataSync(syncCode: string): Promise<{ itemCount: { presets: number; worldInfo: number; regexScripts: number } }> {
+    isSyncing.value = true
+    try {
+      const result = await userDataSyncApi.download(syncCode)
+      if (result.userData) {
+        if (result.userData.presets) presets.value = result.userData.presets
+        if (result.userData.worldInfo) worldInfo.value = result.userData.worldInfo
+        if (result.userData.regexScripts) regexScripts.value = result.userData.regexScripts
+        _save()
+      }
+      await loadSyncStatus()
+      return { itemCount: result.itemCount }
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  async function cancelUserDataSync(): Promise<void> {
+    await userDataSyncApi.cancel()
+    await loadSyncStatus()
+  }
+
   return {
     worldInfo,
     presets,
@@ -381,6 +442,8 @@ export const useUserDataStore = defineStore('userData', () => {
     enabledPresets,
     enabledRegexScripts,
     isLoaded,
+    syncStatus,
+    isSyncing,
     load,
     addWorldInfo,
     updateWorldInfo,
@@ -399,6 +462,11 @@ export const useUserDataStore = defineStore('userData', () => {
     reorderRegexScripts,
     importData,
     exportData,
-    clearAll
+    clearAll,
+    loadSyncStatus,
+    uploadUserDataSync,
+    downloadUserDataSync,
+    cancelUserDataSync,
+    _save
   }
 })

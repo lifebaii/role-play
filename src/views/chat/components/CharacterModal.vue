@@ -31,7 +31,7 @@
               <template v-else>
                 <span class="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-secondary)] rounded-md sm:rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">+</span>
               </template>
-              {{ isViewOnlyMode ? '查看角色' : (editingCharacter ? '编辑角色' : '创建角色') }}
+              {{ isViewOnlyMode ? t('character.characterInfo') : (editingCharacter ? t('character.editCharacter') : t('character.createCharacter')) }}
             </h2>
             <span
               v-if="editingCharacter && !isLoadingCharacterDetail && !isLoadingMeta"
@@ -52,7 +52,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              加载源文件...
+              {{ t('common.loading') }}
             </span>
           </div>
           <div class="flex items-center gap-1 sm:gap-2">
@@ -69,7 +69,7 @@
                 <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span class="hidden sm:inline">更新</span>
+                <span class="hidden sm:inline">{{ t('common.update') }}</span>
               </button>
             </template>
             <template v-if="showCommentSection">
@@ -88,7 +88,7 @@
                 <svg v-else class="w-4 h-4" :fill="displayMeta.isLiked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
                 </svg>
-                <span class="hidden sm:inline">{{ displayMeta.isLiked ? '已点赞' : '点赞' }}</span>
+                <span class="hidden sm:inline">{{ displayMeta.isLiked ? t('character.liked') : t('character.like') }}</span>
                 <span class="text-xs opacity-80">{{ displayMeta.likeCount }}</span>
               </button>
             </template>
@@ -120,7 +120,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span class="ml-2 text-theme-text-secondary">加载角色数据...</span>
+              <span class="ml-2 text-theme-text-secondary">{{ t('character.loadingCharacter') }}</span>
             </div>
           </div>
           
@@ -155,7 +155,7 @@
               type="button"
               @click="characterFormRef && (characterFormRef.showImageEditor = true)"
               :disabled="characterFormRef?.isSavingImage"
-              :title="characterFormRef?.isSavingImage ? '保存中...' : '编辑图片'"
+              :title="characterFormRef?.isSavingImage ? t('common.saving') : t('character.editImage')"
               class="px-2 py-1.5 sm:px-4 sm:py-2.5 text-theme-text-accent hover:bg-[var(--theme-primary)]/10 rounded-lg sm:rounded-xl transition-all duration-200 font-medium border border-[var(--theme-primary)]/20 flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg v-if="characterFormRef?.isSavingImage" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span class="hidden sm:inline">{{ characterFormRef?.isSavingImage ? '保存中...' : '编辑图片' }}</span>
+              <span class="hidden sm:inline">{{ characterFormRef?.isSavingImage ? t('common.saving') : t('character.editImage') }}</span>
             </button>
             
             <div 
@@ -180,9 +180,9 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  加载中...
+                  {{ t('common.loading') }}
                 </template>
-                <template v-else>分享</template>
+                <template v-else>{{ t('character.share') }}</template>
               </span>
               <label v-if="!isLoadingMeta" class="relative inline-flex items-center" :class="canToggleShared && !isUpdatingShared ? 'cursor-pointer' : 'cursor-not-allowed'">
                 <input
@@ -213,7 +213,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                 </svg>
-                <span class="hidden sm:inline">更多</span>
+                <span class="hidden sm:inline">{{ t('common.more') }}</span>
               </button>
               
               <div
@@ -230,7 +230,7 @@
                   <svg class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  <span>{{ editingCharacterMeta.originalId ? '在线添加的角色无法导出' : '导出角色' }}</span>
+                  <span>{{ editingCharacterMeta.originalId ? t('character.cannotExportOnline') : t('character.exportCharacter') }}</span>
                 </button>
                 
                 <div class="border-t border-theme-border/50"></div>
@@ -248,7 +248,7 @@
                   <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  <span>{{ (localIsDeleting || isDeletingCharacter) ? '删除中...' : '删除角色' }}</span>
+                  <span>{{ (localIsDeleting || isDeletingCharacter) ? t('character.deleting') : t('character.deleteCharacter') }}</span>
                 </button>
                 
                 <template v-if="isLoggedIn">
@@ -273,8 +273,8 @@
                     </svg>
                     <span>
                       {{ editingCharacterMeta.shared 
-                        ? (isUpdatingFromServer ? '下载中...' : '下载') 
-                        : '下载（分享已被取消）' }}
+                        ? (isUpdatingFromServer ? t('character.downloading') : t('character.download')) 
+                        : t('character.downloadShareCancelled') }}
                     </span>
                   </button>
                   
@@ -293,7 +293,7 @@
                     <svg v-else class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
-                    <span>{{ isUpdatingToServer ? '上传中...' : '上传' }}</span>
+                    <span>{{ isUpdatingToServer ? t('character.uploading') : t('character.upload') }}</span>
                   </button>
                 </template>
                 
@@ -307,7 +307,7 @@
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
-                  <span>取消</span>
+                  <span>{{ t('common.cancel') }}</span>
                 </button>
               </div>
             </div>
@@ -318,7 +318,7 @@
               @click="$emit('update:visible', false)"
               class="px-3 py-1.5 sm:px-6 sm:py-2.5 chat-card text-theme-text-primary rounded-lg sm:rounded-xl hover:bg-[var(--theme-card-hover)] transition-all duration-200 font-medium border border-theme-border text-xs sm:text-sm"
             >
-              取消
+              {{ t('common.cancel') }}
             </button>
             <button
               type="button"
@@ -331,10 +331,10 @@
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                 </svg>
-                <span class="hidden sm:inline">保存中...</span>
+                <span class="hidden sm:inline">{{ t('common.saving') }}</span>
                 <span class="sm:hidden">...</span>
               </span>
-              <span v-else>{{ editingCharacter ? '保存' : '创建' }}</span>
+              <span v-else>{{ editingCharacter ? t('common.save') : t('common.create') }}</span>
             </button>
           </div>
         </div>
@@ -349,8 +349,8 @@
         <div class="bg-[var(--theme-card-bg)] rounded-2xl p-6 sm:p-8 flex flex-col items-center gap-4 shadow-2xl border border-theme-border">
           <div class="w-12 h-12 border-4 border-[var(--theme-danger)] border-t-transparent rounded-full animate-spin"></div>
           <div class="text-center">
-            <p class="text-base sm:text-lg font-semibold text-theme-text-primary">删除中...</p>
-            <p class="text-xs sm:text-sm text-theme-text-secondary mt-1">请稍候</p>
+            <p class="text-base sm:text-lg font-semibold text-theme-text-primary">{{ t('character.deleting') }}</p>
+            <p class="text-xs sm:text-sm text-theme-text-secondary mt-1">{{ t('common.pleaseWait') }}</p>
           </div>
         </div>
       </div>
@@ -369,11 +369,13 @@ import { characterGet } from '@/utils/db'
 import { useUserStore } from '@/stores/user'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
 import { debugPrintFile, debugPrintBlob } from '@/utils/debugCharacterFile'
 import { config } from '@/utils/config'
 
 const userStore = useUserStore()
 const { showAlert, showConfirm, showErrorAlert } = useDialog()
+const { t } = useI18n()
 
 interface MetaData {
   originalId: string | null
@@ -612,10 +614,10 @@ const canToggleShared = computed(() => {
 })
 
 const sharedDisabledReason = computed(() => {
-  if (props.isLoadingMeta) return '正在加载角色信息...'
-  if (!isLoggedIn.value) return '请先登录'
+  if (props.isLoadingMeta) return t('character.loadingCharacterInfo')
+  if (!isLoggedIn.value) return t('auth.loginFirst')
   if (props.existsOnServer && !props.isOwnerOfCharacter) {
-    return '此角色不属于您'
+    return t('character.notOwner')
   }
   return ''
 })
@@ -645,7 +647,7 @@ async function handleToggleShared(event: Event) {
   const newSharedState = !props.editingCharacterMeta.shared
   
   if (newSharedState) {
-    const confirmed = await showConfirm('分享后其他用户可以添加此角色，确定要分享吗？')
+    const confirmed = await showConfirm(t('character.shareConfirm'))
     if (!confirmed) {
       return
     }
@@ -660,7 +662,7 @@ async function handleToggleShared(event: Event) {
     if (newSharedState) {
       const blob = await getCharacterBlob(characterId)
       if (!blob) {
-        await showErrorAlert('无法获取角色数据')
+        await showErrorAlert(t('character.cannotGetCharacterData'))
         return
       }
       
@@ -685,7 +687,7 @@ async function handleToggleShared(event: Event) {
     emit('update:shared', newSharedState)
   } catch (error: any) {
     console.error('更新分享状态失败:', error)
-    await showErrorAlert('更新分享状态失败: ' + error.message)
+    await showErrorAlert(t('character.updateShareFailed') + ': ' + error.message)
     // 失败时回滚到原来的状态
     tempSharedState.value = null
     hasError = true

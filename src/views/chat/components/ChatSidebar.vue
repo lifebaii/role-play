@@ -8,6 +8,7 @@
       <div class="px-2 sm:px-4 h-14 flex items-center justify-between">
         <h1 @click="$emit('openAbout')" class="text-lg sm:text-xl font-bold gradient-text cursor-pointer hover:opacity-80 transition-opacity">ROLE PLAY</h1>
         <div class="flex items-center gap-1 sm:gap-2">
+          <LanguageSelector />
           <button @click="handleToggleColorMode" class="p-1.5 sm:p-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent" :title="colorModeTitle">
             <svg v-if="currentColorMode === 'light'" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
@@ -19,12 +20,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
           </button>
-          <button @click="$emit('update:modelValue', false)" class="hidden lg:flex p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" title="折叠侧边栏">
+          <button @click="$emit('update:modelValue', false)" class="hidden lg:flex p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" :title="t('sidebar.collapse')">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
           </button>
-          <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" title="关闭侧边栏">
+          <button @click="$emit('update:modelValue', false)" class="lg:hidden p-1.5 sm:p-2 text-theme-text-secondary hover:bg-[var(--theme-primary)]/10 rounded-full transition-all" :title="t('sidebar.close')">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -35,7 +36,7 @@
 
     <div class="flex-1 overflow-y-auto p-3 overscroll-contain" data-scrollable="true" style="-webkit-overflow-scrolling: touch;">
       <div>
-        <div class="flex items-center justify-between px-1 mb-3">
+        <div class="flex items-center justify-between px-1 mb-3 min-w-0 w-full overflow-x-auto scrollbar-hide">
           <div class="flex items-center gap-2">
             <button 
               @click="router.push('/friends')" 
@@ -57,7 +58,7 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              导入
+              {{ t('sidebar.import') }}
             </label>
             <button
               @click="$emit('openCreateCharacter')"
@@ -66,7 +67,7 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
-              创建
+              {{ t('sidebar.create') }}
             </button>
             <button
               v-if="showAuthEntry"
@@ -76,7 +77,7 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
-              添加
+              {{ t('sidebar.add') }}
             </button>
           </div>
         </div>
@@ -126,9 +127,9 @@
                   </div>
                   <div :class="['text-xs truncate', chatStore.currentCharacter?.role_play?.id === character.role_play?.id ? 'text-white/80' : 'text-theme-text-secondary']">
                     <template v-if="chatStore.isCharacterStreaming(character.role_play?.id || character.id)">
-                      <span class="text-[var(--theme-success-light)]">回复中...</span>
+                      <span class="text-[var(--theme-success-light)]">{{ t('chat.replying') }}</span>
                     </template>
-                    <template v-else>{{ getCharacterDescription(character) || '暂无描述' }}</template>
+                    <template v-else>{{ getCharacterDescription(character) || t('chat.noDescription') }}</template>
                   </div>
                 </div>
               </div>
@@ -171,7 +172,7 @@
         <button
           @click="handleLogout"
           class="p-2 text-theme-text-secondary hover:text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] rounded-xl transition-all duration-200"
-          title="退出登录"
+          :title="t('auth.logout')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -180,7 +181,7 @@
         <button
           @click="$emit('openUserDataSettings')"
           class="p-2 text-theme-text-secondary hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all duration-200"
-          title="本地用户数据设置"
+          :title="t('settings.title')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -205,7 +206,7 @@
               {{ chatStore.userName }}
             </template>
             <template v-else>
-              <span class="text-theme-text-accent">点击设置称呼</span>
+              <span class="text-theme-text-accent">{{ t('user.editName') }}</span>
             </template>
           </div>
           <div class="text-xs text-theme-text-secondary">
@@ -217,12 +218,12 @@
           @click="userStore.requireLogin()"
           class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
         >
-          登录
+          {{ t('auth.login') }}
         </button>
         <button
           @click="$emit('openUserDataSettings')"
           class="p-2 text-theme-text-secondary hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 rounded-xl transition-all duration-200"
-          title="本地用户数据设置"
+          :title="t('settings.title')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -247,9 +248,12 @@ import { config } from '@/utils/config'
 import AvatarImage from '@/components/AvatarImage.vue'
 import { toggleColorMode, getColorMode, type ColorMode } from '@/utils/theme'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
 import draggable from 'vuedraggable'
+import LanguageSelector from '@/components/LanguageSelector.vue'
 
 const { showConfirm } = useDialog()
+const { t } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -282,9 +286,9 @@ const localFriendCharacters = ref<any[]>([])
 
 const colorModeTitle = computed(() => {
   switch (currentColorMode.value) {
-    case 'light': return '亮色模式（点击切换）'
-    case 'dark': return '暗色模式（点击切换）'
-    default: return '跟随系统（点击切换）'
+    case 'light': return t('sidebar.colorMode.light')
+    case 'dark': return t('sidebar.colorMode.dark')
+    default: return t('sidebar.colorMode.system')
   }
 })
 

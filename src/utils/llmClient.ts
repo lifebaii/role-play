@@ -244,7 +244,6 @@ export async function* streamChat(
       yield* streamKobold(api_url, api_key, model, messages, options, signal)
       break
     case 'openai':
-    case 'openai-compatible':
     default:
       yield* streamOpenAI(api_url, api_key, model, messages, options, signal)
       break

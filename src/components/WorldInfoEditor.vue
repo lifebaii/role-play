@@ -14,7 +14,7 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-theme-text-primary leading-tight">{{ isEditing ? '编辑条目' : '新建条目' }}</h3>
+            <h3 class="text-lg font-bold text-theme-text-primary leading-tight">{{ isEditing ? t('worldInfo.editEntry') : t('worldInfo.newEntry') }}</h3>
             <p class="text-xs text-theme-text-secondary">World Info Entry</p>
           </div>
         </div>
@@ -33,15 +33,13 @@
           <div class="space-y-4">
             <div>
               <label
-                  class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">名称/备注
-                  (Comment)</label>
+                  class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('worldInfo.comment') }}</label>
               <input v-model="localData.comment" type="text"
                   class="w-full chat-input-field border border-theme-border rounded-xl px-4 py-2.5 text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none transition-all shadow-sm font-medium"
-                  placeholder="例如：主城描述">
+                  :placeholder="t('worldInfo.commentPlaceholder')">
             </div>
             <div>
-              <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">主关键词
-                  (Keys)</label>
+              <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('worldInfo.keys') }}</label>
               <div class="relative">
                 <input
                     :value="Array.isArray(localData.keys) ? localData.keys.join(', ') : ''"
@@ -49,13 +47,13 @@
                     type="text"
                     class="w-full chat-input-field border border-theme-border rounded-xl px-4 py-2.5 text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none transition-all shadow-sm"
                     :class="{'border-l-4 !border-l-[var(--theme-success)]': localData.constant}"
-                    placeholder="逗号分隔，留空则需勾选'常驻'">
+                    :placeholder="t('worldInfo.keysHint')">
                 <div class="absolute right-2 top-2">
                   <button
                       @click="localData.constant = !localData.constant"
                       :class="['flex items-center space-x-1 px-2.5 py-1 rounded-lg border transition-all shadow-sm active:scale-95',
                                    localData.constant ? 'bg-[var(--theme-success-bg)] border-[var(--theme-success)]/30 text-[var(--theme-success)]' : 'bg-[var(--theme-card-hover)] border-theme-border text-theme-text-secondary hover:bg-[var(--theme-sidebar-hover)]']"
-                      title="常驻条目，始终插入，忽略概率">
+                      :title="t('worldInfo.constantTitle')">
                     <svg v-if="localData.constant" class="w-3 h-3"
                         fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd"
@@ -63,7 +61,7 @@
                           clip-rule="evenodd"></path>
                     </svg>
                     <span class="text-[10px] font-bold uppercase tracking-wider">{{
-                        localData.constant ? '已常驻' : '设为常驻' }}</span>
+                        localData.constant ? t('worldInfo.isConstant') : t('worldInfo.setConstant') }}</span>
                   </button>
                 </div>
               </div>
@@ -78,7 +76,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                       d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span class="text-xs font-bold">正则匹配</span>
+                <span class="text-xs font-bold">{{ t('worldInfo.useRegex') }}</span>
               </label>
               <label
                   :class="['flex-1 flex items-center space-x-1.5 cursor-pointer px-3 py-1.5 border rounded-xl transition-all select-none shadow-sm active:scale-95',
@@ -90,7 +88,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                       d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span class="text-xs font-bold">全词匹配</span>
+                <span class="text-xs font-bold">{{ t('worldInfo.matchWholeWords') }}</span>
               </label>
               <label
                   :class="['flex-1 flex items-center space-x-1.5 cursor-pointer px-3 py-1.5 border rounded-xl transition-all select-none shadow-sm active:scale-95',
@@ -101,7 +99,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
                       d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span class="text-xs font-bold">区分大小写</span>
+                <span class="text-xs font-bold">{{ t('worldInfo.caseSensitive') }}</span>
               </label>
             </div>
           </div>
@@ -111,21 +109,20 @@
             <div class="space-y-4">
               <div>
                 <label
-                    class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">插入位置
-                    (Position)</label>
+                    class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('worldInfo.position') }}</label>
                 <div class="relative group">
                   <select v-model="localData.position"
                       class="w-full select-field border border-theme-border rounded-xl px-4 py-2.5 text-sm text-theme-text-primary focus:ring-4 focus:ring-[var(--theme-primary)]/10 focus:border-[var(--theme-primary)] focus:outline-none appearance-none transition-all shadow-sm cursor-pointer group-hover:border-[var(--theme-primary)]/30">
-                    <optgroup label="System Prompt (系统提示词)">
-                      <option value="system_top">System Top (最顶)</option>
-                      <option value="global_note">Global Note (全局)</option>
-                      <option value="before_char">Before Character (角色前)</option>
-                      <option value="after_char">After Character (角色后)</option>
+                    <optgroup :label="t('worldInfo.systemPromptGroup')">
+                      <option value="system_top">{{ t('worldInfo.positions.systemTop') }}</option>
+                      <option value="global_note">{{ t('worldInfo.positions.globalNote') }}</option>
+                      <option value="before_char">{{ t('worldInfo.positions.beforeChar') }}</option>
+                      <option value="after_char">{{ t('worldInfo.positions.afterChar') }}</option>
                     </optgroup>
-                    <optgroup label="In-Chat (对话中)">
-                      <option value="at_depth">@ Depth (按深度)</option>
-                      <option value="user_top">User Message Top (用户消息顶)</option>
-                      <option value="assistant_top">AI Message Top (AI消息顶)</option>
+                    <optgroup :label="t('worldInfo.inChatGroup')">
+                      <option value="at_depth">{{ t('worldInfo.positions.atDepth') }}</option>
+                      <option value="user_top">{{ t('worldInfo.positions.userTop') }}</option>
+                      <option value="assistant_top">{{ t('worldInfo.positions.assistantTop') }}</option>
                     </optgroup>
                   </select>
                   <div
@@ -139,15 +136,14 @@
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-theme-text-secondary mb-1">顺序 (Order)</label>
+                  <label class="block text-xs text-theme-text-secondary mb-1">{{ t('worldInfo.order') }}</label>
                   <input type="number" v-model.number="localData.order"
                       class="w-full chat-input-field border border-theme-border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none"
-                      placeholder="100">
+                      :placeholder="t('worldInfo.orderPlaceholder')">
                 </div>
                 <div>
                   <label
-                      class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">触发概率
-                      (%)</label>
+                      class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('worldInfo.probability') }}</label>
                   <div
                       :class="['flex items-center border rounded-xl transition-all overflow-hidden shadow-sm',
                                localData.useProbability ? 'border-[var(--theme-primary)]/30 ring-2 ring-[var(--theme-primary)]/10' : 'border-theme-border opacity-60']">
@@ -170,7 +166,7 @@
               </div>
               <div v-if="localData.position === 'at_depth'"
                   class="pt-2 border-t border-theme-border">
-                <label class="block text-xs text-theme-text-secondary mb-1">插入深度 (Depth) <span
+                <label class="block text-xs text-theme-text-secondary mb-1">{{ t('worldInfo.depth') }} <span
                         class="text-[10px] text-theme-text-secondary/60">@D</span></label>
                 <input type="number" v-model.number="localData.depth"
                     class="w-full chat-input-field border border-theme-border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none"
@@ -183,14 +179,14 @@
         <div>
           <label
               class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5 flex justify-between">
-            <span>内容 (Content)</span>
+            <span>{{ t('worldInfo.content') }}</span>
             <span
                 class="text-[10px] font-normal normal-case bg-[var(--theme-card-hover)] px-1.5 rounded text-theme-text-secondary">{{
-                (localData.content || '').length }} 字符</span>
+                (localData.content || '').length }} {{ t('worldInfo.characters') }}</span>
           </label>
           <textarea v-model="localData.content" rows="8"
               class="w-full chat-input-field border border-theme-border rounded-xl px-4 py-3 text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none font-mono text-sm shadow-inner leading-relaxed resize-y min-h-[150px]"
-              placeholder="在此输入世界书条目的具体内容..."></textarea>
+              :placeholder="t('worldInfo.contentPlaceholder')"></textarea>
         </div>
 
         <details class="group border border-theme-border rounded-xl chat-card shadow-sm overflow-hidden">
@@ -205,7 +201,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              高级设置 (逻辑、分组、时效、递归)
+              {{ t('worldInfo.advancedSettings') }}
             </span>
             <svg class="w-5 h-5 text-theme-text-secondary group-open:rotate-180 transition-transform duration-300"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,15 +214,15 @@
             <div class="space-y-3">
               <h4
                   class="text-xs font-bold text-theme-text-secondary uppercase tracking-wide border-b border-theme-border pb-1">
-                逻辑过滤 (Selective)</h4>
+                {{ t('worldInfo.logicFilter') }}</h4>
               <div class="flex items-center gap-2">
                 <div class="relative flex-1 group">
                   <select v-model.number="localData.selectiveLogic"
                       class="w-full select-field border border-theme-border rounded-xl px-3 py-2 text-xs text-theme-text-primary focus:ring-4 focus:ring-[var(--theme-primary)]/10 focus:border-[var(--theme-primary)] focus:outline-none appearance-none transition-all shadow-sm cursor-pointer group-hover:border-[var(--theme-primary)]/30">
-                    <option :value="0">AND ANY (主词 & 任一次词)</option>
-                    <option :value="1">AND ALL (主词 & 所有次词)</option>
-                    <option :value="2">NOT ANY (主词 & 无任一次词)</option>
-                    <option :value="3">NOT ALL (主词 & 非所有次词)</option>
+                    <option :value="0">{{ t('worldInfo.logicOptions.andAny') }}</option>
+                    <option :value="1">{{ t('worldInfo.logicOptions.andAll') }}</option>
+                    <option :value="2">{{ t('worldInfo.logicOptions.notAny') }}</option>
+                    <option :value="3">{{ t('worldInfo.logicOptions.notAll') }}</option>
                   </select>
                   <div
                       class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-theme-text-secondary group-hover:text-theme-text-primary transition-colors">
@@ -243,20 +239,20 @@
                   @input="localData.secondary_keys = ($event.target as HTMLInputElement).value.split(',').map(k => k.trim()).filter(k => k)"
                   type="text"
                   class="w-full chat-input-field border border-theme-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none"
-                  placeholder="次级关键词 (逗号分隔)">
+                  :placeholder="t('worldInfo.secondaryKeysPlaceholder')">
             </div>
 
             <div class="space-y-3">
               <h4
                   class="text-xs font-bold text-theme-text-secondary uppercase tracking-wide border-b border-theme-border pb-1">
-                分组 (Group)</h4>
+                {{ t('worldInfo.group') }}</h4>
               <div class="flex gap-2">
                 <input type="text" v-model="localData.group"
                     class="flex-1 chat-input-field border border-theme-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none"
-                    placeholder="组名">
+                    :placeholder="t('worldInfo.groupPlaceholder')">
                 <input type="number" v-model.number="localData.groupWeight"
                     class="w-20 chat-input-field border border-theme-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:outline-none"
-                    placeholder="权重">
+                    :placeholder="t('worldInfo.groupWeightPlaceholder')">
               </div>
               <label
                   :class="['flex items-center space-x-2 cursor-pointer p-2 rounded-xl border transition-all select-none shadow-sm active:scale-95',
@@ -271,27 +267,27 @@
                         d="M5 13l4 4L19 7"></path>
                   </svg>
                 </div>
-                <span class="text-xs font-bold">组内优先 (基于Order)</span>
+                <span class="text-xs font-bold">{{ t('worldInfo.preferential') }}</span>
               </label>
             </div>
 
             <div class="space-y-3">
               <h4
                   class="text-xs font-bold text-theme-text-secondary uppercase tracking-wide border-b border-theme-border pb-1">
-                时效控制 (消息数)</h4>
+                {{ t('worldInfo.timeControl') }}</h4>
               <div class="grid grid-cols-3 gap-3">
                 <div>
-                  <label class="block text-[10px] text-theme-text-secondary mb-1">持续 (Sticky)</label>
+                  <label class="block text-[10px] text-theme-text-secondary mb-1">{{ t('worldInfo.sticky') }}</label>
                   <input type="number" v-model.number="localData.sticky" min="0"
                       class="w-full chat-input-field border border-theme-border rounded-lg px-2 py-1.5 text-sm text-center">
                 </div>
                 <div>
-                  <label class="block text-[10px] text-theme-text-secondary mb-1">冷却 (Cooldown)</label>
+                  <label class="block text-[10px] text-theme-text-secondary mb-1">{{ t('worldInfo.cooldown') }}</label>
                   <input type="number" v-model.number="localData.cooldown" min="0"
                       class="w-full chat-input-field border border-theme-border rounded-lg px-2 py-1.5 text-sm text-center">
                 </div>
                 <div>
-                  <label class="block text-[10px] text-theme-text-secondary mb-1">延迟 (Delay)</label>
+                  <label class="block text-[10px] text-theme-text-secondary mb-1">{{ t('worldInfo.delay') }}</label>
                   <input type="number" v-model.number="localData.delay" min="0"
                       class="w-full chat-input-field border border-theme-border rounded-lg px-2 py-1.5 text-sm text-center">
                 </div>
@@ -301,7 +297,7 @@
             <div class="space-y-3">
               <h4
                   class="text-xs font-bold text-theme-text-secondary uppercase tracking-wide border-b border-theme-border pb-1">
-                其他设置</h4>
+                {{ t('worldInfo.otherSettings') }}</h4>
               <div class="grid grid-cols-1 gap-2">
                 <label
                     v-for="key in ['excludeRecursion', 'preventRecursion', 'delayUntilRecursion']"
@@ -318,14 +314,20 @@
                           d="M5 13l4 4L19 7"></path>
                     </svg>
                   </div>
-                  <span class="text-xs font-bold">{{ {excludeRecursion: '不可被递归', preventRecursion: '阻止后续递归', delayUntilRecursion: '仅在递归时触发'}[key] }}</span>
+                  <span class="text-xs font-bold">{{ 
+                    {
+                      excludeRecursion: t('worldInfo.excludeRecursion'), 
+                      preventRecursion: t('worldInfo.preventRecursion'), 
+                      delayUntilRecursion: t('worldInfo.delayUntilRecursion')
+                    }[key] 
+                  }}</span>
                 </label>
               </div>
               <div class="flex items-center gap-2 mt-2">
-                <span class="text-xs text-theme-text-secondary whitespace-nowrap">自定义扫描深度:</span>
+                <span class="text-xs text-theme-text-secondary whitespace-nowrap">{{ t('worldInfo.customScanDepth') }}</span>
                 <input type="number" v-model.number="localData.scanDepth"
                     class="w-16 chat-input-field border border-theme-border rounded px-2 py-1 text-xs"
-                    placeholder="默认">
+                    :placeholder="t('worldInfo.scanDepthPlaceholder')">
               </div>
             </div>
 
@@ -336,14 +338,14 @@
       <div
           class="p-4 md:p-5 border-t border-theme-border flex justify-end space-x-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/5 to-[var(--theme-gradient-end)]/5 backdrop-blur-sm flex-shrink-0 z-10">
         <button @click="handleClose"
-            class="px-5 py-2.5 chat-card hover:bg-[var(--theme-card-hover)] text-theme-text-primary border border-theme-border rounded-xl transition-all shadow-sm font-medium text-sm active:scale-95">取消</button>
+            class="px-5 py-2.5 chat-card hover:bg-[var(--theme-card-hover)] text-theme-text-primary border border-theme-border rounded-xl transition-all shadow-sm font-medium text-sm active:scale-95">{{ t('common.cancel') }}</button>
         <button @click="handleSave"
             class="px-6 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] text-white rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm active:scale-95 flex items-center">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
             </path>
           </svg>
-          保存条目
+          {{ t('worldInfo.saveEntry') }}
         </button>
       </div>
     </div>
@@ -352,6 +354,9 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useI18n } from '@/composables/useI18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean

@@ -6,7 +6,7 @@
           ref="inputRef"
           v-model="inputText"
           type="text"
-          placeholder="输入消息..."
+          :placeholder="placeholderText"
           class="flex-1 min-w-0 px-3 py-2 sm:px-5 sm:py-3 rounded-2xl border-2 chat-input-field shadow-lg transition-all duration-200"
           :disabled="isStreaming"
           :style="{ visibility: isStreaming ? 'hidden' : 'visible' }"
@@ -58,6 +58,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from '@/composables/useI18n'
 
 const props = defineProps<{
   isStreaming: boolean
@@ -66,6 +67,7 @@ const props = defineProps<{
   isGeneratingSuggestions: boolean
   autoFetchSuggestions: boolean
   sidebarOpen?: boolean
+  totalMessagesCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -82,6 +84,7 @@ const inputText = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const isInputFocused = ref(false)
 const windowWidth = ref(window.innerWidth)
+const { t } = useI18n()
 
 function updateWindowWidth() {
   windowWidth.value = window.innerWidth
@@ -144,13 +147,18 @@ function handleSuggestionButtonClick() {
   }
 }
 
+const placeholderText = computed(() => {
+  const count = props.totalMessagesCount || 0
+  return `${t('chat.inputPlaceholder')} (${count})`
+})
+
 const getSuggestionButtonTitle = computed(() => {
   if (props.isGeneratingSuggestions) {
-    return '取消生成'
+    return t('chat.stop')
   } else if (props.showSuggestions) {
-    return '隐藏建议回复'
+    return t('chat.hide')
   } else {
-    return '显示建议回复'
+    return t('chat.show')
   }
 })
 </script>

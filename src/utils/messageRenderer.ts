@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import { applyRegexScriptsToHtml } from '@/utils/regexUtils'
 import { getStreamingProcessor, resetStreamingProcessor } from '@/utils/streamingRegexProcessor'
+import { parseCot, type CotParseResult } from '@/utils/cotParser'
 
 export interface RenderMessageOptions {
   content: string
@@ -10,6 +11,13 @@ export interface RenderMessageOptions {
   userName?: string
   compiledRegexScripts?: CompiledRegexScript[]
   isStreaming?: boolean
+  includeCot?: boolean
+}
+
+export interface RenderMessageResult {
+  html: string
+  cot?: string
+  isFinished?: boolean
 }
 
 export const cleanConfig = {
@@ -255,16 +263,17 @@ function getRegexScriptsHash(compiledRegexScripts: CompiledRegexScript[]): strin
   return compiledRegexScripts.map(s => s.find + s.replace + JSON.stringify(s.condition)).join('|');
 }
 
-export function renderMessage(options: RenderMessageOptions): string {
+export function renderMessage(options: RenderMessageOptions): string | RenderMessageResult {
   const {
     content,
     role = 'assistant',
     userName = '用户',
     compiledRegexScripts = [],
-    isStreaming = false
+    isStreaming = false,
+    includeCot = false
   } = options;
 
-  if (!content) return '';
+  if (!content) return includeCot ? { html: '', cot: '', isFinished: true } : '';
 
   const regexHash = getRegexScriptsHash(compiledRegexScripts);
   if (lastRegexScriptsHash !== regexHash || lastRegexScriptsLength !== compiledRegexScripts.length) {
@@ -273,13 +282,26 @@ export function renderMessage(options: RenderMessageOptions): string {
     clearCaches();
   }
 
+  let parsedCot: CotParseResult | null = null
+  if (includeCot || content.includes('<cot>') || content.includes('<think>')) {
+    parsedCot = parseCot(content)
+  }
+
   const cacheKey = `${role}_${content}_${isStreaming}_${regexHash}`;
 
   if (!isStreaming && renderMarkdownCache.has(cacheKey)) {
-    return renderMarkdownCache.get(cacheKey)!;
+    const cachedResult = renderMarkdownCache.get(cacheKey)!;
+    if (includeCot && parsedCot) {
+      return {
+        html: typeof cachedResult === 'string' ? cachedResult : cachedResult.html,
+        cot: parsedCot.cot,
+        isFinished: parsedCot.isFinished
+      }
+    }
+    return cachedResult;
   }
 
-  let processed = content.trim();
+  let processed = parsedCot ? parsedCot.main : content.trim();
 
   processed = processed.replace(/\{\{user\}\}/gi, userName);
 
@@ -310,10 +332,21 @@ export function renderMessage(options: RenderMessageOptions): string {
   if (isStreaming) {
     const trimmed = processed.trim()
     const containsHtml = /<[^>]+>/i.test(processed)
+    let html: string
     if (containsHtml && !trimmed.includes('```')) {
-      return addLazyLoading(DOMPurify.sanitize(processed, cleanConfig))
+      html = addLazyLoading(DOMPurify.sanitize(processed, cleanConfig))
+    } else {
+      html = addLazyLoading(DOMPurify.sanitize(marked(processed) as string, cleanConfig))
     }
-    return addLazyLoading(DOMPurify.sanitize(marked(processed) as string, cleanConfig))
+    
+    if (includeCot && parsedCot) {
+      return {
+        html,
+        cot: parsedCot.cot,
+        isFinished: parsedCot.isFinished
+      }
+    }
+    return html
   }
 
   const trimmed = processed.trim();
@@ -504,6 +537,14 @@ export function renderMessage(options: RenderMessageOptions): string {
       if (firstKey !== undefined) {
         renderMarkdownCache.delete(firstKey)
       }
+    }
+  }
+
+  if (includeCot && parsedCot) {
+    return {
+      html,
+      cot: parsedCot.cot,
+      isFinished: parsedCot.isFinished
     }
   }
 

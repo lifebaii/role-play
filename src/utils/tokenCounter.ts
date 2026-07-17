@@ -8,41 +8,7 @@ function estimateTokens(text: string): number {
   return Math.ceil(cjkChars * 1.5 + otherChars / TOKEN_ESTIMATE_RATIO)
 }
 
-let tokenizer: any = null
-let tokenizerModel: string | null = null
-
-async function loadTokenizer(modelName: string): Promise<void> {
-  if (tokenizer && tokenizerModel === modelName) return
-
-  try {
-    const tiktoken = await import('js-tiktoken')
-    const encoding = modelName.startsWith('gpt-4') || modelName.startsWith('gpt-4o')
-      ? 'cl100k_base'
-      : modelName.startsWith('claude')
-        ? 'cl100k_base'
-        : 'cl100k_base'
-
-    tokenizer = tiktoken.getEncoding(encoding as any)
-    tokenizerModel = modelName
-  } catch (e) {
-    console.warn('Failed to load tiktoken, using estimation:', e)
-    tokenizer = null
-    tokenizerModel = null
-  }
-}
-
-function countTokens(text: string, model?: string): number {
-  if (!text) return 0
-
-  if (tokenizer) {
-    try {
-      const tokens = tokenizer.encode(text)
-      return tokens.length
-    } catch {
-      return estimateTokens(text)
-    }
-  }
-
+function countTokens(text: string): number {
   return estimateTokens(text)
 }
 
@@ -51,10 +17,10 @@ function countMessageTokens(
   model?: string
 ): number {
   let count = 4
-  count += countTokens(message.role, model)
-  count += countTokens(message.content, model)
+  count += countTokens(message.role)
+  count += countTokens(message.content)
   if (message.name) {
-    count += countTokens(message.name, model)
+    count += countTokens(message.name)
     count += 1
   }
   return count
@@ -113,7 +79,6 @@ function formatTokenCount(count: number): string {
 
 export {
   estimateTokens,
-  loadTokenizer,
   countTokens,
   countMessageTokens,
   countChatTokens,

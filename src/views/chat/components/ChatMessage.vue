@@ -5,7 +5,36 @@
     :class="message.role === 'user' ? 'items-end' : 'items-start'"
   >
     <div
-      v-if="message.role === 'assistant' && isStreaming && isLastMessage && !message.content && !streamingContent"
+      v-if="cotContent"
+      class="cot-wrapper max-w-[95%] sm:max-w-[95%]"
+    >
+      <div
+        class="cot-ui"
+        :class="{ 'is-open': isCotExpanded }"
+      >
+        <button
+          type="button"
+          class="cot-header"
+          @click="toggleCot"
+        >
+          <span class="cot-label">思考过程</span>
+          <span class="cot-length">{{ cotContent.length }} 字</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div
+          class="cot-body"
+          :class="{ 'is-open': isCotExpanded }"
+        >
+          <div class="cot-inner">
+            <div class="cot-content" v-text="cotContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="shouldShowBubble && message.role === 'assistant' && isStreaming && isLastMessage && !message.content && !streamingContent"
       class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl bubble-assistant text-theme-text-primary shadow-xl shadow-[var(--theme-shadow-light)] chat-bubble-animated chat-bubble-reply"
     >
       <div class="px-6 py-4 flex items-center justify-center gap-4">
@@ -18,7 +47,7 @@
       </div>
     </div>
     <div
-      v-else
+      v-else-if="shouldShowBubble"
       ref="bubbleRef"
       class="max-w-[95%] sm:max-w-[95%] p-0 rounded-2xl shadow-xl shadow-[var(--theme-shadow-light)] text-base leading-relaxed transition-all duration-200 chat-bubble-animated"
       :class="[
@@ -43,7 +72,7 @@
       <button
         @click.stop="$emit('copy', message.content)"
         class="p-2 sm:p-1 action-icon"
-        title="复制"
+        :title="t('common.copy')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -52,7 +81,7 @@
       <button
         @click.stop="$emit('edit', { index, content: message.content })"
         class="p-2 sm:p-1 action-icon"
-        title="编辑"
+        :title="t('common.edit')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
@@ -61,7 +90,7 @@
       <button
         @click.stop="$emit('delete', index)"
         class="p-2 sm:p-1 action-icon hover:!text-[var(--theme-danger)]"
-        title="删除"
+        :title="t('common.delete')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -71,7 +100,7 @@
         v-if="config.backendEnabled"
         @click.stop="$emit('regenerate-greeting')"
         class="p-2 sm:p-1 action-icon"
-        title="重新生成"
+        :title="t('chat.regenerate')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -88,7 +117,7 @@
         v-if="message.role === 'assistant'"
         @click.stop="$emit('regenerate-from-assistant', index)"
         class="p-2 sm:p-1 action-icon"
-        title="重新生成"
+        :title="t('chat.regenerate')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -98,7 +127,7 @@
         v-if="message.role === 'user'"
         @click.stop="$emit('regenerate-user', index)"
         class="p-2 sm:p-1 action-icon"
-        title="重新生成"
+        :title="t('chat.regenerate')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -107,7 +136,7 @@
       <button
         @click.stop="$emit('copy', message.content)"
         class="p-2 sm:p-1 action-icon"
-        title="复制"
+        :title="t('common.copy')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -116,7 +145,7 @@
       <button
         @click.stop="$emit('edit', { index, content: message.content })"
         class="p-2 sm:p-1 action-icon"
-        title="编辑"
+        :title="t('common.edit')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
@@ -125,7 +154,7 @@
       <button
         @click.stop="$emit('delete', index)"
         class="p-2 sm:p-1 action-icon hover:!text-red-500"
-        title="删除"
+        :title="t('common.delete')"
       >
         <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -148,20 +177,20 @@
           @click.stop="$emit('save-edit', index)"
           class="px-4 py-2 text-sm font-semibold text-theme-text-secondary chat-card hover:bg-[var(--theme-card-hover)] rounded-xl shadow-lg border border-theme-border transition-all duration-200"
         >
-          保存
+          {{ t('common.save') }}
         </button>
         <button
           v-if="messages[index]?.role === 'user'"
           @click.stop="$emit('send-edit', index)"
           class="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] rounded-xl shadow-lg shadow-[var(--theme-primary)]/25 transition-all duration-200 transform hover:-translate-y-0.5"
         >
-          发送
+          {{ t('chat.sendMessage') }}
         </button>
         <button
           @click.stop="$emit('cancel-edit')"
           class="px-4 py-2 text-sm font-semibold text-theme-text-secondary chat-card hover:bg-[var(--theme-card-hover)] rounded-xl shadow-lg border border-theme-border transition-all duration-200"
         >
-          取消
+          {{ t('common.cancel') }}
         </button>
       </div>
     </div>
@@ -171,6 +200,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
+import { useI18n } from '@/composables/useI18n'
 import type { Message } from '@/types'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import { renderMessage } from '@/utils/messageRenderer'
@@ -203,6 +233,7 @@ const emit = defineEmits<{
 }>()
 
 const chatStore = useChatStore()
+const { t } = useI18n()
 
 const isVisible = ref(true) // 默认直接可见，避免折叠时出现空白
 const messageRef = ref<HTMLElement | null>(null)
@@ -236,6 +267,11 @@ function animateBubbleHeight(previousHeight?: number) {
       if (bubbleRef.value === bubble) {
         bubble.style.height = ''
         bubble.style.overflow = ''
+        requestAnimationFrame(() => {
+          if (bubbleRef.value === bubble) {
+            bubble.scrollHeight
+          }
+        })
       }
     }, 220)
   })
@@ -247,7 +283,7 @@ onUnmounted(() => {
   }
 })
 
-const renderedContent = computed(() => {
+const renderResult = computed(() => {
   let content = props.message.content
   if (props.message.role === 'assistant' &&
       props.isStreaming &&
@@ -260,10 +296,34 @@ const renderedContent = computed(() => {
   return renderMessage({
     content,
     role,
-    userName: chatStore.userName || '用户',
+    userName: chatStore.userName || t('user.user'),
     compiledRegexScripts: props.compiledRegexScripts,
-    isStreaming: props.isStreaming && props.isLastMessage
+    isStreaming: props.isStreaming && props.isLastMessage,
+    includeCot: role === 'assistant'
   })
+})
+
+const renderedContent = computed(() => {
+  const result = renderResult.value
+  return typeof result === 'string' ? result : result.html
+})
+
+const cotContent = computed(() => {
+  const result = renderResult.value
+  return typeof result !== 'string' && result.cot ? result.cot : ''
+})
+
+const isCotExpanded = ref(false)
+
+const toggleCot = () => {
+  isCotExpanded.value = !isCotExpanded.value
+}
+
+const shouldShowBubble = computed(() => {
+  if (props.message.role !== 'assistant') return true
+  if (!props.isStreaming || !props.isLastMessage) return true
+  if (cotContent.value && !renderedContent.value.trim()) return false
+  return true
 })
 
 watch(
@@ -297,11 +357,16 @@ watch(
 }
 
 .chat-bubble-streaming {
-  transition: height 220ms ease, box-shadow 200ms ease, transform 200ms ease;
+  transition: height 220ms ease-out, box-shadow 200ms ease, transform 200ms ease;
+  min-height: 2.5rem;
 }
 
 .chat-bubble-streaming .chat-bubble-content {
   animation: chat-stream-content 180ms ease-out both;
+}
+
+.chat-bubble-content {
+  min-height: 2.5rem;
 }
 
 @keyframes chat-bubble-enter {
@@ -318,11 +383,120 @@ watch(
 @keyframes chat-stream-content {
   from {
     opacity: 0.72;
-    transform: translateY(4px);
+    transform: translateY(2px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.cot-wrapper {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.cot-ui {
+  background-color: var(--theme-bubble-assistant);
+  border: 1px solid var(--theme-bubble-assistant-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.cot-ui.is-open {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cot-header {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--theme-text-secondary);
+  font-size: 0.875rem;
+  transition: background 0.2s ease;
+}
+
+.cot-header:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cot-ui.is-open .cot-header {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.cot-label {
+  font-weight: 500;
+}
+
+.cot-length {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-right: 0.5rem;
+}
+
+.cot-header .chevron {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.cot-ui.is-open .chevron {
+  transform: rotate(180deg);
+}
+
+.cot-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.cot-body.is-open {
+  max-height: 400px;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.cot-inner {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.cot-content {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--theme-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cot-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cot-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+}
+
+.cot-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.cot-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 </style>

@@ -1,12 +1,14 @@
 # Role-Play Frontend
 
+English | [中文](docs/README_ZH.md)
+
 <img src="https://github.com/smanx/role-play/blob/master/public/pwa-192x192.png?raw=true" alt="Role-Play Logo" width="128" />
 
-基于 Vue 3 + Vite + TypeScript + Tailwind CSS 的前端应用。
+A frontend application built with Vue 3 + Vite + TypeScript + Tailwind CSS.
 
-## 项目简介
+## Project Overview
 
-Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
+Role-Play is an LLM-based role-play chat application that supports:
 
 - 🎭 创建和管理自定义角色
 - 💬 与 AI 角色进行流畅对话
@@ -18,34 +20,34 @@ Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
 - 🎨 主题切换和个性化设置
 - 📦 离线 PWA 支持
 
-## 截图展示
+## Screenshots
 
-### PC端
-<img src="https://github.com/smanx/role-play/blob/master/docs/imgs/pc-home-light.jpg?raw=true" alt="PC端主页" width="800" />
+### PC
+<img src="https://github.com/smanx/role-play/blob/master/docs/imgs/pc-home-light.jpg?raw=true" alt="PC Home" width="800" />
 
-### 移动端
+### Mobile
 <div align="center">
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-list.jpg?raw=true" alt="移动端列表" width="300" />
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-list.jpg?raw=true" alt="Mobile List" width="300" />
   &nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-chat.jpg?raw=true" alt="移动端聊天" width="300" />
+  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-chat.jpg?raw=true" alt="Mobile Chat" width="300" />
 </div>
 
-## 在线体验
+## Try Online
 
 🚀 **[https://rp.good.hidns.vip/](https://rp.good.hidns.vip/)**
 
-## 技术栈
+## Tech Stack
 
-- **框架**: Vue 3 + TypeScript
-- **构建**: Vite 5
-- **样式**: Tailwind CSS
-- **状态管理**: Pinia
-- **路由**: Vue Router
+- **Framework**: Vue 3 + TypeScript
+- **Build**: Vite 5
+- **Styling**: Tailwind CSS
+- **State Management**: Pinia
+- **Routing**: Vue Router
 - **PWA**: vite-plugin-pwa
-- **数据库**: IndexedDB (Dexie)
+- **Database**: IndexedDB (Dexie)
 - **Markdown**: marked + dompurify
-- **拖拽**: sortablejs + vuedraggable
-- **压缩**: pako
+- **Drag & Drop**: sortablejs + vuedraggable
+- **Compression**: pako
 
 ## 运行模式
 
@@ -61,19 +63,19 @@ Role-Play 是一个基于 LLM 的角色扮演聊天应用，支持：
 
 纯前端部署适合多人访问同一个 IP 和端口。数据按“协议 + 主机 + 端口 + 浏览器配置文件”隔离，不同设备或不同浏览器配置文件不会共享数据；同一浏览器配置文件访问同一地址时会共用本地数据。
 
-## 开发
+## Development
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 启动开发服务器 (端口 3000)
+# Start development server (port 3000)
 npm run dev
 
-# 构建生产版本
+# Build for production
 npm run build
 
-# 预览生产版本
+# Preview production build
 npm run preview
 ```
 
@@ -81,13 +83,13 @@ npm run preview
 
 ## 环境变量
 
-创建 `.env` 文件：
+Create a `.env` file:
 
 ```env
-# 后端 API 地址 (可选)
-# 开发模式: 留空使用 Vite proxy 代理
-# 生产模式: 设置完整的后端地址
-# 示例: VITE_API_BASE_URL=http://192.168.1.100:3001/api
+# Backend API URL (optional)
+# Development mode: Leave empty to use Vite proxy
+# Production mode: Set full backend URL
+# Example: VITE_API_BASE_URL=http://192.168.1.100:3001/api
 VITE_API_BASE_URL=
 
 # 是否启用配套后端（纯前端个人 Key 模式保持 false）
@@ -114,98 +116,98 @@ VITE_SHOW_AUTH_ENTRY=false
 
 ## 响应式设计
 
-项目支持 PC 和移动端：
+The project supports PC and mobile:
 
-- 使用 Tailwind CSS 响应式断点
-- 移动端优先设计
-- 触摸友好的交互
-- 按钮最小尺寸 48px
+- Uses Tailwind CSS responsive breakpoints
+- Mobile-first design
+- Touch-friendly interactions
+- Minimum button size 48px
 
-## PWA 支持
+## PWA Support
 
-生产构建自动生成 PWA 支持：
+Production builds automatically include PWA support:
 
-- 离线访问
-- 添加到主屏幕
-- 自动更新
-- Google Fonts 缓存
+- Offline access
+- Add to home screen
+- Automatic updates
+- Google Fonts caching
 
-### iOS 沉浸式体验
+### iOS Immersive Experience
 
-iOS 用户可通过 Safari 的"添加到主屏幕"功能将应用添加到桌面。从主屏幕启动后，应用将以全屏模式运行，隐藏 Safari 地址栏和工具栏，提供类似原生 App 的沉浸式体验。
+iOS users can add the app to the home screen via Safari's "Add to Home Screen" feature. When launched from the home screen, the app runs in full-screen mode, hiding the Safari address bar and toolbar, providing a native app-like immersive experience.
 
 <div align="center">
   <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-ios-pwa.jpg?raw=true" alt="ios app" width="300" />
 </div>
 
-## 主要依赖
+## Main Dependencies
 
-### 生产依赖
+### Production Dependencies
 
-- `vue` - Vue 3 框架
-- `vue-router` - 路由管理
-- `pinia` - 状态管理
-- `dexie` - IndexedDB 封装
-- `marked` - Markdown 解析
-- `dompurify` - HTML 净化
-- `sortablejs` - 拖拽排序
-- `vuedraggable` - Vue 拖拽组件
-- `pako` - Gzip 压缩/解压
+- `vue` - Vue 3 framework
+- `vue-router` - Routing management
+- `pinia` - State management
+- `dexie` - IndexedDB wrapper
+- `marked` - Markdown parser
+- `dompurify` - HTML sanitization
+- `sortablejs` - Drag and drop sorting
+- `vuedraggable` - Vue drag and drop component
+- `pako` - Gzip compression/decompression
 
-### 开发依赖
+### Development Dependencies
 
-- `vite` - 构建工具
-- `vite-plugin-pwa` - PWA 插件
-- `typescript` - TypeScript 支持
-- `tailwindcss` - CSS 框架
-- `postcss` - CSS 处理
-- `autoprefixer` - CSS 自动前缀
-- `sharp` - 图像处理
+- `vite` - Build tool
+- `vite-plugin-pwa` - PWA plugin
+- `typescript` - TypeScript support
+- `tailwindcss` - CSS framework
+- `postcss` - CSS processing
+- `autoprefixer` - CSS auto-prefixing
+- `sharp` - Image processing
 
-## 构建配置
+## Build Configuration
 
-### Vite 配置
+### Vite Configuration
 
-- 开发服务器端口: 3000
-- API 代理: `/api` -> `http://localhost:3001`
-- 构建输出: `../dist`
-- 路径别名: `@` -> `src/`
+- Dev server port: 3000
+- API proxy: `/api` -&gt; `http://localhost:3001`
+- Build output: `../dist`
+- Path alias: `@` -&gt; `src/`
 
-### PWA 配置
+### PWA Configuration
 
-- 应用名称: Role-Play
-- 主题色: #1f2937
-- 背景色: #f3f4f6
-- 显示模式: standalone
-- 缓存策略: CacheFirst (Google Fonts)
+- App name: Role-Play
+- Theme color: #1f2937
+- Background color: #f3f4f6
+- Display mode: standalone
+- Cache strategy: CacheFirst (Google Fonts)
 
-## IndexedDB 数据库
+## IndexedDB Database
 
-数据库名: `SillyTavernDB`
+Database name: `SillyTavernDB`
 
-主要存储:
-- 聊天记录: `silly_tavern_chat_{角色ID}`
-- 角色精灵图
-- 本地角色数据
-- 用户设置
+Main storage:
+- Chat history: `silly_tavern_chat_{characterID}`
+- Character sprites
+- Local character data
+- User settings
 
-## 开发规范
+## Development Guidelines
 
-### 命名规范
+### Naming Conventions
 
-- **文件命名**: kebab-case (例如: `chat-view.ts`)
-- **组件命名**: PascalCase (例如: `ChatView.vue`)
-- **变量/函数**: camelCase
-- **CSS 类名**: kebab-case (Tailwind CSS)
+- **File names**: kebab-case (e.g., `chat-view.ts`)
+- **Component names**: PascalCase (e.g., `ChatView.vue`)
+- **Variables/functions**: camelCase
+- **CSS class names**: kebab-case (Tailwind CSS)
 
-### 代码风格
+### Code Style
 
-- 使用 TypeScript
-- 使用 Vue 3 Composition API
-- 使用 Pinia 进行状态管理
-- 使用 Tailwind CSS 进行样式
+- Use TypeScript
+- Use Vue 3 Composition API
+- Use Pinia for state management
+- Use Tailwind CSS for styling
 
-## 许可证
+## License
 
 MIT License
 

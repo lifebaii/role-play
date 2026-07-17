@@ -317,7 +317,7 @@
 
       <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
         <div class="flex items-center gap-2">
-          <span class="text-sm text-theme-text-secondary">每页</span>
+          <span class="text-sm text-theme-text-secondary">{{ t('common.perPage') }}</span>
           <div class="flex items-center">
             <select
               :value="localPageSize"
@@ -344,7 +344,7 @@
               class="w-20 px-3 py-1.5 chat-input-field border border-theme-border border-l-0 rounded-r-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
             />
           </div>
-          <span class="text-sm text-theme-text-secondary">条</span>
+          <span class="text-sm text-theme-text-secondary">{{ t('common.items') }}</span>
         </div>
         
         <div v-if="totalPages > 1" class="flex items-center gap-2">
@@ -358,7 +358,7 @@
                 : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
             ]"
           >
-            上一页
+            {{ t('common.previousPage') }}
           </button>
           <div class="flex items-center gap-1">
             <button
@@ -385,7 +385,7 @@
                 : 'bg-[var(--theme-card-hover)] text-theme-text-secondary hover:bg-[var(--theme-primary)]/10'
             ]"
           >
-            下一页
+            {{ t('common.nextPage') }}
           </button>
         </div>
       </div>
@@ -455,7 +455,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from '@/composables/useI18n'
 import AvatarImage from './AvatarImage.vue'
+
+const { t } = useI18n()
 
 interface Character {
   id?: string

@@ -10,8 +10,8 @@
         <div class="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-theme-primary to-theme-secondary rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg shadow-theme-primary/25">
           <span class="text-2xl sm:text-3xl">💬</span>
         </div>
-        <h2 class="text-xl sm:text-2xl font-bold text-theme-text-primary mb-1 sm:mb-2">Role-Play</h2>
-        <p class="text-theme-text-secondary text-sm sm:text-base">使用 GitHub 账号登录</p>
+        <h2 class="text-xl sm:text-2xl font-bold text-theme-text-primary mb-1 sm:mb-2">{{ t('sidebar.title') }}</h2>
+        <p class="text-theme-text-secondary text-sm sm:text-base">{{ t('auth.loginWithGithub') }}</p>
       </div>
 
       <button
@@ -26,18 +26,18 @@
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
         </svg>
-        <span class="text-sm sm:text-base">{{ isLoading ? '登录中...' : '使用 GitHub 登录' }}</span>
+        <span class="text-sm sm:text-base">{{ isLoading ? t('auth.authenticating') : t('auth.loginWithGithub') }}</span>
       </button>
 
       <p class="mt-4 sm:mt-6 text-center text-theme-text-secondary text-xs sm:text-sm">
-        首次登录将自动注册账号
+        {{ t('auth.noAccount') }}
       </p>
 
       <button
         @click="handleClose"
         class="mt-4 w-full py-2 text-theme-text-secondary hover:text-theme-text-primary text-sm transition-colors"
       >
-        取消
+        {{ t('common.cancel') }}
       </button>
     </div>
   </div>
@@ -58,6 +58,7 @@ const emit = defineEmits<{
 
 const userStore = useUserStore()
 const isLoading = ref(false)
+const { t } = useI18n()
 
 const handleClose = () => {
   if (!isLoading.value) {

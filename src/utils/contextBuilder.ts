@@ -324,7 +324,7 @@ export function buildContext(options: ContextOptions): BuildContextResult {
     messages.push({ role: 'system', content: userTopContent })
   }
 
-  if (userMessage !== null && userMessage !== undefined) {
+  if (userMessage) {
     messages.push({
       role: 'user',
       name: finalUserName,

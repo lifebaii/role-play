@@ -8,7 +8,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </span>
-          我创建的角色
+          {{ t('friends.myCharactersTitle') }}
           <span v-if="total > 0" class="text-xs sm:text-sm font-normal text-theme-text-secondary">({{ total }})</span>
         </h2>
         <button @click="close" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg sm:rounded-xl hover:bg-[var(--theme-card-hover)] text-theme-text-secondary hover:text-theme-text-primary transition-colors duration-200">
@@ -24,7 +24,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="搜索角色名称..."
+            :placeholder="t('friends.searchCharacterPlaceholder')"
             class="w-full pl-10 pr-4 py-2.5 chat-input-field border border-theme-border rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
           />
           <div v-if="isSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
@@ -46,9 +46,9 @@
         :action-character-id="actionCharacterId"
         :show-add-button="true"
         :show-friend-status="true"
-        empty-text="暂无角色"
-        empty-subtext="创建你的第一个角色吧"
-        friend-status-title="已召回"
+        :empty-text="t('friends.noCharacters')"
+        :empty-subtext="t('friends.noUserCharactersHint')"
+        :friend-status-title="t('friends.alreadyRecalled')"
         @page-change="loadPage"
         @page-size-change="handlePageSizeChange"
         @select="viewCharacterDetail"
@@ -72,7 +72,10 @@ import { useUserStore } from '@/stores/user'
 import { charactersApi } from '@/api'
 import type { Character } from '@/types'
 import { getLocalFriends } from '@/utils/localFriendStorage'
+import { useI18n } from '@/composables/useI18n'
 import CharacterSelectorList from './CharacterSelectorList.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean
@@ -120,7 +123,7 @@ const toggleFriend = async (character: Character) => {
   
   const characterId = character.role_play?.id || character.id
   if (!characterId) {
-    showToast('角色ID无效', 'error')
+    showToast(t('friends.invalidCharacterId'), 'error')
     return
   }
   
@@ -130,9 +133,9 @@ const toggleFriend = async (character: Character) => {
     await userStore.addOnlineFriendCharacter(characterId, sourceUrl, 'import')
     character.isFriend = true
     await userStore.loadLocalFriends()
-    showToast('召回成功', 'success')
+    showToast(t('friends.recallSuccess'), 'success')
   } catch (error: any) {
-    showToast(error.message || '操作失败', 'error')
+    showToast(error.message || t('friends.operationFailed'), 'error')
   } finally {
     actionCharacterId.value = null
   }

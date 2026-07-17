@@ -1148,6 +1148,63 @@ export const chatSyncApi = {
   cancel: (characterId: string) => api.delete<{ success: boolean }>(`/chat-sync/cancel?characterId=${characterId}`)
 };
 
+export interface UserDataSyncStatus {
+  totalLimit: number;
+  dailyLimit: number;
+  totalUsed: number;
+  dailyUsed: number;
+  remainingTotal: number;
+  remainingDaily: number;
+  remainingBonus: number;
+  activeSync?: {
+    syncId: string;
+    syncCode: string;
+    createdAt: string;
+    expiresAt: string;
+    downloadCount?: number;
+    itemCount?: {
+      presets: number;
+      worldInfo: number;
+      regexScripts: number;
+    };
+  };
+  totalUploadedDownloads: number;
+  uploadedSyncs: any[];
+}
+
+export interface UserDataUploadResult {
+  success: boolean;
+  syncId: string;
+  syncCode: string;
+  expiresAt: string;
+}
+
+export interface UserDataDownloadResult {
+  success: boolean;
+  userData: {
+    presets: any[];
+    worldInfo: any[];
+    regexScripts: any[];
+  };
+  itemCount: {
+    presets: number;
+    worldInfo: number;
+    regexScripts: number;
+  };
+}
+
+export const userDataSyncApi = {
+  upload: (presets: any[], worldInfo: any[], regexScripts: any[]) =>
+    api.post<UserDataUploadResult>('/user-data-sync/upload', { presets, worldInfo, regexScripts }),
+  
+  download: (syncCode: string) =>
+    api.post<UserDataDownloadResult>('/user-data-sync/download', { syncCode: syncCode.toUpperCase() }),
+  
+  getStatus: () => api.get<UserDataSyncStatus>('/user-data-sync/status'),
+  
+  cancel: () => api.delete<{ success: boolean }>('/user-data-sync/cancel')
+};
+
 // 流浪角色管理 API
 export interface OrphanedCharacter {
   id: string;

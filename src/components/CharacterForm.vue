@@ -15,8 +15,8 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">基本信息</h2>
-            <p class="text-xs text-theme-text-secondary">角色名称、描述</p>
+            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">{{ t('character.characterInfo') }}</h2>
+            <p class="text-xs text-theme-text-secondary">{{ t('character.characterName') }}, {{ t('character.characterDescription') }}</p>
           </div>
         </div>
         <svg 
@@ -38,21 +38,21 @@
           <div>
             <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
               <span class="text-[var(--theme-danger)]">*</span>
-              角色名称
+              {{ t('character.characterName') }}
             </label>
             <input
               v-model="form.name"
               type="text"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200"
               :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-              placeholder="输入角色名称..."
+              placeholder="..."
               :disabled="viewOnly"
               required
             />
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-theme-text-primary mb-2">标签</label>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">{{ t('character.characterTags') }}</label>
             <div class="space-y-3">
               <div v-if="form.tags.length > 0" class="flex flex-wrap gap-2">
                 <span
@@ -78,7 +78,7 @@
                   v-model="newTagInput"
                   type="text"
                   class="flex-1 min-w-0 px-3 py-2 sm:px-4 sm:py-2.5 chat-input-field border border-theme-border rounded-lg sm:rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 text-sm"
-                  placeholder="输入新标签..."
+                  placeholder="..."
                   @keydown.enter.prevent="addTag"
                 />
                 <button
@@ -86,20 +86,20 @@
                   @click="addTag"
                   class="px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-lg sm:rounded-xl hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] transition-all duration-200 font-medium text-sm whitespace-nowrap"
                 >
-                  添加
+                  {{ t('sidebar.add') }}
                 </button>
               </div>
             </div>
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-theme-text-primary mb-2">角色描述</label>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">{{ t('character.characterDescription') }}</label>
             <textarea
               ref="descriptionTextarea"
               v-model="form.description"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
               :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-              placeholder="简短描述这个角色..."
+              placeholder="..."
               :disabled="viewOnly"
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
@@ -107,14 +107,14 @@
           
           <div>
             <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
-              开场白
+              {{ t('character.characterGreeting') }}
             </label>
             <textarea
               ref="first_mesTextarea"
               v-model="form.first_mes"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
               :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-              placeholder="角色初次见面时说的话..."
+              placeholder="..."
               :disabled="viewOnly"
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
@@ -133,19 +133,19 @@
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-                {{ expandedSections.firstMessagePreview ? '收起预览' : '显示预览' }}
+                {{ expandedSections.firstMessagePreview ? t('common.less') : t('common.show') }}
               </button>
               <div v-if="expandedSections.firstMessagePreview" class="mt-3">
                 <div class="rounded-xl border border-theme-border bg-[var(--theme-card-hover)] p-4">
                   <div class="flex items-start gap-3">
-                    <AvatarImage
+                    <!-- <AvatarImage
                       :src="form.avatar"
                       :name="form.name || '角色'"
                       size="md"
                       rounded="full"
                       gradient="primary"
                       class="flex-shrink-0"
-                    />
+                    /> -->
                     <div class="flex-1 min-w-0">
                       <div class="text-sm font-medium text-theme-text-primary mb-1">{{ form.name || '角色' }}</div>
                       <div v-html="renderedFirstMessage" class="text-theme-text-secondary prose prose-sm max-w-none"></div>
@@ -157,13 +157,13 @@
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-theme-text-primary mb-2">备注</label>
+            <label class="block text-sm font-medium text-theme-text-primary mb-2">{{ t('character.characterNotes') }}</label>
             <textarea
               ref="creatorNotesTextarea"
               v-model="form.creator_notes"
               class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
               :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-              placeholder="输入备注信息..."
+              placeholder="..."
               :disabled="viewOnly"
               @input="autoResize($event.target as HTMLTextAreaElement)"
             ></textarea>
@@ -187,8 +187,8 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">角色设定</h2>
-            <p class="text-xs text-theme-text-secondary">人设、场景、开场白、Temperature</p>
+            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">{{ t('character.characterPersonality') }}</h2>
+            <p class="text-xs text-theme-text-secondary">{{ t('character.characterPersonality') }}, {{ t('character.characterScenario') }}, {{ t('character.characterGreeting') }}, Temperature</p>
           </div>
         </div>
         <svg 
@@ -209,14 +209,14 @@
         <div>
           <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
             <span class="w-6 h-6 rounded-full bg-[var(--theme-secondary)]/15 flex items-center justify-center text-xs font-bold text-theme-text-accent">1</span>
-            人设
+            {{ t('character.characterPersonality') }}
           </label>
           <textarea
             ref="personalityTextarea"
             v-model="form.personality"
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-secondary)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
             :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-            placeholder="描述角色的性格、特点、背景故事..."
+            placeholder="..."
             :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
@@ -225,14 +225,14 @@
         <div>
           <label class="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-2">
             <span class="w-6 h-6 rounded-full bg-[var(--theme-accent)]/15 flex items-center justify-center text-xs font-bold text-theme-text-accent">2</span>
-            场景设定
+            {{ t('character.characterScenario') }}
           </label>
           <textarea
             ref="scenarioTextarea"
             v-model="form.scenario"
             class="w-full px-4 py-3 chat-input-field border border-theme-border rounded-xl text-theme-text-primary placeholder-theme-text-secondary/60 focus:ring-2 focus:ring-[var(--theme-accent)] focus:border-transparent transition-all duration-200 resize-none overflow-y-auto"
             :class="{ 'bg-[var(--theme-card-hover)] cursor-not-allowed': viewOnly }"
-            placeholder="描述角色所处的场景和环境..."
+            placeholder="..."
             :disabled="viewOnly"
             @input="autoResize($event.target as HTMLTextAreaElement)"
           ></textarea>
@@ -284,8 +284,8 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">世界书</h2>
-            <p class="text-xs text-theme-text-secondary">{{ form.character_book.entries.length }} 个条目</p>
+            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">{{ t('worldInfo.title') }}</h2>
+            <p class="text-xs text-theme-text-secondary">{{ form.character_book.entries.length }} {{ t('worldInfo.noEntries').replace('暂无世界书条目', '个条目') }}</p>
           </div>
         </div>
         <svg 
@@ -314,7 +314,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            添加条目
+            {{ t('worldInfo.addEntry') }}
           </button>
         </div>
         
@@ -324,8 +324,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <p class="text-theme-text-secondary mb-2">暂无世界书条目</p>
-          <p class="text-sm text-theme-text-secondary/70">点击上方按钮添加新条目</p>
+          <p class="text-theme-text-secondary mb-2">{{ t('worldInfo.noEntries') }}</p>
+          <p class="text-sm text-theme-text-secondary/70">{{ t('common.more') }}</p>
         </div>
         
         <draggable
@@ -353,10 +353,10 @@
                       v-model="element.enabled"
                       class="w-4 h-4 rounded border-theme-border bg-[var(--theme-input-bg)] text-[var(--theme-accent)] focus:ring-[var(--theme-accent)]"
                     />
-                    <span class="font-medium text-theme-text-primary truncate">{{ element.comment || '未命名条目' }}</span>
+                    <span class="font-medium text-theme-text-primary truncate">{{ element.comment || t('common.default') }}</span>
                   </div>
                   <div class="text-xs text-theme-text-secondary">
-                    关键词: {{ Array.isArray(element.keys) ? element.keys.join(', ') : element.keys || '无' }}
+                    {{ t('worldInfo.keys') }}: {{ Array.isArray(element.keys) ? element.keys.join(', ') : element.keys || t('common.default') }}
                   </div>
                   <div v-if="!viewOnly" class="flex gap-2 mt-3">
                     <button
@@ -364,14 +364,14 @@
                       @click="openWorldInfoEditor(index)"
                       class="px-3 py-1 text-xs text-theme-text-accent hover:bg-[var(--theme-accent)]/10 rounded-lg"
                     >
-                      编辑
+                      {{ t('common.edit') }}
                     </button>
                     <button
                       type="button"
                       @click="removeWorldInfo(index)"
                       class="px-3 py-1 text-xs text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] rounded-lg"
                     >
-                      删除
+                      {{ t('common.delete') }}
                     </button>
                   </div>
                 </div>
@@ -397,8 +397,8 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">正则脚本</h2>
-            <p class="text-xs text-theme-text-secondary">{{ form.regex_scripts.length }} 个脚本</p>
+            <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">{{ t('regex.title') }}</h2>
+            <p class="text-xs text-theme-text-secondary">{{ form.regex_scripts.length }} {{ t('regex.noScripts').replace('暂无正则脚本', '个脚本') }}</p>
           </div>
         </div>
         <svg 
@@ -427,7 +427,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            添加脚本
+            {{ t('regex.addScript') }}
           </button>
         </div>
         
@@ -437,8 +437,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
           </div>
-          <p class="text-theme-text-secondary mb-2">暂无正则脚本</p>
-          <p class="text-sm text-theme-text-secondary/70">点击上方按钮添加新脚本</p>
+          <p class="text-theme-text-secondary mb-2">{{ t('regex.noScripts') }}</p>
+          <p class="text-sm text-theme-text-secondary/70">{{ t('common.more') }}</p>
         </div>
         
         <draggable
@@ -467,10 +467,10 @@
                       class="w-4 h-4 rounded border-theme-border bg-[var(--theme-input-bg)] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
                       @change="element.disabled = !element.disabled"
                     />
-                    <span class="font-medium text-theme-text-primary truncate">{{ element.name || element.scriptName || '未命名脚本' }}</span>
+                    <span class="font-medium text-theme-text-primary truncate">{{ element.name || element.scriptName || t('common.default') }}</span>
                   </div>
                   <div class="text-xs text-theme-text-secondary font-mono bg-[var(--theme-input-bg)] px-2 py-1 rounded inline-block">
-                    {{ element.regex || element.findRegex || '无正则表达式' }}
+                    {{ element.regex || element.findRegex || t('regex.noScripts') }}
                   </div>
                   <div v-if="!viewOnly" class="flex gap-2 mt-3">
                     <button
@@ -478,14 +478,14 @@
                       @click="openRegexEditor(index)"
                       class="px-3 py-1 text-xs text-theme-text-accent hover:bg-[var(--theme-primary)]/10 rounded-lg"
                     >
-                      编辑
+                      {{ t('common.edit') }}
                     </button>
                     <button
                       type="button"
                       @click="removeRegex(index)"
                       class="px-3 py-1 text-xs text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] rounded-lg"
                     >
-                      删除
+                      {{ t('common.delete') }}
                     </button>
                   </div>
                 </div>
@@ -534,6 +534,7 @@ import { exportCharacterFile, getCharacterSourceType, getCharacterBlob, saveChar
 import { exportCharacterAsPng, parseCharacterFromPng, downloadBlob } from '@/utils/characterImport'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
 import { debugPrintBlob, debugPrintFile } from '@/utils/debugCharacterFile'
 import { renderMessage } from '@/utils/messageRenderer'
 import { compileRegexScripts } from '@/utils/regexUtils'
@@ -541,6 +542,7 @@ import { useUserStore } from '@/stores/user'
 
 const { showDangerConfirm, showErrorAlert } = useDialog()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 interface CharacterFormData {
   id?: string

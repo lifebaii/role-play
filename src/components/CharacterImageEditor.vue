@@ -14,7 +14,7 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-theme-text-primary leading-tight">编辑角色图片</h3>
+            <h3 class="text-lg font-bold text-theme-text-primary leading-tight">{{ t('character.imageEditor.title') }}</h3>
             <p class="text-xs text-theme-text-secondary">Character Image Editor</p>
           </div>
         </div>
@@ -37,7 +37,7 @@
                 v-if="previewUrl" 
                 :src="previewUrl" 
                 class="w-full h-full object-cover"
-                alt="预览图片"
+                :alt="t('character.imageEditor.previewImage')"
             />
             <div v-else class="text-center p-4">
               <svg class="w-12 h-12 mx-auto text-theme-text-secondary mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@
                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
                 </path>
               </svg>
-              <p class="text-sm text-theme-text-secondary">暂无图片</p>
+              <p class="text-sm text-theme-text-secondary">{{ t('character.imageEditor.noImage') }}</p>
             </div>
             
             <div v-if="isLoading" class="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -61,7 +61,7 @@
           <div class="flex items-center justify-center gap-2 text-sm text-theme-text-secondary">
             <span class="px-2 py-1 rounded-lg text-xs font-medium"
                 :class="sourceType === 'image' ? 'bg-[var(--theme-primary)]/10 text-theme-text-accent' : 'bg-[var(--theme-card-hover)]'">
-              {{ sourceType === 'image' ? '图片源文件' : 'JSON 源文件' }}
+              {{ sourceType === 'image' ? t('character.imageEditor.imageSource') : t('character.imageEditor.jsonSource') }}
             </span>
           </div>
 
@@ -72,7 +72,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
               </svg>
-              {{ sourceType === 'image' ? '替换图片' : '上传图片' }}
+              {{ sourceType === 'image' ? t('character.imageEditor.replaceImage') : t('character.imageEditor.uploadImage') }}
               <input 
                   type="file" 
                   accept="image/*"
@@ -86,12 +86,12 @@
                 @click="clearSelection"
                 class="px-4 py-3 text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] border border-[var(--theme-danger)]/30 rounded-xl transition-all font-medium text-sm active:scale-95"
             >
-              清除选择
+              {{ t('character.imageEditor.clearSelection') }}
             </button>
           </div>
 
           <p v-if="selectedFile" class="text-xs text-center text-theme-text-secondary">
-            已选择: {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
+            {{ t('character.imageEditor.selected') }}: {{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})
           </p>
 
           <div class="bg-[var(--theme-card-hover)] rounded-xl p-3 text-xs text-theme-text-secondary space-y-1">
@@ -99,13 +99,13 @@
               <svg class="w-3.5 h-3.5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              图片将自动转换为 PNG 格式
+              {{ t('character.imageEditor.convertToPng') }}
             </p>
             <p class="flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              角色数据将嵌入图片保存
+              {{ t('character.imageEditor.embedCharacterData') }}
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@
           class="p-4 md:p-5 border-t border-theme-border flex justify-end space-x-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/5 to-[var(--theme-gradient-end)]/5 backdrop-blur-sm flex-shrink-0">
         <button @click="handleClose"
             class="px-5 py-2.5 chat-card hover:bg-[var(--theme-card-hover)] text-theme-text-primary border border-theme-border rounded-xl transition-all shadow-sm font-medium text-sm active:scale-95">
-          取消
+          {{ t('character.imageEditor.cancel') }}
         </button>
         <button @click="handleSave"
             :disabled="!selectedFile || isSaving"
@@ -127,7 +127,7 @@
           <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
           </svg>
-          {{ isSaving ? '保存中...' : '保存图片' }}
+          {{ isSaving ? t('character.imageEditor.saving') : t('character.imageEditor.saveImage') }}
         </button>
       </div>
     </div>
@@ -138,8 +138,10 @@
 import { ref, watch, computed } from 'vue'
 import { getCharacterSourceType, getCharacterBlob } from '@/utils/localFriendStorage'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
 
 const { showErrorAlert } = useDialog()
+const { t } = useI18n()
 
 const props = defineProps<{
   visible: boolean
@@ -181,7 +183,7 @@ async function loadCurrentImage() {
       }
     }
   } catch (error) {
-    console.error('加载角色图片失败:', error)
+    console.error('Failed to load character image:', error)
   } finally {
     isLoading.value = false
   }
@@ -193,7 +195,7 @@ function handleFileSelect(event: Event) {
   
   if (file) {
     if (!file.type.startsWith('image/')) {
-      showErrorAlert('请选择图片文件')
+      showErrorAlert(t('character.imageEditor.pleaseSelectImage'))
       return
     }
     
@@ -259,8 +261,8 @@ async function handleSave() {
     emit('save', fileToSave)
     emit('update:visible', false)
   } catch (error) {
-    console.error('保存角色图片失败:', error)
-    await showErrorAlert('保存失败，请重试')
+    console.error('Failed to save character image:', error)
+    await showErrorAlert(t('character.imageEditor.saveFailed'))
   } finally {
     isSaving.value = false
   }

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { dbSet, dbGet } from '@/utils/db'
 import { fetchModelList, testConnection } from '@/utils/llmClient'
 import type { ModelInfo } from '@/utils/llmClient'
@@ -7,7 +7,7 @@ import type { ModelInfo } from '@/utils/llmClient'
 export interface ModelConfig {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'openai-compatible' | 'kobold'
+  provider: 'openai' | 'anthropic' | 'kobold'
   api_url: string
   api_key: string
   default_model: string
@@ -23,6 +23,7 @@ export interface ModelConfig {
   context_size?: number
   stop_sequences?: string[]
   is_default?: boolean
+  models?: ModelInfo[]
 }
 
 const STORAGE_KEY = 'model_configs'
@@ -44,6 +45,7 @@ function getDefaultConfig(): Omit<ModelConfig, 'id'> {
     context_size: 128000,
     stop_sequences: [],
     is_default: false,
+    models: [],
   }
 }
 
@@ -59,7 +61,6 @@ async function saveConfigs(configs: ModelConfig[]): Promise<void> {
 export const useModelConfigStore = defineStore('modelConfig', () => {
   const configs = ref<ModelConfig[]>([])
   const activeConfigId = ref<string | null>(null)
-  const modelLists = ref<Record<string, ModelInfo[]>>({})
   const isLoaded = ref(false)
 
   const activeConfig = computed(() => {
@@ -79,6 +80,16 @@ export const useModelConfigStore = defineStore('modelConfig', () => {
       is_default: c.is_default,
     }))
   )
+
+  const modelLists = computed(() => {
+    const lists: Record<string, ModelInfo[]> = {}
+    for (const config of configs.value) {
+      if (config.models && config.models.length > 0) {
+        lists[config.id] = config.models
+      }
+    }
+    return lists
+  })
 
   async function load() {
     if (isLoaded.value) return
@@ -150,7 +161,8 @@ export const useModelConfigStore = defineStore('modelConfig', () => {
     if (!config) return []
 
     const models = await fetchModelList(config)
-    modelLists.value[configId] = models
+    config.models = models
+    _save()
     return models
   }
 
@@ -169,6 +181,7 @@ export const useModelConfigStore = defineStore('modelConfig', () => {
       id: generateId(),
       name: `${source.name} (副本)`,
       is_default: false,
+      models: source.models ? [...source.models] : [],
     }
     configs.value.push(newConfig)
     _save()
@@ -181,6 +194,7 @@ export const useModelConfigStore = defineStore('modelConfig', () => {
         ...config,
         id: generateId(),
         is_default: false,
+        models: config.models ? [...config.models] : [],
       })
     }
     _save()
@@ -189,6 +203,10 @@ export const useModelConfigStore = defineStore('modelConfig', () => {
   function exportConfigs(): ModelConfig[] {
     return configs.value.map(c => ({ ...c }))
   }
+
+  watch(configs, () => {
+    _save()
+  }, { deep: true })
 
   return {
     configs,

@@ -35,7 +35,7 @@
       <div v-if="chatStore.isLoading" class="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
         <div class="flex flex-col items-center gap-3 bg-[var(--theme-card-bg)] p-8 rounded-2xl shadow-xl border border-theme-border">
           <div class="w-12 h-12 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin shadow-lg shadow-[var(--theme-primary)]/30"></div>
-          <span class="text-theme-text-secondary font-medium">加载中...</span>
+          <span class="text-theme-text-secondary font-medium">{{ t('common.loading') }}</span>
         </div>
       </div>
 
@@ -44,13 +44,13 @@
           <div class="w-32 h-32 mx-auto mb-6 animate-float">
             <img src="/pwa-512x512.png" alt="Logo" class="w-full h-full object-contain" style="filter: drop-shadow(0 25px 25px rgba(59, 130, 246, 0.3));" />
           </div>
-          <h2 class="text-2xl font-bold gradient-text mb-2">开始你的故事</h2>
-          <p class="text-theme-text-secondary mb-6">选择一个角色开始聊天</p>
+          <h2 class="text-2xl font-bold gradient-text mb-2">{{ t('chat.startStory') }}</h2>
+          <p class="text-theme-text-secondary mb-6">{{ t('chat.selectCharacter') }}</p>
           <button
             @click="sidebarOpen = !sidebarOpen"
             class="px-6 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] text-white rounded-xl font-semibold shadow-lg shadow-[var(--theme-primary)]/25 hover:shadow-xl hover:shadow-[var(--theme-primary)]/30 transition-all duration-200 transform hover:-translate-y-0.5"
           >
-            {{ sidebarOpen ? '隐藏角色列表' : '查看角色列表' }}
+            {{ sidebarOpen ? t('chat.hideCharacters') : t('chat.viewCharacters') }}
           </button>
         </div>
       </div>
@@ -63,7 +63,7 @@
                 @click="sidebarOpen = !sidebarOpen"
                 class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-theme-text-primary dark:text-gray-200 flex-shrink-0 rounded-xl transition-all bg-white/70 dark:bg-black/50 border border-white/30 dark:border-white/10 hover:bg-white/85 dark:hover:bg-black/70"
                 style="backdrop-filter: blur(1px); -webkit-backdrop-filter: blur(1px);"
-                :title="sidebarOpen ? '关闭侧边栏' : '打开侧边栏'"
+                :title="sidebarOpen ? t('sidebar.close') : t('sidebar.openSidebar')"
               >
                 <svg v-if="sidebarOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -81,7 +81,7 @@
                 <span
                   class="text-base sm:text-lg font-semibold text-theme-text-primary dark:text-gray-200 truncate transition-colors"
                 >
-                  {{ chatStore.currentCharacter?.name || '未知角色' }}
+                  {{ chatStore.currentCharacter?.name || t('chat.unknownCharacter') }}
                 </span>
               </div>
             </div>
@@ -106,19 +106,21 @@
           @click="showMenuDropdown = false"
         >
           <div class="px-4 py-3 border-b border-theme-border mb-1" @click.stop>
-            <template v-if="showAuthEntry">
-              <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">选择服务</div>
-              <select
-                :value="chatStore.useCustomModel ? 'custom' : 'builtin'"
-                @change.stop="handleServiceSelect($event)"
-                class="w-full px-3 py-2 text-sm border border-theme-border rounded-xl select-field focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] mb-3"
-              >
-                <option value="custom">自定义模型</option>
-                <option value="builtin">内置模型服务</option>
-              </select>
-            </template>
+            <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">{{ t('chat.selectService') }}</div>
+            <select
+              :value="getCurrentServiceValue()"
+              @change.stop="handleServiceSelectNew($event)"
+              class="w-full px-3 py-2 text-sm border border-theme-border rounded-xl select-field focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] mb-3"
+            >
+              <template v-if="showAuthEntry">
+                <option value="builtin">{{ t('chat.builtinService') }}</option>
+              </template>
+              <option v-for="config in modelConfigStore.configs" :key="config.id" :value="`config:${config.id}`">
+                {{ config.name || config.default_model || t('chat.unnamedConfig') }}{{ config.is_default ? ` (${t('model.isDefault')})` : '' }}
+              </option>
+              <option value="add-config">➕ {{ t('model.addNewConfig') }}</option>
+            </select>
 
-            <div class="text-xs font-semibold text-theme-text-secondary mb-2 uppercase tracking-wider">选择模型</div>
             <template v-if="chatStore.useCustomModel || !showAuthEntry">
               <select
                 :value="chatStore.customModelConfig?.default_model || ''"
@@ -144,7 +146,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                配置自定义模型
+                {{ t('chat.manageConfig') }}
               </button>
             </template>
             <template v-else>
@@ -154,12 +156,12 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                   </svg>
-                  加载模型列表...
+                  {{ t('chat.loadingModels') }}
                 </div>
               </template>
               <template v-else-if="userStore.isAnonymous">
                 <div class="text-sm text-theme-text-secondary mb-2">
-                  请先登录以使用内置模型服务
+                  {{ t('auth.loginError') }}
                 </div>
                 <button
                   @click.stop="userStore.requireLogin()"
@@ -168,24 +170,20 @@
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  登录
-                </button>
+                    {{ t('auth.login') }}
+                  </button>
               </template>
               <template v-else-if="chatStore.uniqueModels.length === 0">
                 <div class="text-sm text-theme-text-secondary mb-2">
-                  暂无可用模型
+                  {{ t('model.noModels') }}
                 </div>
               </template>
               <template v-else>
-                <select
-                  :value="chatStore.selectedModel"
-                  @change.stop="chatStore.setSelectedModel(($event.target as HTMLSelectElement).value)"
-                  class="w-full px-3 py-2 text-sm border border-theme-border rounded-xl select-field focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)]"
-                >
-                  <option v-for="model in chatStore.uniqueModels" :key="model.id" :value="model.id">
-                    {{ model.name }}{{ model.is_default ? ' (默认)' : '' }}
-                  </option>
-                </select>
+                <SearchableSelect
+                v-model="chatStore.selectedModel"
+                :options="getBuiltinModelOptions"
+                :placeholder="t('model.searchOrSelectModel')"
+              />
               </template>
             </template>
           </div>
@@ -201,8 +199,8 @@
               </svg>
             </div>
             <span :class="autoFetchSuggestions ? 'text-theme-text-primary' : 'text-theme-text-secondary'">
-              自动获取建议
-            </span>
+      {{ t('chat.autoFetchSuggestions') }}
+    </span>
             <div class="ml-auto flex items-center">
               <div :class="autoFetchSuggestions ? 'w-10 h-5 bg-[var(--theme-success)] rounded-full relative' : 'w-10 h-5 bg-[var(--theme-card-hover)] rounded-full relative'">
                 <div :class="autoFetchSuggestions ? 'absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all' : 'absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all'"></div>
@@ -227,7 +225,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
               </svg>
             </div>
-            <span>聊天记录导入</span>
+            <span>{{ t('chat.menu.import') }}</span>
             <input type="file" accept=".jsonl,.json" class="hidden" @change="handleImportChat" />
           </label>
           <button
@@ -239,7 +237,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
               </svg>
             </div>
-            <span>聊天记录导出</span>
+            <span>{{ t('chat.menu.export') }}</span>
           </button>
           <button
             @click="handleExportChatAsText"
@@ -262,9 +260,20 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
               </svg>
             </div>
-            <span>聊天记录同步</span>
+            <span>{{ t('sync.title') }}</span>
           </button>
           <div class="border-t border-theme-border my-1"></div>
+          <button
+            @click="showChatStats = true; showMenuDropdown = false"
+            class="w-full px-4 py-2.5 text-left text-sm text-theme-text-primary menu-dropdown-item flex items-center gap-3 transition-all"
+          >
+            <div class="w-7 h-7 rounded-lg bg-[var(--theme-accent)]/10 flex items-center justify-center text-theme-text-accent">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <span>{{ t('chat.menu.stats') }}</span>
+          </button>
           <button
             @click="confirmClearHistory"
             class="w-full px-4 py-2.5 text-left text-sm text-[var(--theme-danger)] hover:bg-[var(--theme-danger-bg)] flex items-center gap-3 transition-all"
@@ -274,7 +283,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
               </svg>
             </div>
-            <span>清空聊天</span>
+            <span>{{ t('chat.menu.clear') }}</span>
           </button>
         </div>
 
@@ -313,6 +322,7 @@
           :is-generating-suggestions="chatStore.isGeneratingSuggestions"
           :auto-fetch-suggestions="autoFetchSuggestions"
           :sidebar-open="sidebarOpen"
+          :total-messages-count="chatStore.totalMessagesCount"
           @submit="handleSubmit"
           @stop="chatStore.abortStream()"
           @fetch-suggestions="fetchSuggestions"
@@ -332,13 +342,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h2 class="text-lg sm:text-xl font-bold text-theme-text-primary mb-1 sm:mb-2">欢迎！</h2>
-          <p class="text-theme-text-secondary text-xs sm:text-sm">设置一个你喜欢的称呼吧</p>
+          <h2 class="text-lg sm:text-xl font-bold text-theme-text-primary mb-1 sm:mb-2">{{ t('auth.welcomeBack') }}</h2>
+          <p class="text-theme-text-secondary text-xs sm:text-sm">{{ t('user.editName') }}</p>
         </div>
         <input
           v-model="editingUserName"
           type="text"
-          placeholder="输入你的称呼..."
+          placeholder="..."
           class="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-theme-border rounded-xl chat-input-field mb-4 sm:mb-6 text-center text-base sm:text-lg"
           @keyup.enter="saveUserName"
           autofocus
@@ -348,8 +358,8 @@
           class="w-full px-4 py-2 sm:px-6 sm:py-3 text-white bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-sm sm:text-base"
           :disabled="!editingUserName.trim()"
         >
-          开始聊天 ✨
-        </button>
+            {{ t('chat.startStory') }}
+          </button>
       </div>
     </div>
 
@@ -362,7 +372,7 @@
             @click="showRemoveFriendConfirm = false"
             class="flex-1 px-4 py-2 chat-card text-theme-text-primary rounded-xl hover:bg-[var(--theme-card-hover)] transition-all"
           >
-            取消
+            {{ t('common.cancel') }}
           </button>
           <button
             @click="handleRemoveFriend"
@@ -373,7 +383,7 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>{{ isRemovingFriend ? '删除中...' : '确认删除' }}</span>
+            <span>{{ isRemovingFriend ? t('common.loading') : t('common.confirm') }}</span>
           </button>
         </div>
       </div>
@@ -387,10 +397,10 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
             </svg>
           </div>
-          <h3 class="text-base sm:text-lg font-bold text-theme-text-primary">出错了</h3>
+          <h3 class="text-base sm:text-lg font-bold text-theme-text-primary">{{ t('error.generic') }}</h3>
         </div>
         <div class="mb-4 sm:mb-6">
-          <p class="text-theme-text-secondary text-sm sm:text-base mb-2">错误信息：</p>
+          <p class="text-theme-text-secondary text-sm sm:text-base mb-2">{{ t('error.generic') }}:</p>
           <div class="bg-[var(--theme-danger-bg)] border border-[var(--theme-danger)]/30 rounded-xl p-3 sm:p-4 max-h-60 overflow-y-auto">
             <p class="text-[var(--theme-danger)] text-xs sm:text-sm whitespace-pre-wrap break-words">{{ errorMessage }}</p>
           </div>
@@ -400,7 +410,7 @@
             @click="showErrorDialog = false; chatStore.error = null;"
             class="px-6 py-2 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white rounded-xl hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] transition-all shadow-lg hover:shadow-xl"
           >
-            关闭
+            {{ t('common.close') }}
           </button>
         </div>
       </div>
@@ -475,8 +485,8 @@
     <div v-if="isImportingCharacter" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4">
       <div class="chat-card rounded-2xl p-4 sm:p-8 flex flex-col items-center shadow-2xl border border-theme-border">
         <div class="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin shadow-lg shadow-[var(--theme-primary)]/30 mb-3 sm:mb-4"></div>
-        <h3 class="text-base sm:text-lg font-semibold text-theme-text-primary mb-1 sm:mb-2">导入角色中...</h3>
-        <p class="text-xs sm:text-sm text-theme-text-secondary">请稍候，正在处理您的角色数据</p>
+        <h3 class="text-base sm:text-lg font-semibold text-theme-text-primary mb-1 sm:mb-2">{{ t('character.importCharacter') }}...</h3>
+        <p class="text-xs sm:text-sm text-theme-text-secondary">{{ t('common.loading') }}</p>
       </div>
     </div>
 
@@ -486,8 +496,8 @@
           <div class="mx-auto mb-3 sm:mb-4 flex items-center justify-center">
             <img src="/pwa-512x512.png" alt="ROLE PLAY" class="w-20 h-20 sm:w-24 sm:h-24 object-contain" />
           </div>
-          <h2 class="text-xl sm:text-2xl font-bold gradient-text mb-1 sm:mb-2">ROLE PLAY</h2>
-          <p class="text-xs sm:text-sm text-theme-text-secondary mb-4 sm:mb-6">沉浸式角色扮演聊天体验</p>
+          <h2 class="text-xl sm:text-2xl font-bold gradient-text mb-1 sm:mb-2">{{ t('sidebar.title') }}</h2>
+          <p class="text-xs sm:text-sm text-theme-text-secondary mb-4 sm:mb-6">{{ t('about.description') }}</p>
           
           <div class="text-left space-y-2 sm:space-y-3 text-xs sm:text-sm text-theme-text-primary mb-4 sm:mb-6">
             <p>🎭 与各种角色进行沉浸式对话</p>
@@ -497,7 +507,7 @@
           </div>
           
           <div class="text-xs text-theme-text-secondary mb-3 sm:mb-4">
-            版本 1.0.0 ({{ buildTime }})
+            {{ t('about.version') }} 1.0.0 ({{ buildTime }})
           </div>
           
           <a
@@ -509,21 +519,89 @@
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.304.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
             </svg>
-            GitHub 开源地址
+            {{ t('about.githubRepo') }}
           </a>
           
           <button
             @click="showAbout = false"
             class="w-full py-2 sm:py-3 rounded-2xl font-semibold transition-all duration-200 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] text-white hover:shadow-lg hover:shadow-[var(--theme-primary)]/30 text-sm sm:text-base"
           >
-            关闭
+            {{ t('common.close') }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showChatStats" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click="showChatStats = false">
+      <div class="chat-card rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-2xl border border-theme-border" @click.stop>
+        <div class="flex items-center justify-between mb-4 sm:mb-6">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-r from-[var(--theme-accent)] to-[var(--theme-secondary)] flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base sm:text-lg font-semibold text-theme-text-primary">{{ t('chat.menu.stats') }}</h3>
+              <p class="text-xs sm:text-sm text-theme-text-secondary">{{ chatStore.currentCharacter?.name || t('chat.unknownCharacter') }}</p>
+            </div>
+          </div>
+          <button @click="showChatStats = false" class="p-2 rounded-xl hover:bg-[var(--theme-card-hover)] transition-all">
+            <svg class="w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-3 sm:space-y-4">
+          <div class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-[var(--theme-card-hover)]">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="w-8 h-8 rounded-lg bg-[var(--theme-primary)]/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+              <span class="text-sm text-theme-text-secondary">{{ t('chat.stats.messages') }}</span>
+            </div>
+            <span class="text-lg sm:text-xl font-bold text-theme-text-primary">{{ chatStore.totalMessagesCount }}</span>
+          </div>
+
+          <div class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-[var(--theme-card-hover)]">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="w-8 h-8 rounded-lg bg-[var(--theme-secondary)]/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-[var(--theme-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span class="text-sm text-theme-text-secondary">{{ t('chat.stats.characters') }}</span>
+            </div>
+            <span class="text-lg sm:text-xl font-bold text-theme-text-primary">{{ formatNumber(chatStore.totalCharactersCount) }}</span>
+          </div>
+
+          <div class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-[var(--theme-card-hover)]">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="w-8 h-8 rounded-lg bg-[var(--theme-accent)]/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-[var(--theme-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <span class="text-sm text-theme-text-secondary">{{ t('chat.stats.tokens') }}</span>
+            </div>
+            <span class="text-lg sm:text-xl font-bold text-theme-text-primary">{{ formatNumber(chatStore.totalTokensCount) }}</span>
+          </div>
+        </div>
+
+        <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-theme-border">
+          <p class="text-xs sm:text-sm text-theme-text-secondary text-center">
+            {{ t('chat.stats.estimateNote') }}
+          </p>
         </div>
       </div>
     </div>
 
     <CustomModelConfigModal
       v-model:visible="showCustomModelConfig"
+      v-model:selected-config-id="selectedConfigId"
       :use-custom-model="chatStore.useCustomModel"
       :config="activeCustomModelConfig"
       :config-list="customModelConfigs"
@@ -594,10 +672,12 @@ import ChatSyncModal from './components/ChatSyncModal.vue'
 import FriendSelector from '@/components/FriendSelector.vue'
 import LoginModal from '@/components/LoginModal.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
+import SearchableSelect from '@/components/SearchableSelect.vue'
 
 import { useCharacter } from '@/composables/useCharacter'
 import { useCustomModel } from '@/composables/useCustomModel'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
 import { getFriendAvatar, clearCharacterAvatarCache } from '@/utils/localFriendStorage'
 import {
   getBackgroundUrl,
@@ -614,6 +694,7 @@ const devMarkerPosition = ref({ x: window.innerWidth - 50, y: window.innerHeight
 let isDragging = false
 let dragOffset = { x: 0, y: 0 }
 const { showDangerConfirm } = useDialog()
+const { t } = useI18n()
 
 function startDragDevMarker(e: MouseEvent | TouchEvent) {
   isDragging = true
@@ -668,7 +749,7 @@ watch(
           const parsed = JSON.parse(cachedCharacters)
           chatStore.userCharacters = parsed.characters || []
         } catch (e) {
-          console.error('解析缓存用户角色列表失败:', e)
+          console.error(t('chat.parseCachedUserCharactersFailed') + ':', e)
         }
       }
       chatStore.loadUserCharacters(newUserId)
@@ -686,13 +767,18 @@ const compiledRegexScripts = computed<CompiledRegexScript[]>(() => {
   return compileRegexScripts(globalRegexList, charRegexList, userRegexList)
 })
 
-// 从 localStorage 读取侧边栏状态，如果没有则根据屏幕宽度判断
-const savedSidebarState = localStorage.getItem('sidebarOpen')
-const sidebarOpen = ref(savedSidebarState !== null ? savedSidebarState === 'true' : window.innerWidth >= 1024)
+// 判断是否为PC端
+const isPc = () => window.innerWidth >= 1024
 
-// 监听侧边栏状态变化，保存到 localStorage
+// 从 localStorage 读取侧边栏状态，手机端默认关闭，PC端读取保存的状态
+const savedSidebarState = localStorage.getItem('sidebarOpen')
+const sidebarOpen = ref(isPc() ? (savedSidebarState !== null ? savedSidebarState === 'true' : true) : false)
+
+// 监听侧边栏状态变化，只有PC端才保存到 localStorage
 watch(sidebarOpen, (newValue) => {
-  localStorage.setItem('sidebarOpen', newValue.toString())
+  if (isPc()) {
+    localStorage.setItem('sidebarOpen', newValue.toString())
+  }
 })
 const showMenuDropdown = ref(false)
 const showUserNameDialog = ref(false)
@@ -706,6 +792,7 @@ const showUserSettings = ref(false)
 const showUserDataSettings = ref(false)
 const showBackgroundSelector = ref(false)
 const showChatSync = ref(false)
+const showChatStats = ref(false)
 const showAbout = ref(false)
 const buildTime = __APP_BUILD_TIME__
 const backgroundImageUrl = ref<string | null>(null)
@@ -766,16 +853,16 @@ async function handleLoadOriginalCharacterData() {
       showToast(message, 'success')
     }
   } catch (e: any) {
-    showToast(e.message || '加载原角色数据失败', 'error')
+    showToast(e.message || t('chat.loadOriginalCharacterFailed'), 'error')
   }
 }
 
 async function handleUpdateToServer(data: any) {
   try {
     await updateToServer(data)
-    showToast('更新到服务器成功', 'success')
+    showToast(t('chat.updateToServerSuccess'), 'success')
   } catch (e: any) {
-    showToast(e.message || '更新到服务器失败', 'error')
+    showToast(e.message || t('chat.updateToServerFailed'), 'error')
   }
 }
 
@@ -786,7 +873,7 @@ async function handleUpdateFromServer() {
       showToast(result.message, 'success')
     }
   } catch (e: any) {
-    showToast(e.message || '从服务器更新失败', 'error')
+    showToast(e.message || t('chat.updateFromServerFailed'), 'error')
   }
 }
 
@@ -797,7 +884,7 @@ async function handleSaveCharacter(data: any) {
       showToast(result.message, 'success')
     }
   } catch (e: any) {
-    showToast(e.message || '保存失败', 'error')
+    showToast(e.message || t('chat.saveFailed'), 'error')
   }
 }
 
@@ -805,14 +892,14 @@ async function onImportCharacter(event: Event) {
   try {
     const result = await handleImportUserCharacter(event)
     if (result) {
-      let message = `成功导入 ${result.successCount} 个角色`
+      let message = t('chat.importCharactersSuccess', { successCount: result.successCount })
       if (result.failCount > 0) {
-        message += `，${result.failCount} 个文件导入失败`
+        message += t('chat.importCharactersPartialFail', { failCount: result.failCount })
       }
       showToast(message, 'success')
     }
   } catch (e: any) {
-    showToast(e.message || '导入失败', 'error')
+    showToast(e.message || t('chat.importCharactersFailed'), 'error')
   }
 }
 
@@ -825,7 +912,7 @@ async function handleViewCharacterWithErrorHandling(character: any) {
   try {
     await handleViewCharacter(character)
   } catch (e: any) {
-    showToast(e.message || '查看角色详情失败', 'error')
+    showToast(e.message || t('chat.viewCharacterDetailFailed'), 'error')
   }
 }
 
@@ -833,7 +920,7 @@ async function handleEditUserCharacterWithErrorHandling(character: any) {
   try {
     await editUserCharacter(character)
   } catch (e: any) {
-    showToast(e.message || '加载角色信息失败', 'error')
+    showToast(e.message || t('chat.loadCharacterInfoFailed'), 'error')
   }
 }
 
@@ -846,6 +933,7 @@ const {
   availableCustomModels,
   fetchModelsError,
   isLoadingBuiltinModels,
+  pendingSwitchToBuiltin,
   fetchCustomModels,
   updateCustomModelConfig,
   createCustomModelConfig,
@@ -854,6 +942,35 @@ const {
   handleServiceSelect,
   loadCustomModelsFromStorage
 } = useCustomModel()
+
+// 更新当前激活配置的单个字段
+function updateConfigField(field: string, value: any) {
+  if (modelConfigStore.activeConfigId) {
+    updateConfig(modelConfigStore.activeConfigId, { [field]: value })
+  }
+}
+
+// 配置弹窗中当前选中的配置 ID
+const selectedConfigId = ref<string | null>(null)
+
+// 内置模型选项
+const getBuiltinModelOptions = computed(() => {
+  const models = chatStore.uniqueModels
+  return models.map(model => ({
+    id: model.id,
+    value: model.id,
+    label: `${model.name}${model.is_default ? ` (${t('model.isDefault')})` : ''}`
+  }))
+})
+
+// 自定义模型选项
+const getCustomModelOptions = computed(() => {
+  const models = availableCustomModels.value
+  return models.map((model: string) => ({
+    value: model,
+    label: model
+  }))
+})
 
 const messages = computed(() => chatStore.displayedMessages)
 
@@ -864,6 +981,12 @@ const editingIndex = ref(-1)
 
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+  return String(num)
+}
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {
   toastMessage.value = message
@@ -886,6 +1009,59 @@ async function handleDeleteCustomModelConfig(id: string) {
 function toggleAutoSuggestions() {
   autoFetchSuggestions.value = !autoFetchSuggestions.value
   localStorage.setItem('role_play_auto_suggestions', autoFetchSuggestions.value.toString())
+}
+
+// 获取当前选择的服务值
+function getCurrentServiceValue() {
+  if (!chatStore.useCustomModel && showAuthEntry) {
+    return 'builtin'
+  }
+  if (modelConfigStore.activeConfigId) {
+    return `config:${modelConfigStore.activeConfigId}`
+  }
+  // 如果还没有激活的配置，但有配置，选第一个
+  if (modelConfigStore.configs.length > 0) {
+    return `config:${modelConfigStore.configs[0].id}`
+  }
+  return 'builtin'
+}
+
+// 处理服务选择
+async function handleServiceSelectNew(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const value = target.value
+  
+  if (value === 'builtin') {
+    if (!userStore.isLoggedIn()) {
+      // 需要登录
+      pendingSwitchToBuiltin.value = true
+      userStore.requireLogin()
+      target.value = getCurrentServiceValue()
+      return
+    }
+    // 切换到内置模型
+    await switchToBuiltinModel()
+  } else if (value.startsWith('config:')) {
+    // 切换到自定义配置
+    const configId = value.replace('config:', '')
+    const config = modelConfigStore.configs.find(c => c.id === configId)
+    if (config) {
+      setActiveConfig(configId)
+      chatStore.setUseCustomModel(true)
+    }
+  } else if (value === 'add-config') {
+    // 添加新配置
+    const newConfig = modelConfigStore.addConfig({
+      name: `${t('model.configName')} ${modelConfigStore.configs.length}`
+    })
+    selectedConfigId.value = newConfig.id
+    setActiveConfig(newConfig.id)
+    chatStore.setUseCustomModel(true)
+    showCustomModelConfig.value = true
+    showMenuDropdown.value = false
+    // 重置选择值
+    target.value = getCurrentServiceValue()
+  }
 }
 
 function handleLoadMore() {
@@ -957,7 +1133,7 @@ function sendEdit(index: number) {
 }
 
 async function deleteMessage(index: number) {
-  const confirmed = await showDangerConfirm('确定要删除这条消息吗？')
+  const confirmed = await showDangerConfirm(t('chat.deleteMessageConfirm'))
   if (confirmed) {
     chatStore.deleteMessage(index + chatStore.displayOffset)
     chatStore.suggestions = []
@@ -1000,12 +1176,12 @@ async function regenerateGreeting() {
       chatStore.editMessage(greetingIndex, response.first_mes)
     }
   } catch (e: any) {
-    showToast('生成开场白失败: ' + e.message, 'error')
+    showToast(t('chat.generateGreetingFailed') + ': ' + e.message, 'error')
   }
 }
 
 async function confirmClearHistory() {
-  const confirmed = await showDangerConfirm('确定要清空聊天记录吗？')
+  const confirmed = await showDangerConfirm(t('chat.clearChatConfirm'))
   if (confirmed) {
     chatStore.clearHistory()
   }
@@ -1015,7 +1191,7 @@ async function handleExportChat() {
   try {
     await chatStore.exportChat()
   } catch (e: any) {
-    showToast('导出失败: ' + e.message, 'error')
+    showToast(t('chat.exportChatFailed') + ': ' + e.message, 'error')
   }
 }
 
@@ -1033,9 +1209,9 @@ async function handleImportChat(event: Event) {
   
   try {
     const count = await chatStore.importChat(file)
-    showToast(`成功导入 ${count} 条消息`, 'success')
+    showToast(t('chat.importChatSuccess', { count: count }), 'success')
   } catch (e: any) {
-    showToast('导入失败: ' + e.message, 'error')
+    showToast(t('chat.importChatFailed') + ': ' + e.message, 'error')
   }
   
   ;(event.target as HTMLInputElement).value = ''
@@ -1051,7 +1227,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
   if (chatStore.useCustomModel) {
     const config = chatStore.customModelConfig
     if (!config?.api_url || !config?.api_key || !config?.default_model) {
-      showToast('请先完成自定义模型配置（API地址、API密钥、模型名称）', 'error')
+      showToast(t('chat.completeCustomModelConfig'), 'error')
       return
     }
   }
@@ -1084,15 +1260,33 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
   
   try {
     // 在前端构建上下文（不添加用户新消息）
+    // 截取最新的 n 条消息
+    let filteredHistory = chatStore.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }))
+    let historyTruncated = false
+    let truncatedCount = 0
+    if (config.suggestionsMaxHistory > 0 && filteredHistory.length > config.suggestionsMaxHistory) {
+      truncatedCount = filteredHistory.length - config.suggestionsMaxHistory
+      filteredHistory = filteredHistory.slice(-config.suggestionsMaxHistory)
+      historyTruncated = true
+    }
+    
+    // 如果历史记录被截取，添加系统提示
+    if (historyTruncated) {
+      filteredHistory.unshift({
+        role: 'system',
+        content: t('chat.historyTruncatedForSuggestions', { truncatedCount, maxHistory: config.suggestionsMaxHistory })
+      })
+    }
+    
     const contextResult = await chatStore.buildLocalContext(
-      chatStore.messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content })),
+      filteredHistory,
       ''
     )
     
     const context = contextResult.messages
     
     // 添加建议生成提示
-    const prompt = "请根据上述对话上下文，生成5个符合当前语境的简短用户回复建议，用于推动对话继续。回复建议要自然、简短、符合日常对话习惯。\n\n必须以严格的保证每个建议使用;分割，不要包含任何其他内容，格式示例：建议1;建议2;建议3;建议4;建议5"
+    const prompt = t('chat.generateSuggestionsPrompt')
     context.push({ role: 'user', content: prompt })
     
     let response: string
@@ -1107,7 +1301,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     } else {
       // 使用内置模型调用 API（共用相同的上下文）
       if (userStore.isAnonymous) {
-        showToast('请先登录以使用内置模型服务', 'error')
+        showToast(t('chat.loginFirstForBuiltinModel'), 'error')
         return
       }
       
@@ -1117,7 +1311,7 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
       }
       
       if (!modelToUse) {
-        showToast('请先选择一个模型', 'error')
+        showToast(t('chat.selectModelFirst'), 'error')
         return
       }
       
@@ -1194,15 +1388,14 @@ async function fetchSuggestions(options: { autoShow?: boolean, force?: boolean }
     }
     chatStore.lastSuggestionsMessagesSnapshot = JSON.stringify(chatStore.messages.slice(-6))
   } catch (error: any) {
-    // 如果是abort错误，不显示错误提示
     if (error.name === 'AbortError') {
       return
     }
     
     console.error('Failed to fetch suggestions:', error)
-    if (error.message === 'Insufficient quota') {
+    if (error.message?.includes('额度不足')) {
       setTimeout(() => {
-        showToast('对话额度不足，请签到获取更多额度或联系管理员', 'error')
+        showToast(error.message, 'error')
       }, 100)
     }
   } finally {
@@ -1257,7 +1450,7 @@ function handleOpenFriendSelector() {
 }
 
 async function sendSuggestion(suggestion: string) {
-  if (!chatStore.userName || chatStore.userName === '游客') {
+  if (!chatStore.userName || chatStore.userName === t('chat.guest')) {
     editingUserName.value = ''
     showUserNameDialog.value = true
     return
@@ -1267,7 +1460,7 @@ async function sendSuggestion(suggestion: string) {
   chatStore.showSuggestions = false
   if (success) {
     nextTick(() => {
-      chatMessagesRef.value?.scrollToBottom()
+      // chatMessagesRef.value?.scrollToBottom(1000)
     })
   }
 }
@@ -1275,7 +1468,7 @@ async function sendSuggestion(suggestion: string) {
 async function handleSubmit(text: string, clearInput: () => void) {
   if (!text.trim()) return
   
-  if (!chatStore.userName || chatStore.userName === '游客') {
+  if (!chatStore.userName || chatStore.userName === t('chat.guest')) {
     editingUserName.value = ''
     showUserNameDialog.value = true
     return
@@ -1286,7 +1479,7 @@ async function handleSubmit(text: string, clearInput: () => void) {
     clearInput()
     // 发送消息后立即滚动到底部
     nextTick(() => {
-      chatMessagesRef.value?.scrollToBottom(true)
+      chatMessagesRef.value?.scrollToBottom(300)
     })
   }
 }
@@ -1429,18 +1622,29 @@ async function handleSignin() {
   try {
     await userStore.signin()
   } catch (e: any) {
-    showToast('签到失败: ' + e.message, 'error')
+    showToast(t('chat.signinFailed') + ': ' + e.message, 'error')
   }
 }
 
 let previousIsStreaming = chatStore.isStreaming
+let streamingCharacterId: string | null = null
+
 watch(() => chatStore.isStreaming, (isStreaming) => {
+  if (isStreaming) {
+    streamingCharacterId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id || null
+  }
+  
   if (previousIsStreaming && !isStreaming && autoFetchSuggestions.value) {
     setTimeout(() => {
       if (chatStore.error) return
+      if (chatStore.wasManuallyStopped) return
+      
+      const currentCharId = chatStore.currentCharacter?.role_play?.id || chatStore.currentCharacter?.id
+      if (streamingCharacterId && currentCharId !== streamingCharacterId) {
+        return
+      }
       
       const lastMessage = chatStore.messages[chatStore.messages.length - 1]
-      // 只有当最后一条消息是助手消息且内容不为空时，才触发自动建议
       if (!lastMessage || lastMessage.role !== 'assistant') {
         return
       }
@@ -1460,8 +1664,8 @@ watch(() => chatStore.error, (newError) => {
     showToast(newError, 'error')
     
     if (newError.includes('API Key') || 
-        newError.includes('模型配置') ||
-        newError.includes('API配置')) {
+        newError.includes(t('chat.modelConfig')) ||
+        newError.includes(t('chat.apiConfig'))) {
       showMenuDropdown.value = true
     }
     
@@ -1487,7 +1691,7 @@ onMounted(async () => {
       if (isNewFromUrl) {
         // 延迟一点时间显示欢迎消息，确保用户数据已加载
         setTimeout(() => {
-          showToast('欢迎加入！您已成功登录，开始您的角色扮演之旅吧！', 'success')
+          showToast(t('chat.welcomeMessage'), 'success')
         }, 500)
       }
     } catch (error) {

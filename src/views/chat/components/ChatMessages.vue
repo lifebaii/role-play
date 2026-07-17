@@ -1,23 +1,24 @@
 <template>
-  <div
-    ref="messagesContainer"
-    data-scrollable="true"
-    class="absolute inset-0 overflow-y-auto overflow-x-hidden px-2 sm:px-4 space-y-4 overscroll-contain"
-    style="padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px) + (100vh - 100dvh)); -webkit-overflow-scrolling: touch;"
-    @click="$emit('click')"
-  >
-    <div class="h-0"></div>
-    <div class="max-w-4xl mx-auto">
-      <!-- 加载更多历史消息指示器 -->
-      <div v-if="hasMoreMessages" class="flex justify-center py-3">
-        <div v-if="isLoadingMore" class="flex items-center gap-2 text-theme-text-secondary text-sm">
-          <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
-          加载中...
+  <div class="relative" style="height: 100%;">
+    <div
+      ref="messagesContainer"
+      data-scrollable="true"
+      class="absolute inset-0 overflow-y-auto overflow-x-hidden px-2 sm:px-4 space-y-4 overscroll-contain"
+      style="padding-top: calc(3.5rem + env(safe-area-inset-top, 0px)); padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px) + (100vh - 100dvh)); -webkit-overflow-scrolling: touch;"
+      @click="$emit('click')"
+    >
+      <div class="h-0"></div>
+      <div class="max-w-4xl mx-auto">
+        <!-- 加载更多历史消息指示器 -->
+        <div v-if="hasMoreMessages" class="flex justify-center py-3">
+          <div v-if="isLoadingMore" class="flex items-center gap-2 text-theme-text-secondary text-sm">
+            <div class="w-4 h-4 border-2 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+            {{ t('common.loading') }}
+          </div>
+          <button v-else @click="$emit('loadMore')" class="text-sm text-[var(--theme-primary)] hover:underline px-4 py-2">
+            ↑ {{ t('chat.menu.loadMore') }}
+          </button>
         </div>
-        <button v-else @click="$emit('loadMore')" class="text-sm text-[var(--theme-primary)] hover:underline px-4 py-2">
-          ↑ 加载更多消息
-        </button>
-      </div>
 
       <ChatMessage
         v-for="(message, index) in messages"
@@ -45,23 +46,23 @@
         @update:editContent="$emit('update:editContent', $event)"
       />
 
-      <!-- 建议回复区域 -->
+      <!-- 建议回复区域 - 流式输出时不显示 -->
       <Transition name="suggestions-panel">
-        <div v-if="showSuggestions || isGeneratingSuggestions" class="mt-4 flex justify-end">
+        <div v-if="(showSuggestions || isGeneratingSuggestions) && !chatStore.isStreaming" class="mt-4 flex justify-end">
           <div class="w-full max-w-[95%] sm:max-w-[95%] p-2 sm:p-4 rounded-2xl border border-theme-border bubble-assistant overflow-hidden">
             <div class="text-xs font-semibold text-theme-text-secondary mb-2 sm:mb-3 uppercase tracking-wider flex items-center justify-between">
             <div class="flex items-center gap-1.5 sm:gap-2">
               <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
               </svg>
-              建议回复
+              {{ t('chat.suggestions') }}
             </div>
             <div class="flex items-center gap-2">
               <button
                 @click.stop="$emit('refreshSuggestions')"
                 :disabled="isGeneratingSuggestions"
                 class="px-3 py-2 rounded-xl hover:bg-[var(--theme-primary)]/10 transition-all text-theme-text-accent disabled:opacity-50"
-                title="刷新建议"
+                :title="t('chat.refreshSuggestions')"
               >
                 <div v-if="isGeneratingSuggestions" class="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                 <svg v-else class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +72,7 @@
               <button
                 @click.stop="$emit('closeSuggestions')"
                 class="px-3 py-2 rounded-xl hover:bg-[var(--theme-danger)]/10 transition-all text-theme-text-secondary"
-                title="关闭"
+                :title="t('common.close')"
               >
                 <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -110,12 +111,38 @@
         </div>
       </Transition>
     </div>
+    </div>
+
+    <!-- 滚动按钮 -->
+    <Transition name="scroll-buttons">
+      <div v-if="showScrollButtons && isButtonsVisible" class="fixed right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-2">
+        <button
+          @click="scrollToTop"
+          class="w-10 h-10 rounded-full bg-white/50 dark:bg-gray-800/50 shadow-lg border border-gray-200/50 dark:border-gray-700/50 flex items-center justify-center hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all"
+          title="滚动到顶部"
+        >
+          <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+          </svg>
+        </button>
+        <button
+          @click="scrollToBottom"
+          class="w-10 h-10 rounded-full bg-white/50 dark:bg-gray-800/50 shadow-lg border border-gray-200/50 dark:border-gray-700/50 flex items-center justify-center hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all"
+          title="滚动到底部"
+        >
+          <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+          </svg>
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted, computed } from 'vue'
 import { useChatStore } from '@/stores/chat'
+import { useI18n } from '@/composables/useI18n'
 import type { CompiledRegexScript } from '@/composables/useChat'
 import ChatMessage from './ChatMessage.vue'
 
@@ -130,6 +157,12 @@ const props = defineProps<{
   suggestions: string[]
   isGeneratingSuggestions: boolean
 }>()
+
+const chatStore = useChatStore()
+
+const showScrollButtons = computed(() => {
+  return props.messages.length > 3 * chatStore.PAGE_SIZE
+})
 
 const emit = defineEmits<{
   (e: 'click'): void
@@ -149,13 +182,27 @@ const emit = defineEmits<{
   (e: 'sendSuggestion', suggestion: string): void
 }>()
 
-const chatStore = useChatStore()
+const { t } = useI18n()
 const messagesContainer = ref<HTMLElement | null>(null)
 let scrollTimeout: ReturnType<typeof setTimeout> | null = null
+let hideButtonsTimeout: ReturnType<typeof setTimeout> | null = null
 let isRestoringScroll = false
+const isButtonsVisible = ref(true)
+
+// 滚动到顶部
+function scrollToTop() {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      })
+    }
+  })
+}
 
 // 滚动到最底部，使用平滑滚动
-function scrollToBottom(withDelay = false) {
+function scrollToBottom(time = 0) {
   const executeScroll = () => {
     nextTick(() => {
       if (messagesContainer.value) {
@@ -167,16 +214,25 @@ function scrollToBottom(withDelay = false) {
     })
   }
   
-  if (withDelay) {
-    setTimeout(executeScroll, 300)
-  } else {
-    executeScroll()
-  }
+  setTimeout(executeScroll, time)
 }
 
-// 保存滚动位置（防抖）+ 检测滚动到顶部
+// 保存滚动位置（防抖）+ 检测滚动到顶部 + 控制按钮可见性
 function handleScroll() {
   if (!messagesContainer.value || !chatStore.currentCharacter) return
+
+  // 显示滚动按钮
+  isButtonsVisible.value = true
+  
+  // 清除之前的隐藏定时器
+  if (hideButtonsTimeout) {
+    clearTimeout(hideButtonsTimeout)
+  }
+  
+  // 滚动停止后3秒隐藏按钮
+  hideButtonsTimeout = setTimeout(() => {
+    isButtonsVisible.value = false
+  }, 3000)
 
   // 检测滚动到顶部，自动加载更多历史消息
   if (messagesContainer.value.scrollTop < 50 && props.hasMoreMessages && !props.isLoadingMore) {
@@ -195,10 +251,34 @@ function handleScroll() {
     const characterId = chatStore.currentCharacter.id
     chatStore.resetPagination()
     chatStore.saveScrollPosition(characterId, 0)
+    
+    // 修复iOS设备聊天气泡空白问题：使用requestAnimationFrame和多次重绘
+    // 第一次：重绘
     nextTick(() => {
-      if (messagesContainer.value) {
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-      }
+      requestAnimationFrame(() => {
+        if (!messagesContainer.value) return
+        
+        // 强制重绘 - iOS WebKit需要额外的布局触发
+        messagesContainer.value.style.display = 'none'
+        // 使用offsetHeight强制重排
+        void messagesContainer.value.offsetHeight
+        messagesContainer.value.style.display = ''
+        
+        // 第二次：滚动到底部
+        requestAnimationFrame(() => {
+          if (messagesContainer.value) {
+            messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+          }
+          
+          // 第三次：确保滚动完成后再强制重绘
+          requestAnimationFrame(() => {
+            if (messagesContainer.value) {
+              // 再次强制重绘以确保所有内容可见
+              void messagesContainer.value.offsetHeight
+            }
+          })
+        })
+      })
     })
   }
 
@@ -229,8 +309,14 @@ function restoreScrollPosition() {
       if (savedPosition !== undefined) {
         messagesContainer.value.scrollTop = savedPosition
       } else {
-        // 没有保存的位置，滚动到底部显示最新消息
-        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+        // 没有保存的位置
+        if (props.messages.length > 1) {
+          // 有聊天记录，滚动到底部
+          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+        } else {
+          // 没有聊天记录，明确滚动到顶部
+          messagesContainer.value.scrollTop = 0
+        }
       }
       // 保持抑制状态足够久，确保 messages.length watcher 不会随后覆盖
       setTimeout(() => {
@@ -286,6 +372,35 @@ watch(() => chatStore.streamingContent, () => {
   }
 })
 
+// 监听 isStreaming 变化，流式输出结束时强制重绘确保内容完整显示
+watch(() => chatStore.isStreaming, (isStreaming, wasStreaming) => {
+  if (!isStreaming && wasStreaming && messagesContainer.value) {
+    requestAnimationFrame(() => {
+      const container = messagesContainer.value
+      if (!container) return
+      
+      // 强制触发重绘
+      container.style.display = 'none'
+      void container.offsetHeight
+      container.style.display = ''
+      
+      // 只有当用户已经在底部附近时才滚动到底部
+      // 这样当自动触发建议回复时，如果用户正在查看历史消息，不会被强制滚动
+      requestAnimationFrame(() => {
+        if (messagesContainer.value) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+          if (scrollTop + clientHeight >= scrollHeight - 50) {
+            messagesContainer.value.scrollTo({
+              top: messagesContainer.value.scrollHeight,
+              behavior: 'smooth'
+            })
+          }
+        }
+      })
+    })
+  }
+})
+
 onMounted(() => {
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', handleScroll, { passive: true })
@@ -296,6 +411,10 @@ onMounted(() => {
     isRestoringScroll = true
     restoreScrollPosition()
   }
+  // 初始时显示按钮，3秒后隐藏
+  hideButtonsTimeout = setTimeout(() => {
+    isButtonsVisible.value = false
+  }, 3000)
 })
 
 onUnmounted(() => {
@@ -304,6 +423,9 @@ onUnmounted(() => {
   }
   if (scrollTimeout) {
     clearTimeout(scrollTimeout)
+  }
+  if (hideButtonsTimeout) {
+    clearTimeout(hideButtonsTimeout)
   }
 })
 
@@ -360,5 +482,18 @@ defineExpose({
   max-height: 0;
   opacity: 0;
   transform: translateY(6px);
+}
+
+.scroll-buttons-enter-active,
+.scroll-buttons-leave-active {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.scroll-buttons-enter-from,
+.scroll-buttons-leave-to {
+  opacity: 0;
+  transform: translateY(-50%) translateX(20px);
 }
 </style>

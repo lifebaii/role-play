@@ -107,6 +107,7 @@ migrateFromLocalStorage().catch(e => console.warn('Storage migration failed:', e
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
+app.use(i18n)
 app.mount('#app')
 
 function removeLoading() {

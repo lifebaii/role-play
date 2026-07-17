@@ -9,7 +9,7 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-theme-text-primary">{{ editingData ? '编辑预设' : '新建预设' }}</h3>
+            <h3 class="text-lg font-bold text-theme-text-primary">{{ editingData ? t('preset.editPreset') : t('preset.newPreset') }}</h3>
             <p class="text-xs text-theme-text-secondary">Preset Editor</p>
           </div>
         </div>
@@ -22,29 +22,29 @@
 
       <div class="flex-1 overflow-y-auto p-5 space-y-5">
         <div>
-          <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">预设名称</label>
+          <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('preset.presetName') }}</label>
           <input v-model="localData.name" type="text"
             class="w-full px-4 py-2.5 chat-input-field border border-theme-border rounded-xl text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none transition-all"
-            placeholder="例如：破限、角色扮演增强">
+            :placeholder="t('preset.presetNamePlaceholder')">
         </div>
 
         <div>
           <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5 flex justify-between">
-            <span>预设内容</span>
-            <span class="text-[10px] font-normal normal-case bg-[var(--theme-card-hover)] px-1.5 rounded text-theme-text-secondary">{{ (localData.prompt || '').length }} 字符</span>
+            <span>{{ t('preset.presetContent') }}</span>
+            <span class="text-[10px] font-normal normal-case bg-[var(--theme-card-hover)] px-1.5 rounded text-theme-text-secondary">{{ (localData.prompt || '').length }} {{ t('preset.characters') }}</span>
           </label>
           <textarea v-model="localData.prompt" rows="10"
             class="w-full chat-input-field border border-theme-border rounded-xl px-4 py-3 text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none font-mono text-sm shadow-inner leading-relaxed resize-y min-h-[200px]"
-            placeholder="输入预设内容..."></textarea>
+            :placeholder="t('preset.presetContentPlaceholder')"></textarea>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">排序顺序</label>
+            <label class="block text-xs font-bold text-theme-text-secondary uppercase tracking-wide mb-1.5">{{ t('preset.sortOrder') }}</label>
             <input v-model.number="localData.order" type="number"
               class="w-full chat-input-field border border-theme-border rounded-xl px-4 py-2.5 text-theme-text-primary focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-[var(--theme-primary)] focus:outline-none transition-all"
               placeholder="100">
-            <p class="text-[10px] text-theme-text-secondary mt-1">数字越小越靠前</p>
+            <p class="text-[10px] text-theme-text-secondary mt-1">{{ t('preset.sortOrderHint') }}</p>
           </div>
           <div class="flex items-end">
             <label class="flex items-center space-x-2 cursor-pointer p-3 rounded-xl border transition-all select-none shadow-sm active:scale-95 w-full"
@@ -56,7 +56,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"></path>
                 </svg>
               </div>
-              <span class="text-xs font-bold">启用预设</span>
+              <span class="text-xs font-bold">{{ t('preset.enablePreset') }}</span>
             </label>
           </div>
         </div>
@@ -65,14 +65,14 @@
       <div class="p-4 border-t border-theme-border flex justify-end space-x-3 bg-gradient-to-r from-[var(--theme-gradient-start)]/5 to-[var(--theme-gradient-end)]/5 flex-shrink-0">
         <button @click="close"
           class="px-5 py-2.5 chat-card hover:bg-[var(--theme-card-hover)] text-theme-text-primary border border-theme-border rounded-xl transition-all shadow-sm font-medium text-sm">
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button @click="handleSave"
           class="px-6 py-2.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:from-[var(--theme-primary-dark)] hover:to-[var(--theme-secondary-dark)] text-white rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm flex items-center">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
           </svg>
-          保存预设
+          {{ t('preset.savePreset') }}
         </button>
       </div>
     </div>
@@ -81,6 +81,9 @@
 
 <script setup lang="ts">
 import { ref, watch, reactive } from 'vue'
+import { useI18n } from '@/composables/useI18n'
+
+const { t } = useI18n()
 
 interface PresetData {
   name: string

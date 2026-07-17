@@ -11,12 +11,12 @@
           </svg>
         </div>
         <div>
-          <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">评论区</h2>
-          <p class="text-xs text-theme-text-secondary" v-if="total > 0">{{ total }} 条评论</p>
-          <p class="text-xs text-theme-text-secondary" v-else>暂无评论</p>
+          <h2 class="text-lg sm:text-xl font-semibold text-theme-text-primary">{{ t('comment.title') }}</h2>
+          <p class="text-xs text-theme-text-secondary" v-if="total > 0">{{ t('comment.commentCount', { count: total }) }}</p>
+          <p class="text-xs text-theme-text-secondary" v-else>{{ t('comment.noComments') }}</p>
         </div>
         <span v-if="showOriginalHint" class="text-xs text-theme-text-secondary">
-          (来自原角色)
+          {{ t('comment.fromOriginalCharacter') }}
         </span>
       </div>
       <svg 
@@ -35,7 +35,7 @@
         <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        评论和点赞数据来自原角色，与所有添加该角色的用户共享
+        {{ t('comment.originalDataHint') }}
       </div>
       
       <div v-if="isLoading" class="flex justify-center py-4">
@@ -51,7 +51,7 @@
             <input
               v-model="newComment"
               type="text"
-              placeholder="写下你的评论..."
+              :placeholder="t('comment.placeholder')"
               class="w-full px-3 py-2 chat-input-field border border-theme-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent pr-16"
               @keyup.enter="submitComment"
               :disabled="isSubmitting"
@@ -70,14 +70,14 @@
           >
             <svg v-if="isSubmitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            发送
+            {{ t('comment.send') }}
           </button>
         </div>
 
         <div v-if="comments.length === 0" class="text-center py-6 text-theme-text-secondary text-sm">
-          暂无评论，快来抢沙发吧~
+          {{ t('comment.noCommentsYet') }}
         </div>
 
         <div v-else class="space-y-3 mt-4">
@@ -90,8 +90,8 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="font-medium text-theme-text-primary text-sm">{{ getDisplayName(comment) }}</span>
-                  <span v-if="comment.isOwner" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-primary)]/10 text-theme-text-accent">我</span>
-                  <span v-if="comment.isCreator" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]">创建者</span>
+                  <span v-if="comment.isOwner" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-primary)]/10 text-theme-text-accent">{{ t('comment.me') }}</span>
+                  <span v-if="comment.isCreator" class="text-xs px-1.5 py-0.5 rounded bg-[var(--theme-accent)]/10 text-[var(--theme-accent)]">{{ t('comment.creator') }}</span>
                   <span class="text-xs text-theme-text-secondary">{{ formatTime(comment.createdAt) }}</span>
                 </div>
                 <p class="text-sm text-theme-text-primary break-words">{{ comment.content }}</p>
@@ -100,7 +100,7 @@
                 v-if="canDelete(comment)"
                 @click="handleDelete(comment.id)"
                 class="flex-shrink-0 p-1 rounded hover:bg-[var(--theme-danger-bg)] text-theme-text-secondary hover:text-[var(--theme-danger)] transition-colors"
-                title="删除评论"
+                :title="t('comment.deleteComment')"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -115,7 +115,7 @@
               :disabled="isLoadingMore"
               class="text-sm text-theme-text-accent hover:underline disabled:opacity-50"
             >
-              {{ isLoadingMore ? '加载中...' : '加载更多' }}
+              {{ isLoadingMore ? t('comment.loading') : t('comment.loadMore') }}
             </button>
           </div>
         </div>
@@ -130,6 +130,9 @@ import type { Comment } from '@/types'
 import { generateAnonymousName } from '@/utils/anonymousName'
 import { charactersApi } from '@/api'
 import { useDialog } from '@/composables/useDialog'
+import { useI18n } from '@/composables/useI18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   characterId: string
@@ -205,14 +208,14 @@ const submitComment = async () => {
     newComment.value = ''
   } catch (error) {
     console.error('Failed to add comment:', error)
-    await showErrorAlert(error.message || '评论发送失败')
+    await showErrorAlert(error.message || t('comment.sendFailed'))
   } finally {
     isSubmitting.value = false
   }
 }
 
 const handleDelete = async (commentId: string) => {
-  const confirmed = await showDangerConfirm('确定要删除这条评论吗？')
+  const confirmed = await showDangerConfirm(t('comment.deleteConfirm'))
   if (!confirmed) return
   
   try {
@@ -237,10 +240,10 @@ const formatTime = (dateStr: string) => {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
   
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 30) return `${days}天前`
+  if (minutes < 1) return t('comment.timeJustNow')
+  if (minutes < 60) return t('comment.timeMinutesAgo', { minutes })
+  if (hours < 24) return t('comment.timeHoursAgo', { hours })
+  if (days < 30) return t('comment.timeDaysAgo', { days })
   
   return date.toLocaleDateString('zh-CN')
 }

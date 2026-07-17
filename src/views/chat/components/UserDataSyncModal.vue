@@ -3,7 +3,7 @@
     <div class="chat-card rounded-lg shadow-xl max-w-md w-full mx-4" @click.stop>
       <div class="p-6">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-theme-text-primary">{{ t('sync.chatSyncModalTitle') }}</h3>
+          <h3 class="text-lg font-semibold text-theme-text-primary">{{ t('sync.userDataSyncModalTitle') }}</h3>
           <button @click="handleClose" class="text-theme-text-secondary hover:text-theme-text-primary">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -71,12 +71,16 @@
         <div v-if="mode === 'upload'">
           <div v-if="!uploadResult">
             <p class="text-sm text-theme-text-secondary mb-4">
-              <i18n-t keypath="sync.uploadDescription" tag="span">
-                <template #characterName>
-                  <strong class="text-theme-text-primary">{{ characterName }}</strong>
-                </template>
-              </i18n-t>
+              {{ t('sync.userDataUploadDescription') }}
             </p>
+            <div class="text-sm text-theme-text-secondary mb-4">
+              <span class="text-theme-text-primary font-medium">{{ t('sync.currentData') }}</span>
+              <i18n-t keypath="sync.userDataCurrentData" tag="span">
+                <template #presets>{{ userDataStore.presets.length }}</template>
+                <template #worldInfo>{{ userDataStore.worldInfo.length }}</template>
+                <template #regexScripts>{{ userDataStore.regexScripts.length }}</template>
+              </i18n-t>
+            </div>
             <button
               @click="handleUpload"
               :disabled="isSyncing"
@@ -99,16 +103,16 @@
                   :title="copySuccess ? t('sync.copied') : t('sync.copySyncCode')"
                 >
                   <svg v-if="!copySuccess" class="w-5 h-5 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
                   <svg v-else class="w-5 h-5 text-[var(--theme-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                 </button>
               </div>
             </div>
             <p class="text-sm text-theme-text-secondary mb-4">
-              {{ t('sync.syncCodeExpires') }}
+              {{ t('sync.userDataSyncCodeExpires') }}
             </p>
             <p class="text-xs text-theme-text-secondary">
               {{ t('sync.expiresAt') }} {{ formatTime(uploadResult.expiresAt) }}
@@ -135,11 +139,7 @@
             />
           </div>
           <p class="text-xs text-theme-text-secondary mb-4">
-            <i18n-t keypath="sync.downloadDescription" tag="span">
-              <template #characterName>
-                <strong class="text-theme-text-primary">{{ characterName }}</strong>
-              </template>
-            </i18n-t>
+            {{ t('sync.userDataDownloadDescription') }}
           </p>
           <button
             @click="handleDownloadClick"
@@ -175,14 +175,21 @@
                 :title="copySuccess ? t('sync.copied') : t('sync.copySyncCode')"
               >
                 <svg v-if="!copySuccess" class="w-4 h-4 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
                 <svg v-else class="w-4 h-4 text-[var(--theme-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
               </button>
             </div>
-            <p><span class="text-theme-text-secondary">{{ t('sync.characterName') }}</span><span class="text-theme-text-primary font-medium">{{ syncStatus.activeSync.characterName }}</span></p>
+            <p v-if="syncStatus.activeSync.itemCount">
+              <span class="text-theme-text-secondary">{{ t('sync.userDataActiveSyncData') }}</span>
+              <i18n-t keypath="sync.userDataCurrentData" tag="span" class="text-theme-text-primary font-medium">
+                <template #presets>{{ syncStatus.activeSync.itemCount.presets }}</template>
+                <template #worldInfo>{{ syncStatus.activeSync.itemCount.worldInfo }}</template>
+                <template #regexScripts>{{ syncStatus.activeSync.itemCount.regexScripts }}</template>
+              </i18n-t>
+            </p>
             <p v-if="syncStatus.activeSync.downloadCount" class="text-theme-text-accent">
               <span class="text-theme-text-secondary">{{ t('sync.downloadedTimes') }}</span>
               <span class="font-medium">{{ syncStatus.activeSync.downloadCount }} 次</span>
@@ -206,17 +213,13 @@
           <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--theme-danger)] to-[var(--theme-danger-light)] flex items-center justify-center">
               <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
               </svg>
             </div>
             <h3 class="text-lg font-semibold text-theme-text-primary">{{ t('sync.confirmOverwrite') }}</h3>
           </div>
           <p class="text-sm text-theme-text-secondary mb-6">
-            <i18n-t keypath="sync.confirmOverwriteDescription" tag="span">
-              <template #characterName>
-                <strong class="text-theme-text-primary">{{ characterName }}</strong>
-              </template>
-            </i18n-t>
+            {{ t('sync.userDataConfirmOverwriteDescription') }}
           </p>
           <div class="flex gap-3">
             <button
@@ -242,33 +245,31 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useChatStore } from '@/stores/chat'
+import { useUserDataStore } from '@/stores/userData'
 import { useDialog } from '@/composables/useDialog'
-import type { UploadResult } from '@/api'
 
 const { t } = useI18n()
 
 const props = defineProps<{
   show: boolean
-  characterName: string
 }>()
 
 const emit = defineEmits<{
   close: []
 }>()
 
-const chatStore = useChatStore()
+const userDataStore = useUserDataStore()
 const { showSuccessAlert, showErrorAlert } = useDialog()
 
 const mode = ref<'upload' | 'download'>('upload')
 const syncCode = ref('')
-const uploadResult = ref<UploadResult | null>(null)
+const uploadResult = ref<{ syncCode: string; expiresAt: string } | null>(null)
 const error = ref<string | null>(null)
 const showConfirmDialog = ref(false)
 const copySuccess = ref(false)
 
-const syncStatus = computed(() => chatStore.syncStatus)
-const isSyncing = computed(() => chatStore.isSyncing)
+const syncStatus = computed(() => userDataStore.syncStatus)
+const isSyncing = computed(() => userDataStore.isSyncing)
 
 const canDownload = computed(() => {
   if (!syncStatus.value) return false
@@ -279,7 +280,7 @@ const canDownload = computed(() => {
 
 watch(() => props.show, async (newVal) => {
   if (newVal) {
-    await chatStore.loadSyncStatus()
+    await userDataStore.loadSyncStatus()
     error.value = null
     uploadResult.value = null
     syncCode.value = ''
@@ -326,8 +327,8 @@ function fallbackCopy(text: string) {
     setTimeout(() => {
       copySuccess.value = false
     }, 2000)
-  } catch (err) {
-    console.error('Failed to copy:', err)
+  } catch (e) {
+    console.error('Failed to copy:', e)
   }
   document.body.removeChild(textArea)
 }
@@ -335,7 +336,8 @@ function fallbackCopy(text: string) {
 async function handleUpload() {
   error.value = null
   try {
-    uploadResult.value = await chatStore.uploadChatSync()
+    const result = await userDataStore.uploadUserDataSync()
+    uploadResult.value = result
   } catch (e: any) {
     error.value = e.message
   }
@@ -355,10 +357,14 @@ function handleDownloadClick() {
 async function confirmDownload() {
   error.value = null
   try {
-    const result = await chatStore.downloadChatSync(syncCode.value)
+    const result = await userDataStore.downloadUserDataSync(syncCode.value)
     showConfirmDialog.value = false
     handleClose()
-    await showSuccessAlert(t('sync.downloadSuccess', { count: result.messageCount }))
+    await showSuccessAlert(t('sync.userDataDownloadSuccess', { 
+      presets: result.itemCount.presets, 
+      worldInfo: result.itemCount.worldInfo, 
+      regexScripts: result.itemCount.regexScripts 
+    }))
   } catch (e: any) {
     error.value = e.message
     showConfirmDialog.value = false
@@ -369,7 +375,7 @@ async function confirmDownload() {
 async function handleCancel() {
   error.value = null
   try {
-    await chatStore.cancelChatSync()
+    await userDataStore.cancelUserDataSync()
     await showSuccessAlert(t('sync.syncCancelled'))
   } catch (e: any) {
     error.value = e.message

@@ -99,7 +99,7 @@ export const useUserStore = defineStore('user', () => {
     if (localUserName.value) {
       return localUserName.value;
     }
-    return '游客';
+    return t('auth.guest');
   });
 
   const setToken = (newToken: string | null) => {
@@ -214,7 +214,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       const result = await userApi.signin();
       setUser(result.user);
-      signinMessage.value = `签到成功！获得 ${result.bonusQuota} 次对话额度`;
+      signinMessage.value = t('user.signinSuccess', { count: result.bonusQuota });
       setTimeout(() => {
         signinMessage.value = '';
       }, 3000);
@@ -260,7 +260,7 @@ export const useUserStore = defineStore('user', () => {
         
         const response = await fetch(url.toString(), { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error('获取角色数据失败');
+          throw new Error(t('error.fetchCharacterFailed'));
         }
         blob = await response.blob();
         contentType = response.headers.get('Content-Type') || 'application/octet-stream';

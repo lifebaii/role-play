@@ -83,7 +83,7 @@
       confirm-type="danger"
       @confirm="confirmRemoveFriend"
     >
-      <p class="text-theme-text-secondary">确定要删除「{{ characterToRemove?.name }}」吗？</p>
+      <p class="text-theme-text-secondary">{{ t('character.confirmDelete') }}</p>
     </Dialog>
   </div>
 </template>
@@ -92,6 +92,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from '@/composables/useI18n'
 import { userApi, type FriendsResponse } from '@/api'
 import type { Character } from '@/types'
 import CharacterSelectorList from '@/components/CharacterSelectorList.vue'
@@ -99,6 +100,7 @@ import Dialog from '@/components/Dialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const friends = ref<Character[]>([])
 const searchQuery = ref('')

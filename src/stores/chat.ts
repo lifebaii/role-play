@@ -122,9 +122,21 @@ export const useChatStore = defineStore('chat', () => {
   const displayCount = ref(PAGE_SIZE)
   const isDisplayAll = ref(true)
 
-  const displayOffset = computed(() =>
-    isDisplayAll.value ? 0 : Math.max(0, messages.value.length - displayCount.value)
-  )
+  function getEffectiveMessageCount(): number {
+    let count = messages.value.length
+    
+    const lastMessage = messages.value[messages.value.length - 1]
+    if (lastMessage && lastMessage.role === 'assistant' && !lastMessage.content?.trim()) {
+      count -= 1
+    }
+    
+    return count
+  }
+
+  const displayOffset = computed(() => {
+    if (isDisplayAll.value) return 0
+    return Math.max(0, getEffectiveMessageCount() - displayCount.value)
+  })
 
   const displayedMessages = computed(() =>
     isDisplayAll.value ? messages.value : messages.value.slice(displayOffset.value)
@@ -137,15 +149,15 @@ export const useChatStore = defineStore('chat', () => {
   function loadMoreMessages() {
     if (isDisplayAll.value) return
     displayCount.value += PAGE_SIZE
-    if (displayCount.value >= messages.value.length) {
+    if (displayCount.value >= getEffectiveMessageCount()) {
       isDisplayAll.value = true
-      displayCount.value = messages.value.length
+      displayCount.value = getEffectiveMessageCount()
     }
   }
 
   function resetPagination() {
     displayCount.value = PAGE_SIZE
-    isDisplayAll.value = messages.value.length <= PAGE_SIZE
+    isDisplayAll.value = getEffectiveMessageCount() <= PAGE_SIZE
   }
   const isUpdatingInBackground = ref(false)
   const isUpdatingCharactersList = ref(false)
@@ -153,6 +165,7 @@ export const useChatStore = defineStore('chat', () => {
   const isUpdatingSharedCharactersList = ref(false)
   const error = ref<string | null>(null)
   const streamingContent = ref('')
+  const wasManuallyStopped = ref(false)
   const currentWaitTime = ref('0.0')
   const userStore = useUserStore()
   const userName = computed(() => userStore.effectiveUserName)
@@ -229,6 +242,27 @@ const globalDefaultModel = ref('')
   })
 
   const hasMessages = computed(() => messages.value.length > 0)
+  
+  const totalMessagesCount = computed(() => getEffectiveMessageCount())
+  
+  const totalCharactersCount = computed(() => {
+    let count = 0
+    for (const msg of messages.value) {
+      if (msg.content) {
+        count += msg.content.length
+      }
+    }
+    return count
+  })
+  
+  const totalTokensCount = computed(() => {
+    const chatMessages = messages.value.map(m => ({
+      role: m.role,
+      content: m.content || '',
+      name: m.name
+    }))
+    return countChatTokens(chatMessages)
+  })
   
   const isAnonymous = computed(() => userStore.isAnonymous)
   
@@ -874,6 +908,10 @@ const globalDefaultModel = ref('')
       const newMap = new Map(backgroundStreams.value)
       newMap.delete(characterId)
       backgroundStreams.value = newMap
+      // 定时取消停止标记，这样 watcher 有足够时间检测到这个状态
+      setTimeout(() => {
+        wasManuallyStopped.value = false
+      }, 1000)
     }
   }
 
@@ -932,10 +970,27 @@ const globalDefaultModel = ref('')
     })
     await saveChatHistory(characterId, messagesToSave)
 
-    const historyForApi = messages.value
+    let historyForApi = messages.value
       .slice(0, -2)
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role, content: m.content }))
+    
+    // 截取最新的 n 条消息
+    let historyTruncated = false
+    let truncatedCount = 0
+    if (config.chatMaxHistory > 0 && historyForApi.length > config.chatMaxHistory) {
+      truncatedCount = historyForApi.length - config.chatMaxHistory
+      historyForApi = historyForApi.slice(-config.chatMaxHistory)
+      historyTruncated = true
+    }
+    
+    // 如果历史记录被截取，添加系统提示
+    if (historyTruncated) {
+      historyForApi.unshift({
+        role: 'system',
+        content: i18n.global.t('chat.historyTruncatedForChat', { truncatedCount, maxHistory: config.chatMaxHistory })
+      })
+    }
 
     // 异步执行流式响应，不等待
     executeStream(
@@ -1008,10 +1063,27 @@ const globalDefaultModel = ref('')
 
     const userMessage = messages.value[userMessageIndex]
 
-    const historyForApi = messages.value
+    let historyForApi = messages.value
       .slice(0, userMessageIndex)
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role, content: m.content }))
+    
+    // 截取最新的 n 条消息
+    let historyTruncated = false
+    let truncatedCount = 0
+    if (config.chatMaxHistory > 0 && historyForApi.length > config.chatMaxHistory) {
+      truncatedCount = historyForApi.length - config.chatMaxHistory
+      historyForApi = historyForApi.slice(-config.chatMaxHistory)
+      historyTruncated = true
+    }
+    
+    // 如果历史记录被截取，添加系统提示
+    if (historyTruncated) {
+      historyForApi.unshift({
+        role: 'system',
+        content: i18n.global.t('chat.historyTruncatedForChat', { truncatedCount, maxHistory: config.chatMaxHistory })
+      })
+    }
 
     const newMessages = [...messages.value.slice(0, userMessageIndex + 1)]
 
@@ -1047,6 +1119,7 @@ const globalDefaultModel = ref('')
 
     const ctx = backgroundStreams.value.get(targetId)
     if (ctx) {
+      wasManuallyStopped.value = true
       ctx.abortController.abort()
     }
 
@@ -1246,6 +1319,7 @@ const globalDefaultModel = ref('')
     setCurrentCharacter,
     messages,
     isLoading,
+    wasManuallyStopped,
     // 分页相关
     PAGE_SIZE,
     displayOffset,
@@ -1320,6 +1394,9 @@ const globalDefaultModel = ref('')
     uploadChatSync,
     downloadChatSync,
     loadSyncStatus,
-    cancelChatSync
+    cancelChatSync,
+    totalMessagesCount,
+    totalCharactersCount,
+    totalTokensCount
   }
 })
