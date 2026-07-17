@@ -84,7 +84,7 @@ const enUS: LocaleMessages = {
     create: 'Create',
     add: 'Add',
     import: 'Import',
-    noFriends: 'No characters yet. Click the button above to add one',
+    noFriends: 'No characters yet. Click Import above to add one',
     collapse: 'Collapse sidebar',
     close: 'Close sidebar',
     openSidebar: 'Open sidebar',

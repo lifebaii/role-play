@@ -84,7 +84,7 @@ const zhCN: LocaleMessages = {
     create: '创建',
     add: '添加',
     import: '导入',
-    noFriends: '暂无角色，点击上方按钮添加',
+    noFriends: '暂无角色，点击上方导入按钮添加',
     collapse: '折叠侧边栏',
     close: '关闭侧边栏',
     openSidebar: '打开侧边栏',

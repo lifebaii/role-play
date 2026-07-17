@@ -142,7 +142,7 @@
             <svg class="w-8 h-8 mx-auto mb-2 text-theme-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
-            暂无角色，点击上方按钮添加
+            暂无角色，点击上方导入按钮添加
           </div>
         </div>
       </div>
