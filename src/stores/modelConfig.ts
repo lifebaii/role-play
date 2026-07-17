@@ -34,11 +34,11 @@ function generateId(): string {
 
 function getDefaultConfig(): Omit<ModelConfig, 'id'> {
   return {
-    name: '',
+    name: '美团龙猫',
     provider: 'openai',
-    api_url: '',
+    api_url: 'https://api.longcat.chat/openai/v1',
     api_key: '',
-    default_model: '',
+    default_model: 'LongCat-2.0',
     temperature: 1,
     max_tokens: 4096,
     top_p: 1,

@@ -387,6 +387,15 @@ export interface ModelMessages {
   active: string
   notConfigured: string
   enableCustomModel: string
+  quickConfig: string
+  quickConfigHint: string
+  quickConfigPlaceholder: string
+  quickConfigInvalidLines: string
+  quickConfigInvalidUrl: string
+  quickConfigApplied: string
+  quickConfigFetchingModels: string
+  applyConfig: string
+  lines: string
   configName: string
   configNamePlaceholder: string
   provider: string

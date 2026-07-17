@@ -166,6 +166,40 @@
           </div>
           
           <template v-if="selectedConfig">
+            <div class="rounded-xl bg-[var(--theme-primary)]/5 p-3 sm:p-4">
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <label for="quick-model-config" class="block text-sm font-semibold text-theme-text-primary">{{ t('model.quickConfig') }}</label>
+                  <p class="mt-1 text-xs text-theme-text-secondary">{{ t('model.quickConfigHint') }}</p>
+                </div>
+                <span class="shrink-0 text-xs font-medium text-theme-text-accent">3–4 {{ t('model.lines') }}</span>
+              </div>
+              <textarea
+                id="quick-model-config"
+                v-model="quickConfigText"
+                rows="4"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                :placeholder="t('model.quickConfigPlaceholder')"
+                class="w-full resize-y px-3 py-2.5 border border-theme-border rounded-lg chat-input-field text-sm leading-6 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                @paste="handleQuickConfigPaste"
+              />
+              <div class="mt-2 flex items-center justify-between gap-3">
+                <p class="text-xs" :class="quickConfigError ? 'text-[var(--theme-danger)]' : 'text-[var(--theme-success)]'">
+                  {{ quickConfigError || quickConfigSuccess }}
+                </p>
+                <button
+                  type="button"
+                  class="shrink-0 min-h-11 px-4 py-2 rounded-lg bg-[var(--theme-primary)] text-white text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="!quickConfigText.trim()"
+                  @click="applyQuickConfig()"
+                >
+                  {{ t('model.applyConfig') }}
+                </button>
+              </div>
+            </div>
+
             <!-- 配置名称 -->
             <div>
               <label class="block text-sm font-medium text-theme-text-primary mb-2">{{ t('model.configName') }}</label>
@@ -384,6 +418,9 @@ const localSelectedConfigId = computed({
   set: (val: string | null) => emit('update:selectedConfigId', val)
 })
 const mobileTab = ref<'list' | 'form'>('form')
+const quickConfigText = ref('')
+const quickConfigError = ref('')
+const quickConfigSuccess = ref('')
 
 // 计算属性
 const selectedConfig = computed(() => {
@@ -437,6 +474,51 @@ function addNewConfig() {
 function updateSelectedConfig(field: keyof ModelConfig, value: any) {
   if (!localSelectedConfigId.value) return
   modelConfigStore.updateConfig(localSelectedConfigId.value, { [field]: value })
+}
+
+async function applyQuickConfig(rawText = quickConfigText.value) {
+  if (!localSelectedConfigId.value) return
+
+  const lines = rawText.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+  quickConfigError.value = ''
+  quickConfigSuccess.value = ''
+
+  if (lines.length < 3 || lines.length > 4) {
+    quickConfigError.value = t('model.quickConfigInvalidLines')
+    return
+  }
+
+  const [name, apiUrl, apiKey, model = ''] = lines
+  try {
+    const parsedUrl = new URL(apiUrl)
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') throw new Error('invalid protocol')
+  } catch {
+    quickConfigError.value = t('model.quickConfigInvalidUrl')
+    return
+  }
+
+  modelConfigStore.updateConfig(localSelectedConfigId.value, {
+    name,
+    provider: 'openai',
+    api_url: apiUrl,
+    api_key: apiKey,
+    default_model: model,
+  })
+  quickConfigText.value = ''
+  if (!model) {
+    quickConfigSuccess.value = t('model.quickConfigFetchingModels')
+    await emit('fetchModels', localSelectedConfigId.value)
+  } else {
+    quickConfigSuccess.value = t('model.quickConfigApplied')
+  }
+}
+
+function handleQuickConfigPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData('text')
+  if (!text) return
+  event.preventDefault()
+  quickConfigText.value = text
+  void applyQuickConfig(text)
 }
 
 async function fetchModelsForSelectedConfig() {
