@@ -44,8 +44,8 @@ export function useCustomModel() {
     return Boolean(config?.api_url && config?.api_key && config?.default_model)
   }
 
-  function createEmptyConfig(name = '默认配置') {
-    const config = modelConfigStore.addConfig({ name })
+  function createEmptyConfig(name?: string) {
+    const config = modelConfigStore.addConfig(name ? { name } : undefined)
     modelConfigStore.setActive(config.id)
     selectedConfigId.value = config.id
     syncActiveConfigToChat()

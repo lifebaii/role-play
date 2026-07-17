@@ -6,6 +6,7 @@ import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
 import { config } from '@/utils/config';
 import { i18n } from '@/locales';
+import { initializeDefaultCharacters } from '@/utils/defaultCharacters';
 
 export interface User {
   id: string;
@@ -64,6 +65,11 @@ export const useUserStore = defineStore('user', () => {
   initEventListeners();
 
   const loadLocalFriends = async () => {
+    try {
+      await initializeDefaultCharacters();
+    } catch (error) {
+      console.error('[UserStore] Failed to initialize default characters:', error);
+    }
     clearFriendsCache();
     const localFriends = await getLocalFriends();
     const sortedFriends = sortFriendsByMeta(localFriends);
