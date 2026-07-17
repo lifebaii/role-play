@@ -11,7 +11,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-lg font-bold gradient-text">我的剧本</h1>
+        <h1 class="text-lg font-bold gradient-text">我的角色</h1>
         <div class="flex-1"></div>
       </div>
     </div>
@@ -25,7 +25,7 @@
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="搜索剧本..."
+          placeholder="搜索角色..."
           class="w-full pl-10 pr-4 py-2.5 chat-input-field border border-theme-border rounded-xl focus:ring-2 focus:ring-[var(--theme-primary)] focus:border-transparent"
           @input="debounceSearch"
         />
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <!-- 好友列表 -->
+    <!-- 角色列表 -->
     <div class="flex-1 overflow-hidden">
       <CharacterSelectorList
         :characters="friends"
@@ -53,8 +53,8 @@
         :show-like-count="false"
         :show-tags="false"
         :show-action="true"
-        empty-text="暂无剧本"
-        empty-subtext="去添加一些剧本吧"
+        empty-text="暂无角色"
+        empty-subtext="去添加一些角色吧"
         @page-change="loadPage"
         @page-size-change="handlePageSizeChange"
         @select="handleSelectCharacter"
@@ -64,7 +64,7 @@
           <button
             @click.stop="handleRemoveFriend(character)"
             class="w-8 h-8 rounded-full border border-[var(--theme-danger)]/30 flex items-center justify-center hover:bg-[var(--theme-danger)]/10 hover:border-[var(--theme-danger)] transition-colors group"
-            :title="'删除剧本'"
+            :title="'删除角色'"
           >
             <svg class="w-4 h-4 text-[var(--theme-danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -77,7 +77,7 @@
     <!-- 删除确认对话框 -->
     <Dialog
       v-model:visible="showRemoveConfirm"
-      title="删除剧本"
+      title="删除角色"
       confirm-text="删除"
       cancel-text="取消"
       confirm-type="danger"
@@ -144,7 +144,7 @@ const loadFriends = async () => {
     if (userStore.isLoggedIn()) {
       data = await userApi.getFriends(params)
     } else {
-      // 未登录时使用本地好友
+      // 未登录时使用本地角色
       const localFriends = userStore.friendCharacters
       const startIndex = (currentPage.value - 1) * pageSize.value
       const paginatedFriends = localFriends.slice(startIndex, startIndex + pageSize.value)
@@ -164,7 +164,7 @@ const loadFriends = async () => {
       return
     }
 
-    // 转换好友数据格式适配Character类型
+    // 转换角色数据格式适配 Character 类型
     friends.value = data.friends.map(f => ({
       id: f.id,
       name: f.name,
@@ -201,7 +201,7 @@ const debounceSearch = () => {
 }
 
 const handleSelectCharacter = (character: Character) => {
-  // 这里可以处理选择好友后的操作，比如跳转到聊天页面
+  // 这里可以处理选择角色后的操作，比如跳转到聊天页面
   router.push('/chat')
 }
 
@@ -219,7 +219,7 @@ const confirmRemoveFriend = async () => {
   actionCharacterId.value = characterId
   try {
     await userStore.removeFriend(characterId)
-    // 重新加载好友列表
+    // 重新加载角色列表
     await loadFriends()
   } catch (error) {
     console.error('Failed to remove friend:', error)
@@ -234,7 +234,7 @@ onMounted(() => {
   loadFriends()
 })
 
-// 监听好友列表变化
+// 监听角色列表变化
 watch(() => userStore.friendCharacters, () => {
   if (!userStore.isLoggedIn()) {
     loadFriends()

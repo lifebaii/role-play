@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from '@/composables/useI18n'
 import { config } from '@/utils/config'
 
 const props = defineProps<{

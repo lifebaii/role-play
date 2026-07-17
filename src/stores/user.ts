@@ -5,6 +5,7 @@ import { getLocalFriends, addLocalFriend, addOnlineFriendFromBlob, removeLocalFr
 import { userApi, charactersApi } from '@/api';
 import { eventBus } from '@/utils/eventBus';
 import { config } from '@/utils/config';
+import { i18n } from '@/locales';
 
 export interface User {
   id: string;
@@ -99,7 +100,7 @@ export const useUserStore = defineStore('user', () => {
     if (localUserName.value) {
       return localUserName.value;
     }
-    return t('auth.guest');
+    return '';
   });
 
   const setToken = (newToken: string | null) => {
@@ -214,7 +215,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       const result = await userApi.signin();
       setUser(result.user);
-      signinMessage.value = t('user.signinSuccess', { count: result.bonusQuota });
+      signinMessage.value = i18n.global.t('user.signinSuccess', { count: result.bonusQuota });
       setTimeout(() => {
         signinMessage.value = '';
       }, 3000);
@@ -260,7 +261,7 @@ export const useUserStore = defineStore('user', () => {
         
         const response = await fetch(url.toString(), { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error(t('error.fetchCharacterFailed'));
+          throw new Error(i18n.global.t('error.fetchCharacterFailed'));
         }
         blob = await response.blob();
         contentType = response.headers.get('Content-Type') || 'application/octet-stream';

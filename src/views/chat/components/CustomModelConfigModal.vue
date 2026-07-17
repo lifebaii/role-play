@@ -16,6 +16,10 @@
           </svg>
         </button>
       </div>
+
+      <div class="px-3 py-2 sm:px-6 sm:py-3 border-b border-theme-border bg-[var(--theme-primary)]/5">
+        <p class="text-xs sm:text-sm text-theme-text-secondary">{{ t('model.loginTip') }}</p>
+      </div>
       
       <!-- 移动端标签页切换 -->
       <div class="sm:hidden border-b border-theme-border">
@@ -177,14 +181,38 @@
             <!-- 提供商 -->
             <div>
               <label class="block text-sm font-medium text-theme-text-primary mb-2">{{ t('model.provider') }}</label>
-              <select
-                :value="selectedConfig.provider"
-                @input="updateSelectedConfig('provider', ($event.target as HTMLSelectElement).value)"
-                class="w-full px-4 py-3 border border-theme-border rounded-xl select-field transition-all text-base"
+              <div
+                class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-[var(--theme-primary)]/5 border border-theme-border"
+                role="group"
+                :aria-label="t('model.provider')"
               >
-                <option value="openai">{{ t('model.openaiCompatible') }}</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
+                <button
+                  type="button"
+                  :aria-pressed="selectedConfig.provider === 'openai'"
+                  :class="[
+                    'min-h-11 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-2 active:scale-[0.98]',
+                    selectedConfig.provider === 'openai'
+                      ? 'bg-[var(--theme-primary)] text-white shadow-sm'
+                      : 'text-theme-text-secondary hover:bg-[var(--theme-card-hover)] hover:text-theme-text-primary'
+                  ]"
+                  @click="updateSelectedConfig('provider', 'openai')"
+                >
+                  {{ t('model.openaiCompatible') }}
+                </button>
+                <button
+                  type="button"
+                  :aria-pressed="selectedConfig.provider === 'anthropic'"
+                  :class="[
+                    'min-h-11 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-2 active:scale-[0.98]',
+                    selectedConfig.provider === 'anthropic'
+                      ? 'bg-[var(--theme-primary)] text-white shadow-sm'
+                      : 'text-theme-text-secondary hover:bg-[var(--theme-card-hover)] hover:text-theme-text-primary'
+                  ]"
+                  @click="updateSelectedConfig('provider', 'anthropic')"
+                >
+                  Anthropic
+                </button>
+              </div>
             </div>
             
             <!-- API 地址 -->
@@ -301,15 +329,6 @@
             <p>{{ t('model.selectOrCreateConfig') }}</p>
           </div>
           
-          <div class="p-4 bg-gradient-to-r from-[var(--theme-primary)]/5 to-[var(--theme-secondary)]/5 border border-[var(--theme-primary)]/20 rounded-xl">
-            <div class="flex items-center gap-2 text-theme-text-primary mb-2">
-              <svg class="w-5 h-5 text-[var(--theme-primary)]" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-              </svg>
-              <span class="font-medium">{{ t('model.tip') }}</span>
-            </div>
-            <p class="text-sm text-theme-text-secondary">{{ t('model.loginTip') }}</p>
-          </div>
         </div>
       </div>
       
@@ -417,17 +436,7 @@ function addNewConfig() {
 
 function updateSelectedConfig(field: keyof ModelConfig, value: any) {
   if (!localSelectedConfigId.value) return
-  
-  // 特殊处理 provider 变化时自动设置 api_url
-  if (field === 'provider') {
-    const newApiUrl = value === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'
-    modelConfigStore.updateConfig(localSelectedConfigId.value, {
-      [field]: value,
-      api_url: newApiUrl
-    })
-  } else {
-    modelConfigStore.updateConfig(localSelectedConfigId.value, { [field]: value })
-  }
+  modelConfigStore.updateConfig(localSelectedConfigId.value, { [field]: value })
 }
 
 async function fetchModelsForSelectedConfig() {

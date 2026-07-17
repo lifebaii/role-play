@@ -6,6 +6,7 @@ import './style.css'
 import { loadTheme } from './utils/theme'
 import { migrateFromLocalStorage } from './utils/storageService'
 import { installBackendRequestGuard } from './utils/backendMode'
+import { i18n } from './locales'
 
 installBackendRequestGuard()
 

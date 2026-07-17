@@ -208,6 +208,18 @@
             </div>
           </button>
           <button
+            v-if="chatStore.currentCharacter"
+            @click.stop="openCharacterInfoFromCurrent(); showMenuDropdown = false"
+            class="w-full px-4 py-2.5 text-left text-sm text-theme-text-primary menu-dropdown-item flex items-center gap-3 transition-all"
+          >
+            <div class="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 flex items-center justify-center text-theme-text-accent">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7m-1.586-9.586a2 2 0 112.828 2.828L11.828 13.657 8 14l.343-3.828 8.071-8.071z" />
+              </svg>
+            </div>
+            <span>{{ t('character.editCharacter') }}</span>
+          </button>
+          <button
             @click.stop="showBackgroundSelector = true; showMenuDropdown = false"
             class="w-full px-4 py-2.5 text-left text-sm text-theme-text-primary menu-dropdown-item flex items-center gap-3 transition-all"
           >
@@ -365,8 +377,8 @@
 
     <div v-if="showRemoveFriendConfirm" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-[9999] p-4" @click.self="showRemoveFriendConfirm = false">
       <div class="chat-card rounded-2xl p-3 sm:p-6 max-w-md w-full shadow-2xl border border-theme-border">
-        <h3 class="text-base sm:text-lg font-bold text-theme-text-primary mb-1 sm:mb-2">确认删除剧本</h3>
-        <p class="text-theme-text-secondary text-sm sm:text-base mb-4 sm:mb-6">确定要删除这个剧本吗？删除后聊天记录也会一并删除。</p>
+        <h3 class="text-base sm:text-lg font-bold text-theme-text-primary mb-1 sm:mb-2">确认删除角色</h3>
+        <p class="text-theme-text-secondary text-sm sm:text-base mb-4 sm:mb-6">确定要删除这个角色吗？删除后聊天记录也会一并删除。</p>
         <div class="flex gap-3">
           <button
             @click="showRemoveFriendConfirm = false"
@@ -502,7 +514,7 @@
           <div class="text-left space-y-2 sm:space-y-3 text-xs sm:text-sm text-theme-text-primary mb-4 sm:mb-6">
             <p>🎭 与各种角色进行沉浸式对话</p>
             <p>✨ 支持自定义角色创建</p>
-            <p v-if="backendEnabled">🌐 在线分享剧本</p>
+            <p v-if="backendEnabled">🌐 在线分享角色</p>
             <p>🎨 支持亮色/暗色主题切换</p>
           </div>
           
@@ -904,7 +916,7 @@ async function onImportCharacter(event: Event) {
 }
 
 async function handleFriendCharactersUpdated(characters: any[]) {
-  // 好友列表已经通过 localFriendStorage 更新，这里不需要额外处理
+  // 角色列表已经通过 localFriendStorage 更新，这里不需要额外处理
   // 保持 friendCharacters 的响应性即可
 }
 
@@ -934,24 +946,19 @@ const {
   fetchModelsError,
   isLoadingBuiltinModels,
   pendingSwitchToBuiltin,
+  modelConfigStore,
+  selectedConfigId,
   fetchCustomModels,
   updateCustomModelConfig,
   createCustomModelConfig,
   selectCustomModelConfig,
   deleteCustomModelConfig,
   handleServiceSelect,
+  switchToBuiltinModel,
+  setActiveConfig,
+  promptForIncompleteConfig,
   loadCustomModelsFromStorage
 } = useCustomModel()
-
-// 更新当前激活配置的单个字段
-function updateConfigField(field: string, value: any) {
-  if (modelConfigStore.activeConfigId) {
-    updateConfig(modelConfigStore.activeConfigId, { [field]: value })
-  }
-}
-
-// 配置弹窗中当前选中的配置 ID
-const selectedConfigId = ref<string | null>(null)
 
 // 内置模型选项
 const getBuiltinModelOptions = computed(() => {
@@ -1492,6 +1499,7 @@ async function saveUserName() {
     console.error('Failed to save userName:', error)
   }
   showUserNameDialog.value = false
+  await promptForIncompleteConfig()
   
   if (chatStore.lastCharacterId) {
     const lastChar = userStore.friendCharacters.find(c => 
@@ -1514,7 +1522,7 @@ async function handleRemoveFriend() {
     showRemoveFriendConfirm.value = false
   } catch (error) {
     console.error('Failed to remove friend:', error)
-    showToast('删除剧本失败', 'error')
+    showToast('删除角色失败', 'error')
   } finally {
     isRemovingFriend.value = false
   }
@@ -1712,7 +1720,13 @@ onMounted(async () => {
     loadLikedCharacters()
   }
   
-  loadCustomModelsFromStorage()
+  await loadCustomModelsFromStorage()
+  if (!hasLocalUserName()) {
+    editingUserName.value = ''
+    showUserNameDialog.value = true
+  } else {
+    await promptForIncompleteConfig()
+  }
   
   loadBackground()
 
