@@ -28,6 +28,11 @@ export const cleanConfig = {
 }
 
 function addLazyLoading(html: string): string {
+  // 大多数聊天消息不包含图片，避免在流式输出的每次更新中解析整个 DOM。
+  if (!/<img\b/i.test(html)) {
+    return html
+  }
+
   try {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')

@@ -1,247 +1,194 @@
-# Role-Play Frontend
+# Role-Play
 
-English | [中文](docs/README_ZH.md)
+中文 | [English](docs/README_EN.md)
 
-<img src="https://github.com/smanx/role-play/blob/master/public/pwa-192x192.png?raw=true" alt="Role-Play Logo" width="128" />
+<img src="public/pwa-192x192.png" alt="Role-Play Logo" width="128" />
 
-A frontend application built with Vue 3 + Vite + TypeScript + Tailwind CSS.
+Role-Play 是一个基于 Vue 3、Vite 和 TypeScript 的角色扮演聊天前端。项目默认运行在纯前端模式，不要求用户登录，也不依赖配套后端；角色、聊天记录、模型配置和个人称呼均保存在当前浏览器中。
 
-## Project Overview
+## 在线访问
 
-Role-Play is an LLM-based role-play chat application that supports:
+GitHub Pages：**[https://lifebaii.github.io/role-play/](https://lifebaii.github.io/role-play/)**
 
-- 🎭 创建和管理自定义角色
-- 💬 与 AI 角色进行流畅对话
-- 🌍 世界书和正则脚本增强角色设定
-- 📱 响应式设计，支持 PC 和移动端
-- 💾 本地聊天记录备份、恢复与纯文本导出
-- 👥 群聊功能，支持多角色互动
-- 📤 角色导入/导出，支持多种格式
-- 🎨 主题切换和个性化设置
-- 📦 离线 PWA 支持
+## 主要功能
 
-## Screenshots
+- 创建、导入、导出和编辑角色。
+- 首次访问自动导入两个内置角色。
+- 支持角色卡 JSON 和 PNG 文件。
+- 使用自定义模型进行流式角色对话。
+- 支持 OpenAI 兼容和 Anthropic 两种 API 协议。
+- 支持多套模型配置、模型列表获取和手动填写模型名。
+- 支持三至四行文本快速导入模型配置。
+- 支持世界书、正则脚本、预设和角色背景。
+- 聊天记录支持 JSONL 导入/导出和 TXT 纯文本导出。
+- 本地用户数据支持分类备份、完整备份和恢复。
+- 支持亮色、暗色主题、响应式布局和 PWA。
 
-### PC
-<img src="https://github.com/smanx/role-play/blob/master/docs/imgs/pc-home-light.jpg?raw=true" alt="PC Home" width="800" />
+## 首次使用
 
-### Mobile
-<div align="center">
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-list.jpg?raw=true" alt="Mobile List" width="300" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-chat.jpg?raw=true" alt="Mobile Chat" width="300" />
-</div>
+1. 第一次进入时填写“剧本中怎么称呼你”。未设置前不会使用默认的“访客”名称。
+2. 保存称呼后进入自定义模型配置。
+3. 填写自己的 API Key，确认 API 地址和模型名称，然后关闭配置窗口。
+4. 从左侧角色列表选择角色并开始聊天。
 
-## Try Online
+新模型配置默认提供以下公开参数，API Key 不包含在源码中：
 
-🚀 **[https://rp.good.hidns.vip/](https://rp.good.hidns.vip/)**
+| 配置项 | 默认值 |
+|---|---|
+| 配置名称 | 美团龙猫 |
+| 提供商 | OpenAI 兼容 |
+| API 地址 | `https://api.longcat.chat/openai/v1` |
+| 模型 | `LongCat-2.0` |
+| API Key | 空，由每位用户自行填写 |
 
-## Tech Stack
+切换提供商不会覆盖已经填写的 API 地址。
 
-- **Framework**: Vue 3 + TypeScript
-- **Build**: Vite 5
-- **Styling**: Tailwind CSS
-- **State Management**: Pinia
-- **Routing**: Vue Router
-- **PWA**: vite-plugin-pwa
-- **Database**: IndexedDB (Dexie)
-- **Markdown**: marked + dompurify
-- **Drag & Drop**: sortablejs + vuedraggable
-- **Compression**: pako
+### 快速粘贴模型配置
+
+模型配置窗口支持直接粘贴以下三行：
+
+```text
+配置名字
+API 地址
+API Key
+```
+
+也可以在第四行指定模型名：
+
+```text
+配置名字
+API 地址
+API Key
+模型名
+```
+
+省略模型名时，应用会尝试获取模型列表并选择第一个模型。无法获取时可以手动填写。
+
+## 内置角色
+
+内置角色资源位于 `public/1/`。首次访问会将它们导入浏览器 IndexedDB：
+
+- `v1.96万神的亚狄斯Lite•Preview`
+- `放开那个女巫`
+
+初始化成功后不会重复导入。用户主动删除内置角色后，刷新页面不会自动恢复；清除全部网站数据后会重新执行首次初始化。
+
+聊天页右上角三点菜单中的“编辑角色”可以直接修改当前角色。
+
+## 本地数据与多人访问
+
+纯前端部署可以供多人访问同一个 IP、域名和端口。浏览器数据按“协议 + 主机 + 端口 + 浏览器配置文件”隔离：
+
+- 不同设备、不同浏览器或不同浏览器配置文件不会共享数据。
+- 同一浏览器配置文件访问同一站点时会使用同一份本地数据。
+- API Key 只保存在当前浏览器，不会提交到仓库。
+- 清除网站数据会删除角色、聊天记录和模型配置。
+
+请定期使用导出功能备份数据。TXT 仅用于阅读，恢复聊天记录应使用 JSONL 或完整本地备份。
+
+> 纯前端无法安全保存供所有人共用的 API Key，也无法可靠执行“每位用户固定调用次数”的服务端配额。需要真实共享 Key 或强制配额时，应增加服务端代理。
 
 ## 运行模式
 
 | 功能 | 纯前端模式 | 后端模式 |
-|------|------------|----------|
-| 角色与聊天记录 | 浏览器本地保存 | 浏览器本地保存 |
-| 模型服务 | 每位用户配置自己的 API Key | 可使用自定义或内置模型 |
-| 角色导入/导出 | ✅ | ✅ |
-| 聊天记录 JSONL 导入/导出 | ✅ | ✅ |
-| 聊天记录 TXT 导出 | ✅ | ✅ |
-| 登录、签到、在线角色 | ❌ | 按后端配置启用 |
-| 聊天记录同步 | ❌ | 登录后手动触发 |
+|---|---|---|
+| 角色和聊天记录 | 浏览器本地保存 | 浏览器本地保存 |
+| 自定义模型 | 每位用户配置自己的 Key | 支持 |
+| 角色导入/导出 | 支持 | 支持 |
+| JSONL 备份和恢复 | 支持 | 支持 |
+| TXT 导出 | 支持 | 支持 |
+| 登录、签到、在线角色 | 禁用 | 按后端实现启用 |
+| 聊天同步、内置模型 | 禁用 | 按后端实现启用 |
 
-纯前端部署适合多人访问同一个 IP 和端口。数据按“协议 + 主机 + 端口 + 浏览器配置文件”隔离，不同设备或不同浏览器配置文件不会共享数据；同一浏览器配置文件访问同一地址时会共用本地数据。
+当前仓库默认使用纯前端模式。
 
-### 纯前端首次使用流程
+## 本地开发
 
-1. 首次进入时填写“剧本中怎么称呼你”，未设置前不使用默认访客名称。
-2. 随后完成自定义模型配置。新配置默认使用“美团龙猫”、`https://api.longcat.chat/openai/v1` 和 `LongCat-2.0`，API Key 由每位用户自行填写；也可切换为其他 **OpenAI 兼容** 或 **Anthropic** 服务。
-3. 提供商使用按钮切换；切换提供商不会覆盖已填写的 API 地址。
-4. OpenAI 兼容服务可以尝试获取模型列表；Anthropic 模型名称需要手动填写。
-5. 聊天内容、角色、称呼和模型配置均保存在当前浏览器中，请定期导出本地数据备份。
+### 环境要求
 
-模型配置支持粘贴三至四行文本快速导入，顺序为：配置名字、API 地址、API Key、模型名（可省略）。省略模型名时会自动获取模型列表并选择第一个模型。
+- Node.js 22
+- npm
 
-聊天页右上角的三点菜单提供“编辑角色”，可直接修改当前角色；角色列表保留角色导入、导出和创建能力。
-
-首次访问会从 `public/1/` 自动导入两个内置角色。初始化完成后不会重复导入；用户主动删除内置角色后，刷新页面不会自动恢复。
-
-## Development
+### 安装与启动
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server (port 3000)
+npm ci
 npm run dev
+```
 
-# Build for production
+开发服务器默认地址：
+
+```text
+http://localhost:3000/#/chat
+```
+
+局域网访问时使用：
+
+```text
+http://服务器IP:3000/#/chat
+```
+
+### 构建与预览
+
+```bash
 npm run build
-
-# Preview production build
 npm run preview
 ```
 
-启动后，本机访问 `http://localhost:3000`。同一局域网内的其他设备使用 `http://服务器IP:3000`，每位用户进入“自定义模型配置”，填写自己的 API 地址、API Key 和模型名称。
+生产文件输出到 `dist/`。由于 GitHub Pages 的仓库路径是 `/role-play/`，生产预览地址通常为：
+
+```text
+http://localhost:4173/role-play/#/chat
+```
+
+如果 `4173` 已被占用，Vite 会自动使用 `4174`。需要固定端口时执行：
+
+```bash
+npm run preview -- --port=4173 --strictPort
+```
 
 ## 环境变量
 
-Create a `.env` file:
+复制 `.env.example` 或创建 `.env`：
 
 ```env
-# Backend API URL (optional)
-# Development mode: Leave empty to use Vite proxy
-# Production mode: Set full backend URL
-# Example: VITE_API_BASE_URL=http://192.168.1.100:3001/api
+# 后端 API 地址；纯前端模式可留空
 VITE_API_BASE_URL=
 
-# 是否启用配套后端（纯前端个人 Key 模式保持 false）
+# 默认关闭配套后端
 VITE_BACKEND_ENABLED=false
 
-# 是否显示登录入口和管理员入口 (默认 false)
-# 仅当 VITE_BACKEND_ENABLED=true 时生效
+# 仅在启用后端时控制登录和管理员入口
 VITE_SHOW_AUTH_ENTRY=false
 ```
 
-### 纯前端多人模式
+修改环境变量后需要重新运行开发服务器或重新构建。
 
-保持 `VITE_BACKEND_ENABLED=false` 时，应用只使用浏览器本地数据和每位使用者自行配置的模型 API Key。登录、签到、在线角色、聊天同步、内置模型和管理后台会被禁用，同源 `/api` 请求也会被阻止。不同设备或浏览器用户配置文件的数据相互隔离。
+## GitHub Pages
 
-环境变量在构建时写入前端资源；修改 `.env` 后需要重新运行 `npm run dev` 或 `npm run build`。
+仓库已配置 `.github/workflows/static.yml`：
 
-### 本地备份与恢复
+- 监听 `master` 分支。
+- 使用 Node.js 22 和 `npm ci`。
+- 运行 `npm run build`。
+- 上传 `dist/` 并部署到 GitHub Pages。
+- Vite 生产环境 `base` 为 `/role-play/`。
 
-- “聊天记录导出”生成 JSONL 文件，保留完整消息结构，可通过“聊天记录导入”恢复。
-- “导出纯文本（TXT）”只保留消息正文，适合阅读和归档，不能用于恢复聊天。
-- 角色支持单独导入和导出。
-- 本地用户数据设置提供分类导入/导出和“全部导入/全部导出”。
-- 自定义模型配置和聊天内容仅保存在当前浏览器，不会在不同浏览器或设备之间自动同步。
-- 清除浏览器网站数据会删除本地配置和记录，建议定期导出 JSONL 和本地用户数据备份。
+推送到 `master` 后，GitHub Actions 会自动部署。
 
-## 响应式设计
+## 技术栈
 
-The project supports PC and mobile:
+- Vue 3
+- TypeScript
+- Vite 5
+- Tailwind CSS
+- Pinia
+- Vue Router（Hash 模式）
+- IndexedDB
+- Dexie
+- vite-plugin-pwa
+- marked + DOMPurify
 
-- Uses Tailwind CSS responsive breakpoints
-- Mobile-first design
-- Touch-friendly interactions
-- Minimum button size 48px
+## 许可证
 
-## PWA Support
-
-Production builds automatically include PWA support:
-
-- Offline access
-- Add to home screen
-- Automatic updates
-- Google Fonts caching
-
-### iOS Immersive Experience
-
-iOS users can add the app to the home screen via Safari's "Add to Home Screen" feature. When launched from the home screen, the app runs in full-screen mode, hiding the Safari address bar and toolbar, providing a native app-like immersive experience.
-
-<div align="center">
-  <img src="https://github.com/smanx/role-play/blob/master/docs/imgs/phone-home-ios-pwa.jpg?raw=true" alt="ios app" width="300" />
-</div>
-
-## Main Dependencies
-
-### Production Dependencies
-
-- `vue` - Vue 3 framework
-- `vue-router` - Routing management
-- `pinia` - State management
-- `dexie` - IndexedDB wrapper
-- `marked` - Markdown parser
-- `dompurify` - HTML sanitization
-- `sortablejs` - Drag and drop sorting
-- `vuedraggable` - Vue drag and drop component
-- `pako` - Gzip compression/decompression
-
-### Development Dependencies
-
-- `vite` - Build tool
-- `vite-plugin-pwa` - PWA plugin
-- `typescript` - TypeScript support
-- `tailwindcss` - CSS framework
-- `postcss` - CSS processing
-- `autoprefixer` - CSS auto-prefixing
-- `sharp` - Image processing
-
-## Build Configuration
-
-### Vite Configuration
-
-- Dev server port: 3000
-- API proxy: `/api` -&gt; `http://localhost:3001`
-- Build output: `../dist`
-- Path alias: `@` -&gt; `src/`
-
-### PWA Configuration
-
-- App name: Role-Play
-- Theme color: #1f2937
-- Background color: #f3f4f6
-- Display mode: standalone
-- Cache strategy: CacheFirst (Google Fonts)
-
-## IndexedDB Database
-
-Database name: `SillyTavernDB`
-
-Main storage:
-- Chat history: `silly_tavern_chat_{characterID}`
-- Character sprites
-- Local character data
-- User settings
-
-## Development Guidelines
-
-### Naming Conventions
-
-- **File names**: kebab-case (e.g., `chat-view.ts`)
-- **Component names**: PascalCase (e.g., `ChatView.vue`)
-- **Variables/functions**: camelCase
-- **CSS class names**: kebab-case (Tailwind CSS)
-
-### Code Style
-
-- Use TypeScript
-- Use Vue 3 Composition API
-- Use Pinia for state management
-- Use Tailwind CSS for styling
-
-## License
-
-MIT License
-
-Copyright (c) 2026 Role-Play Lab
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+[MIT License](LICENSE)

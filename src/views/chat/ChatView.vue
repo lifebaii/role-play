@@ -429,6 +429,7 @@
     </div>
 
     <UserSettingsModal
+      v-if="showUserSettings"
       v-model:visible="showUserSettings"
       :user="userStore.user"
       :user-name="chatStore.userName"
@@ -440,10 +441,12 @@
     />
 
     <UserDataSettingsModal
+      v-if="showUserDataSettings"
       v-model:visible="showUserDataSettings"
     />
 
     <BackgroundSelectorModal
+      v-if="showBackgroundSelector"
       v-model:visible="showBackgroundSelector"
       :current-mode="backgroundMode"
       :selected-background="selectedBackgroundName"
@@ -451,16 +454,17 @@
       @background-changed="loadBackground"
     />
 
-    <FriendSelector v-if="backendEnabled" v-model:visible="showFriendSelector" @view-character="handleViewCharacterWithErrorHandling" />
+    <FriendSelector v-if="backendEnabled && showFriendSelector" v-model:visible="showFriendSelector" @view-character="handleViewCharacterWithErrorHandling" />
 
     <ChatSyncModal
-      v-if="backendEnabled"
+      v-if="backendEnabled && showChatSync"
       :show="showChatSync"
       :character-name="chatStore.currentCharacter?.name || ''"
       @close="showChatSync = false"
     />
 
     <CharacterModal
+      v-if="showCreateCharacterModal"
       v-model:visible="showCreateCharacterModal"
       :editing-character="editingCharacter"
       :editing-character-meta="editingCharacterMeta"
@@ -612,6 +616,7 @@
     </div>
 
     <CustomModelConfigModal
+      v-if="showCustomModelConfig"
       v-model:visible="showCustomModelConfig"
       v-model:selected-config-id="selectedConfigId"
       :use-custom-model="chatStore.useCustomModel"
@@ -630,6 +635,7 @@
     />
 
     <LoginModal
+      v-if="userStore.showLoginModal"
       :visible="userStore.showLoginModal"
       @update:visible="(val: boolean) => val ? userStore.requireLogin() : userStore.closeLoginModal()"
     />
@@ -659,7 +665,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useUserStore } from '@/stores/user'
 import { useUserDataStore } from '@/stores/userData'
@@ -675,16 +681,17 @@ import { userApi, v1Api } from '@/api'
 import ChatSidebar from './components/ChatSidebar.vue'
 import ChatMessages from './components/ChatMessages.vue'
 import ChatInput from './components/ChatInput.vue'
-import CharacterModal from './components/CharacterModal.vue'
-import UserSettingsModal from './components/UserSettingsModal.vue'
-import UserDataSettingsModal from './components/UserDataSettingsModal.vue'
-import CustomModelConfigModal from './components/CustomModelConfigModal.vue'
-import BackgroundSelectorModal from './components/BackgroundSelectorModal.vue'
-import ChatSyncModal from './components/ChatSyncModal.vue'
-import FriendSelector from '@/components/FriendSelector.vue'
-import LoginModal from '@/components/LoginModal.vue'
 import AvatarImage from '@/components/AvatarImage.vue'
 import SearchableSelect from '@/components/SearchableSelect.vue'
+
+const CharacterModal = defineAsyncComponent(() => import('./components/CharacterModal.vue'))
+const UserSettingsModal = defineAsyncComponent(() => import('./components/UserSettingsModal.vue'))
+const UserDataSettingsModal = defineAsyncComponent(() => import('./components/UserDataSettingsModal.vue'))
+const CustomModelConfigModal = defineAsyncComponent(() => import('./components/CustomModelConfigModal.vue'))
+const BackgroundSelectorModal = defineAsyncComponent(() => import('./components/BackgroundSelectorModal.vue'))
+const ChatSyncModal = defineAsyncComponent(() => import('./components/ChatSyncModal.vue'))
+const FriendSelector = defineAsyncComponent(() => import('@/components/FriendSelector.vue'))
+const LoginModal = defineAsyncComponent(() => import('@/components/LoginModal.vue'))
 
 import { useCharacter } from '@/composables/useCharacter'
 import { useCustomModel } from '@/composables/useCustomModel'

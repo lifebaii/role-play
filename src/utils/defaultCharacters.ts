@@ -6,12 +6,12 @@ const DEFAULT_CHARACTERS = [
   {
     id: 'bundled-character-adis-lite-preview-v1',
     json: '1/v1.96万神的亚狄斯Lite•Preview.json',
-    image: '1/v1.96万神的亚狄斯Lite•Preview.png',
+    image: '1/v1.96万神的亚狄斯Lite•Preview.webp',
   },
   {
     id: 'bundled-character-release-that-witch-v1',
     json: '1/放开那个女巫.json',
-    image: '1/放开那个女巫.png',
+    image: '1/放开那个女巫.webp',
   },
 ] as const
 
